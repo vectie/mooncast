@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mooncast — governed AIGC studio</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main>
+      <header class="masthead">
+        <div class="mark" aria-hidden="true">M</div>
+        <div>
+          <p class="eyebrow">MOONSUITE DOMAIN PACK</p>
+          <h1>Turn a brief into a governed campaign video.</h1>
+          <p class="dek">Local generation, visible AI labeling, immutable provenance, bounded spend, and human review before any publishing adapter.</p>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <form id="brief-form" class="panel brief-panel">
+          <div class="panel-label"><span>01</span> Creative brief</div>
+          <label for="prompt">What should Mooncast make?</label>
+          <textarea id="prompt" data-testid="prompt-input" maxlength="1000" required>Minimal launch film for a lunar research notebook, deep indigo, precise geometry, calm and credible.</textarea>
+
+          <div class="grid-two">
+            <div>
+              <label for="brand">Brand</label>
+              <input id="brand" value="MoonSuite" maxlength="100">
+            </div>
+            <div>
+              <label for="audience">Audience</label>
+              <input id="audience" value="AI-native creative teams" maxlength="200">
+            </div>
+            <div>
+              <label for="duration">Duration <span id="duration-label">4s</span></label>
+              <input id="duration" data-testid="duration-input" type="range" min="1" max="12" step="1" value="4">
+            </div>
+            <div>
+              <label for="rights-owner">Rights owner</label>
+              <input id="rights-owner" value="Mooncast operator" maxlength="200" required>
+            </div>
+          </div>
+
+          <label class="check-row">
+            <input id="rights-confirmed" data-testid="rights-confirmed" type="checkbox" checked>
+            <span>I control the supplied brief and authorize local generation.</span>
+          </label>
+          <button id="generate" data-testid="generate-button" type="submit">Generate local MP4 <span>→</span></button>
+          <p id="status" data-testid="status" role="status">Ready · maximum 12 seconds / ¥0.96</p>
+        </form>
+
+        <section class="panel output-panel">
+          <div class="panel-label"><span>02</span> Reviewable output</div>
+          <div class="video-shell">
+            <video id="result-video" data-testid="result-video" controls playsinline></video>
+            <div id="video-placeholder">Your generated MP4 will appear here.</div>
+          </div>
+          <div class="review-row">
+            <input id="reviewer" value="creative-director" aria-label="Reviewer ID">
+            <button id="approve" data-testid="approve-button" type="button" disabled>Approve for publishing adapter</button>
+          </div>
+          <p class="publication-note">Approval only marks eligibility. Mooncast does not publish from this screen.</p>
+        </section>
+      </section>
+
+      <section class="panel evidence-panel">
+        <div class="panel-label"><span>03</span> Evidence envelope</div>
+        <div id="provenance" data-testid="provenance" class="provenance-empty">Generate an asset to inspect SHA-256, provider, model, prompt, cost, rights, safety, labels, and human review.</div>
+      </section>
+    </main>
+    <script src="app.js" defer></script>
+  </body>
+</html>

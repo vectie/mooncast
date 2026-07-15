@@ -2,3 +2,7 @@
 /.mooncakes/
 /.moon-cache/
 .DS_Store
+/.tools/
+/var/
+__pycache__/
+*.pyc
