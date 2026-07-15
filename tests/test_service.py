@@ -1,4 +1,5 @@
 import hashlib
+import http.client
 import json
 import subprocess
 import tempfile
@@ -60,6 +61,28 @@ class MooncastServiceTest(unittest.TestCase):
             raw = error.read()
             return error.code, json.loads(raw) if raw else {}
 
+    @classmethod
+    def request_chunked(cls, path, payload):
+        body = json.dumps(payload).encode("utf-8")
+        connection = http.client.HTTPConnection(
+            "127.0.0.1", cls.server.server_address[1], timeout=20
+        )
+        connection.putrequest("POST", path)
+        connection.putheader("Content-Type", "application/json")
+        connection.putheader("Transfer-Encoding", "chunked")
+        connection.endheaders()
+        for start in range(0, len(body), 17):
+            chunk = body[start : start + 17]
+            connection.send(("%X\r\n" % len(chunk)).encode("ascii"))
+            connection.send(chunk)
+            connection.send(b"\r\n")
+        connection.send(b"0\r\n\r\n")
+        response = connection.getresponse()
+        value = json.loads(response.read())
+        status = response.status
+        connection.close()
+        return status, value
+
     def test_health_and_both_ui_routes(self):
         status, health = self.request("GET", "/health")
         self.assertEqual(status, 200)
@@ -92,6 +115,28 @@ class MooncastServiceTest(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertIn(b"ftyp", video[:64])
+
+    def test_chunked_json_generation_matches_moondesk_proxy_framing(self):
+        chunked_brief = {
+            **self.brief,
+            "prompt": self.brief["prompt"] + " through the MoonDesk proxy",
+        }
+        status, asset = self.request_chunked("/api/generate", chunked_brief)
+        self.assertEqual(status, 201)
+        self.assertEqual(asset["prompt"], chunked_brief["prompt"])
+        self.assertTrue(asset["video_url"].startswith("media/asset-"))
+        video_path = (
+            self.output_root / "assets" / ("asset-%s.mp4" % asset["asset_id"])
+        )
+        self.assertTrue(video_path.is_file())
+        probe = subprocess.run(
+            [self.server.ffprobe, "-v", "error", "-show_entries", "format=duration", str(video_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        self.assertIn("duration=1.000000", probe.stdout)
 
     def test_head_supports_ui_health_and_media_smoke_checks(self):
         for route in ("/", "/apps/mooncast/studio", "/health"):

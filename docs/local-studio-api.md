@@ -45,6 +45,10 @@ includes the mount-relative playable `video_url`, output and request SHA-256, pr
 prompt, bounded CNY cost, media probe, rights, safety, labels, pending human
 review, and an explicitly non-published publication state.
 
+The endpoint accepts either bounded `Content-Length` framing or bounded
+`Transfer-Encoding: chunked` framing. Both are capped at 16 KiB; combining the
+two framing headers is rejected.
+
 ### `GET /api/assets` and `GET /api/assets/{asset_id}`
 
 List or retrieve composed asset provenance and the latest append-only review.

@@ -94,8 +94,79 @@ class MooncastHandler(BaseHTTPRequestHandler):
         self._send_json(error.status, {"error": {"code": error.code, "message": error.message}})
 
     def _read_json(self) -> Dict[str, Any]:
+        body = self._read_body()
         try:
-            length = int(self.headers.get("Content-Length", "0"))
+            value = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            raise RenderError("json_invalid", "request body must be valid UTF-8 JSON", 400)
+        if not isinstance(value, dict):
+            raise RenderError("json_object_required", "request body must be a JSON object", 400)
+        return value
+
+    def _read_exactly(self, length: int) -> bytes:
+        chunks = []
+        remaining = length
+        while remaining:
+            chunk = self.rfile.read(remaining)
+            if not chunk:
+                raise RenderError("body_truncated", "request body ended unexpectedly", 400)
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        return b"".join(chunks)
+
+    def _read_chunked_body(self) -> bytes:
+        body = bytearray()
+        while True:
+            size_line = self.rfile.readline(130)
+            if not size_line or len(size_line) > 129 or not size_line.endswith(b"\r\n"):
+                raise RenderError("chunk_header_invalid", "chunk header is invalid", 400)
+            size_text = size_line[:-2].split(b";", 1)[0].strip()
+            try:
+                size = int(size_text, 16)
+            except ValueError:
+                raise RenderError("chunk_size_invalid", "chunk size is invalid", 400)
+            if size < 0 or len(body) + size > MAX_BODY_BYTES:
+                raise RenderError(
+                    "body_size_invalid",
+                    "JSON body must be between 1 and %d bytes" % MAX_BODY_BYTES,
+                    400,
+                )
+            if size == 0:
+                trailer_bytes = 0
+                while True:
+                    trailer = self.rfile.readline(1026)
+                    trailer_bytes += len(trailer)
+                    if not trailer or len(trailer) > 1025 or trailer_bytes > 8192:
+                        raise RenderError("chunk_trailer_invalid", "chunk trailer is invalid", 400)
+                    if trailer == b"\r\n":
+                        break
+                break
+            body.extend(self._read_exactly(size))
+            if self._read_exactly(2) != b"\r\n":
+                raise RenderError("chunk_terminator_invalid", "chunk terminator is invalid", 400)
+        if not body:
+            raise RenderError("body_size_invalid", "JSON body must not be empty", 400)
+        return bytes(body)
+
+    def _read_body(self) -> bytes:
+        transfer_encoding = self.headers.get("Transfer-Encoding", "").strip().casefold()
+        content_length = self.headers.get("Content-Length")
+        if transfer_encoding and content_length is not None:
+            raise RenderError(
+                "body_framing_conflict",
+                "Transfer-Encoding and Content-Length cannot be combined",
+                400,
+            )
+        if transfer_encoding:
+            if transfer_encoding != "chunked":
+                raise RenderError(
+                    "transfer_encoding_unsupported",
+                    "only chunked Transfer-Encoding is supported",
+                    400,
+                )
+            return self._read_chunked_body()
+        try:
+            length = int(content_length or "0")
         except ValueError:
             raise RenderError("content_length_invalid", "Content-Length is invalid", 400)
         if length <= 0 or length > MAX_BODY_BYTES:
@@ -104,13 +175,7 @@ class MooncastHandler(BaseHTTPRequestHandler):
                 "JSON body must be between 1 and %d bytes" % MAX_BODY_BYTES,
                 400,
             )
-        try:
-            value = json.loads(self.rfile.read(length).decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            raise RenderError("json_invalid", "request body must be valid UTF-8 JSON", 400)
-        if not isinstance(value, dict):
-            raise RenderError("json_object_required", "request body must be a JSON object", 400)
-        return value
+        return self._read_exactly(length)
 
     def _send_static(self, name: str, head_only: bool = False) -> None:
         path = _STATIC / name
