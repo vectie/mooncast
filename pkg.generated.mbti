@@ -1,0 +1,40 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/moonlib/pack",
+}
+
+// Values
+pub fn delivery_ready(DeliveryGate) -> Bool
+
+pub fn manifest() -> @pack.MoonPackManifest
+
+pub fn publication_ready(CampaignStage, DeliveryGate) -> Bool
+
+// Errors
+
+// Types and methods
+pub(all) enum CampaignStage {
+  Brief
+  RightsCleared
+  Generated
+  SafetyReviewed
+  HumanApproved
+  Packaged
+  Published
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryGate {
+  rights_cleared : Bool
+  safety_passed : Bool
+  human_approved : Bool
+  provenance_complete : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

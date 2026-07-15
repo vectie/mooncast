@@ -1,0 +1,42 @@
+{
+  "id": "mooncast",
+  "version": "0.1.0",
+  "display_name": "Mooncast AIGC Campaign Studio",
+  "product_id": "mooncast",
+  "kind": "DomainPack",
+  "required_runtime_extensions": ["moonclaw"],
+  "book_templates": [{"id":"campaign-book","version":"1.0.0","path":"book/campaign-book.md"}],
+  "schemas": [
+    {"id":"creative-brief","version":"1.0.0","path":"schemas/creative-brief.schema.json"},
+    {"id":"generation-request","version":"1.0.0","path":"schemas/generation-request.schema.json"},
+    {"id":"asset-provenance","version":"1.0.0","path":"schemas/asset-provenance.schema.json"},
+    {"id":"review-decision","version":"1.0.0","path":"schemas/review-decision.schema.json"},
+    {"id":"delivery-package","version":"1.0.0","path":"schemas/delivery-package.schema.json"},
+    {"id":"publication-receipt","version":"1.0.0","path":"schemas/publication-receipt.schema.json"}
+  ],
+  "tools": [
+    {"id":"brief.validate","owner_product":"mooncast","input_schema_id":"creative-brief","output_schema_id":"creative-brief","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["records/briefs"],"review_required":false},
+    {"id":"asset.generate","owner_product":"mooncast","input_schema_id":"generation-request","output_schema_id":"asset-provenance","authority":"ExternalEffect","idempotent":true,"evidence_outputs":["raw/generations"],"review_required":true},
+    {"id":"asset.review","owner_product":"mooncast","input_schema_id":"asset-provenance","output_schema_id":"review-decision","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["records/reviews"],"review_required":true},
+    {"id":"delivery.package","owner_product":"mooncast","input_schema_id":"review-decision","output_schema_id":"delivery-package","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["records/deliveries"],"review_required":false},
+    {"id":"campaign.publish","owner_product":"mooncast","input_schema_id":"delivery-package","output_schema_id":"publication-receipt","authority":"ExternalEffect","idempotent":true,"evidence_outputs":["records/publications"],"review_required":true}
+  ],
+  "workflows": [{"id":"brief-to-delivery","version":"1.0.0","path":"workflows/brief-to-delivery.md"}],
+  "skills": [{"id":"campaign-producer","version":"1.0.0","path":"skills/campaign-producer.md"}],
+  "policies": [
+    {"id":"rights-clearance","version":"1.0.0","path":"policies/rights-clearance.md"},
+    {"id":"content-safety","version":"1.0.0","path":"policies/content-safety.md"},
+    {"id":"content-labeling","version":"1.0.0","path":"policies/content-labeling.md"},
+    {"id":"human-review","version":"1.0.0","path":"policies/human-review.md"}
+  ],
+  "provider_ports": [
+    {"id":"model-generation","version":"1.0.0","path":"providers/model-generation.port.md"},
+    {"id":"media-storage","version":"1.0.0","path":"providers/media-storage.port.md"},
+    {"id":"publishing","version":"1.0.0","path":"providers/publishing.port.md"}
+  ],
+  "schedules": [],
+  "app_entrypoints": [{"id":"campaign-studio","path":"/apps/mooncast/studio","audience":"campaign-operator"}],
+  "migrations": [{"id":"mooncast-install","version":"1.0.0","path":"migrations/install.md"}],
+  "evaluations": [{"id":"delivery-acceptance","version":"1.0.0","path":"evaluations/delivery-acceptance.md"}],
+  "uninstall_contract": {"id":"mooncast-uninstall","version":"1.0.0","path":"UNINSTALL.md"}
+}

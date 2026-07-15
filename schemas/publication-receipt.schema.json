@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["campaign_id","channel","published_at","external_id","delivery_digest"],"properties":{"campaign_id":{"type":"string"},"channel":{"type":"string"},"published_at":{"type":"string"},"external_id":{"type":"string"},"delivery_digest":{"type":"string"}},"additionalProperties":false}

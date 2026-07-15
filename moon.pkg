@@ -1,0 +1,11 @@
+import {
+  "moonbitlang/core/json",
+  "vectie/moonlib/pack",
+}
+
+import {
+  "moonbitlang/async",
+  "vectie/moonlib/pack/installer",
+} for "test"
+
+supported_targets = "native"
