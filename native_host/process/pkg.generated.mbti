@@ -1,0 +1,38 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/native_host/process"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub async fn run_capture(CommandSpec) -> CommandResult
+
+// Errors
+pub suberror CommandError {
+  InvalidExecutable
+  InvalidArgument(Int)
+  InvalidLimit
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct CommandResult {
+  exit_code : Int?
+  stdout : Bytes
+  stderr : Bytes
+  timed_out : Bool
+  output_truncated : Bool
+} derive(@debug.Debug)
+
+pub(all) struct CommandSpec {
+  executable : String
+  arguments : Array[String]
+  working_directory : String?
+  timeout_ms : Int
+  max_output_bytes : Int
+} derive(@debug.Debug)
+
+// Type aliases
+
+// Traits
+

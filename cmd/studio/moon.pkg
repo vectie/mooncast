@@ -1,0 +1,20 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/http" @async_http,
+  "moonbitlang/async/io",
+  "moonbitlang/async/socket",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "vectie/mooncast/native_host/http" @host_http,
+  "vectie/mooncast/native_host/runtime",
+  "vectie/mooncast/studio_service",
+  "vectie/mooncast/application/execution" @execution_app,
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+)

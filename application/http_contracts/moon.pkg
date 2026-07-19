@@ -1,0 +1,17 @@
+import {
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "vectie/mooncast/application/commerce" @commerce_app,
+  "vectie/mooncast/application/execution" @execution_app,
+  "vectie/mooncast/application/handoff" @handoff_app,
+  "vectie/mooncast/application/pipeline" @pipeline_app,
+  "vectie/mooncast/application/production" @production_app,
+  "vectie/mooncast/commerce",
+  "vectie/mooncast/execution",
+  "vectie/mooncast/handoff",
+  "vectie/mooncast/kernel",
+  "vectie/mooncast/production/creative",
+  "vectie/mooncast/native_host/http",
+}
+
+supported_targets = "native"

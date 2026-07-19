@@ -1,0 +1,623 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/studio_service"
+
+import {
+  "moonbitlang/async/semaphore",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/application/commerce",
+  "vectie/mooncast/application/handoff",
+  "vectie/mooncast/application/pipeline",
+  "vectie/mooncast/application/production",
+  "vectie/mooncast/editor/domain",
+  "vectie/mooncast/editor/integration",
+  "vectie/mooncast/editor/jobs",
+  "vectie/mooncast/editor/media",
+  "vectie/mooncast/editor/render_exec",
+  "vectie/mooncast/editor/render_plan",
+  "vectie/mooncast/kernel",
+  "vectie/mooncast/native_host/http",
+  "vectie/mooncast/production/creative",
+  "vectie/mooncast/production/governance",
+  "vectie/mooncast/production/project",
+}
+
+// Values
+pub fn omit_null_fields(Json) -> Json
+
+// Errors
+pub(all) suberror StudioError {
+  NotFound(entity~ : String, id~ : String)
+  Conflict(code~ : String, message~ : String)
+  Invalid(code~ : String, message~ : String)
+} derive(@debug.Debug)
+pub fn StudioError::code(Self) -> String
+pub fn StudioError::message(Self) -> String
+pub fn StudioError::status(Self) -> Int
+
+// Types and methods
+type ApiErrorDetail derive(ToJson)
+
+type ApiErrorResponse derive(ToJson)
+
+type BillingCreateInput derive(@json.FromJson)
+
+type BillingProjection derive(ToJson)
+
+type BillingTransitionInput derive(@json.FromJson)
+
+type CanonicalClipPayload derive(ToJson)
+
+type CanonicalCreateRequest derive(@json.FromJson)
+
+type CanonicalOutputPayload derive(ToJson)
+
+type CapacityBoardProjection derive(ToJson)
+
+type ClientAnnotationInput derive(@json.FromJson)
+
+type ClientArtifactProjection derive(ToJson)
+
+type ClientBindingProjection derive(ToJson)
+
+type ClientDecisionInput derive(@json.FromJson)
+
+type ClientDeliveryProjection derive(ToJson)
+
+type ClientPortalControlInput derive(@json.FromJson)
+
+type ClientPortalCreateInput derive(@json.FromJson)
+
+type ClientPortalCreateProjection derive(ToJson)
+
+type ClientProjectEpisodeProjection derive(ToJson)
+
+type ClientProjectProjection derive(ToJson)
+
+type ClientRevisionPolicyProjection derive(ToJson)
+
+type ClientWorkspaceProjection derive(ToJson)
+
+type CommercialDashboardProjection derive(ToJson)
+
+type ConversionProjection derive(ToJson)
+
+type ConversionResultProjection derive(ToJson)
+
+pub(all) struct CreativeArtifactRequest {
+  expected_revision : Int
+  command_id : String
+  recorded_at : String
+  evidence_digest : String
+  artifact : @creative.CreativeArtifact
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CreativeDecisionRequest {
+  expected_revision : Int
+  command_id : String
+  recorded_at : String
+  evidence_digest : String
+  decision : @creative.CreativeDecision
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CreativeView {
+  artifact : @creative.CreativeArtifact?
+  history : Array[@creative.CreativeArtifact]
+  decisions : Array[@creative.CreativeDecision]
+  project_revision : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type DeleteRequest derive(@json.FromJson)
+
+type DeleteResponse derive(ToJson)
+
+type DeliveryAcceptanceInput derive(@json.FromJson)
+
+type DeliveryAcceptanceProjection derive(ToJson)
+
+type DeliveryActionInput derive(@json.FromJson)
+
+type DeliveryArtifactProjection derive(ToJson)
+
+type DeliveryBuildProjection derive(ToJson)
+
+type DeliveryBuildsProjection derive(ToJson)
+
+type DeliveryCoverInput derive(ToJson, @json.FromJson)
+
+type DeliveryCreateInput derive(@json.FromJson)
+
+type DeliveryCutInput derive(ToJson, @json.FromJson)
+
+type DeliveryMilestoneInput derive(@json.FromJson)
+
+type DeliveryPackageRecordInput derive(@json.FromJson)
+
+type DeliveryProfileInput derive(ToJson, @json.FromJson)
+
+type DeliveryVariantInput derive(ToJson, @json.FromJson)
+
+pub(all) struct EditorAddClipTemplate {
+  track_id : String
+  clip : @domain.Clip
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type EditorCatalogRecord derive(ToJson, @json.FromJson)
+
+type EditorCommandEnvelope derive(@json.FromJson)
+
+pub(all) struct EditorCreateRequest {
+  project : @domain.EditorProject
+  content_digest : String
+  recorded_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorExportCreateRequest {
+  export_request : @integration.ProductionExportRequest
+  idempotency_key : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type EditorHandoffRequestInput derive(@json.FromJson)
+
+type EditorJobApiResponse derive(ToJson)
+
+pub(all) struct EditorJobView {
+  job : @jobs.EditorJob
+  render_plan : @render_plan.RenderPlan
+  render_receipt : @render_exec.RenderReceipt?
+  export_receipt : @integration.ExportReceipt?
+  export_spec : @integration.ExportSpec?
+  media_url : String?
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorMasterPromotionEnvelope {
+  request : @integration.MasterPromotionRequest
+  master_id : String
+  subtitle_ref : String
+  promoted_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorMediaAnalysisView {
+  analysis : @media.MediaAnalysis
+  proxy : @render_plan.ProxyReadiness
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorOpenView {
+  project_id : String
+  revision : Int
+  snapshot : @domain.EditorProject
+  command_log : Array[@domain.CommandLogRecord]
+  media_bindings : Array[@domain.LocalMediaBinding]
+  takes : Array[EditorTakeRecord]
+  review_comments : Array[@integration.ReviewComment]
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorPrepareIntakeRequest {
+  expected_editor_revision : Int
+  idempotency_key : String
+  role : String
+  file_name : String
+  mime_type : String
+  size_bytes : Int
+  sha256 : String
+  duration_ticks : Int
+  identity : @domain.ProductionIdentity
+  rights : @domain.RightsAttestation
+  source : @domain.MediaSourceAttestation
+  created_by : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorPreparedIntake {
+  intake : @media.IntakeRequest
+  intake_id : String
+  upload_url : String
+  status : String
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorPreviewCreateRequest {
+  expected_editor_revision : Int
+  idempotency_key : String
+  quality : String
+  job_id : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorProductionImportRequest {
+  production : @integration.ProductionImport
+  content_digest : String
+  recorded_at : String
+  expected_editor_revision : Int?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorProjectSummary {
+  project_id : String
+  revision : Int
+  timeline_id : String
+  duration_ticks : Int
+  updated_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorReviewCommentInput {
+  comment_id : String
+  kind : String
+  start_tick : Int
+  end_tick : Int
+  text : String
+  revision_round : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorReviewCommentRequest {
+  expected_revision : Int
+  idempotency_key : String
+  comment : EditorReviewCommentInput
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorTakeRecord {
+  take_id : String
+  project_id : String
+  media_ref_id : String
+  media_digest : String
+  mime_type : String
+  role : String
+  source_url : String
+  thumbnail_url : String
+  analysis_url : String
+  proxy_state : String
+  identity : @domain.ProductionIdentity
+  approved : Bool
+  already_placed : Bool
+  track_id : String
+  track_kind : String
+  add_clip_template : EditorAddClipTemplate?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type EventListResponse derive(ToJson)
+
+pub(all) struct GateCommandRequest {
+  expected_revision : Int
+  command_id : String
+  recorded_at : String
+  evidence_digest : String
+  gate : String
+  actor : String
+  role : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type GenerationAttemptInput derive(@json.FromJson)
+
+pub(all) struct GovernanceView {
+  project_revision : Int
+  model_routing_plan : @governance.ModelRoutingPlan?
+  model_routing_history : Array[@governance.ModelRoutingPlan]
+  model_routing_decisions : Array[@governance.RoutingDecision]
+  generation_attempts : Array[@governance.GenerationAttempt]
+  shot_qc_findings : Array[@governance.QcFinding]
+  shot_qc_decisions : Array[@governance.QcDecision]
+  master_lineage : @governance.Master?
+  master_decisions : Array[@governance.MasterDecision]
+  delivery_package : @governance.DeliveryPackage?
+  delivery_package_history : Array[@governance.DeliveryPackage]
+  delivery_milestone_acceptances : Array[@governance.DeliveryAcceptance]
+  publication_authorizations : Array[@governance.PublicationAuthorization]
+  publication_receipts : Array[@governance.PublicationObservation]
+  performance_reviews : Array[@governance.PerformanceReview]
+  governance_invalidations : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type HumanDecisionInput derive(@json.FromJson)
+
+type LeadCreateInput derive(ToJson, @json.FromJson)
+
+type LeadProjection derive(ToJson)
+
+type LegacyAdvanceInput derive(@json.FromJson)
+
+type LegacyColorSettings derive(@json.FromJson)
+
+type LegacyCreateRequest derive(@json.FromJson)
+
+type LegacyCreativeDecisionInput derive(@json.FromJson)
+
+type LegacyCreativeRevisionInput derive(@json.FromJson)
+
+type LegacyEditorCommandEnvelope derive(@json.FromJson)
+
+type LegacyExportProvenance derive(@json.FromJson)
+
+type LegacyExportRequest derive(@json.FromJson)
+
+type LegacyExportSpec derive(@json.FromJson)
+
+type LegacyNestedClipPayload derive(@json.FromJson)
+
+type LegacyNestedClipSettings derive(@json.FromJson)
+
+type LegacyNestedOutput derive(@json.FromJson)
+
+type LegacyNestedOutputPayload derive(@json.FromJson)
+
+type LegacyPreviewRequest derive(@json.FromJson)
+
+type LegacyPromotionRequest derive(@json.FromJson)
+
+type LegacyVisualSettings derive(@json.FromJson)
+
+type MarginProjection derive(ToJson)
+
+type MarginScenarioProjection derive(ToJson)
+
+type MasterDecisionInput derive(@json.FromJson)
+
+type MasterRecordInput derive(@json.FromJson)
+
+pub(all) struct MediaRecord {
+  contract : String
+  media_id : String
+  content_type : String
+  bytes : Int
+  sha256 : String
+  created_at : String
+  source_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type PerformanceEconomicsInput derive(ToJson, @json.FromJson)
+
+type PerformanceMetricsInput derive(ToJson, @json.FromJson)
+
+type PerformanceReviewInput derive(@json.FromJson)
+
+type PortalsProjection derive(ToJson)
+
+pub(all) struct ProjectCommandReceipt {
+  command_id : String
+  input_digest : String
+  result_key : String
+  result_digest : String
+  result_revision : Int
+  ok : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProjectCommandRequest {
+  expected_revision : Int
+  command : @kernel.ProjectCommand
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProjectCommandResponse {
+  project : ProjectRecord
+  result : @kernel.CommandResult
+  idempotent_replay : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type ProjectExperienceMetadata derive(ToJson, @json.FromJson)
+
+type ProjectListResponse derive(ToJson)
+
+pub(all) struct ProjectRecord {
+  contract : String
+  project_id : String
+  created_at : String
+  updated_at : String
+  deleted : Bool
+  deleted_at : String?
+  snapshot : @kernel.ProjectSnapshot
+  events : Array[@kernel.ProjectEvent]
+  command_receipts : Array[ProjectCommandReceipt]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProjectSummary {
+  project_id : String
+  title : String
+  revision : Int
+  stage : String
+  current_gate : String?
+  next_gate : String?
+  updated_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderAuthorizationRequest {
+  job : @vectie/mooncast/execution.ProviderExecutionJob
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderCommandReceipt {
+  command_id : String
+  input_digest : String
+  result_key : String
+  result_digest : String
+  result_revision : Int
+  ok : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderCommandResponse {
+  record : ProviderJobRecord
+  result : @vectie/mooncast/execution.ProviderExecutionResult
+  idempotent_replay : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type ProviderConfigResponse derive(ToJson)
+
+pub(all) struct ProviderJobRecord {
+  contract : String
+  job : @vectie/mooncast/execution.ProviderExecutionJob
+  events : Array[@vectie/mooncast/execution.ProviderExecutionEvent]
+  command_receipts : Array[ProviderCommandReceipt]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type ProviderJobsProjection derive(ToJson)
+
+type ProviderListResponse derive(ToJson)
+
+type PublicationAuthorizationInput derive(@json.FromJson)
+
+type PublicationObservationInput derive(@json.FromJson)
+
+type QcDecisionInput derive(@json.FromJson)
+
+type QcFindingInput derive(@json.FromJson)
+
+type QuoteConversionInput derive(@json.FromJson)
+
+type QuoteInput derive(ToJson, @json.FromJson)
+
+type QuoteMilestoneInput derive(ToJson, @json.FromJson)
+
+type QuoteProjection derive(ToJson)
+
+type QuoteScheduleProjection derive(ToJson)
+
+type RepeatOrderInput derive(@json.FromJson)
+
+type RepeatOrderResultProjection derive(ToJson)
+
+type ReservationInput derive(@json.FromJson)
+
+type ReservationProjection derive(ToJson)
+
+type ReservationRescheduleInput derive(@json.FromJson)
+
+pub(all) struct ResolvedMedia {
+  record : MediaRecord
+  content : Bytes
+} derive(Eq, @debug.Debug)
+
+type ResourceInput derive(@json.FromJson)
+
+type ResourceProjection derive(ToJson)
+
+pub struct RouteExtension {
+  prefix : String
+  handler : async (@http.Request) -> @http.Response?
+}
+pub fn RouteExtension::new(String, async (@http.Request) -> @http.Response?) -> Self
+
+type RoutedActionProjection derive(ToJson)
+
+type RoutedActionRequest derive(@json.FromJson)
+
+type RoutedCreateRequest derive(@json.FromJson)
+
+pub(all) struct RoutedExecutionRecord {
+  contract : String
+  project_id : String
+  execution : @vectie/mooncast/execution.RoutedExecution
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type RoutedExecutionsProjection derive(ToJson)
+
+type RoutedListResponse derive(ToJson)
+
+pub(all) struct RoutedPlanRequest {
+  expected_project_revision : Int
+  execution_id : String
+  actor_id : String
+  binding_digest : String
+  created_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type RoutingDecisionInput derive(@json.FromJson)
+
+type RoutingPlanRecordInput derive(@json.FromJson)
+
+pub struct StudioService {
+  root : String
+  store : @vectie/mooncast/native_host/store.AtomicStore
+  mutation_lock : @semaphore.Semaphore
+  editor_repository : @vectie/mooncast/editor/store.EditorRepository
+  editor_media : @media.MediaRegistry
+  editor_render_files : @vectie/mooncast/native_host/store.AtomicStore
+  execution_application : @vectie/mooncast/application/execution.ProviderExecutionService
+  production_repository : @production.ProjectRepository
+  production_pipeline : @pipeline.ProductionPipelineService
+  delivery_application : @vectie/mooncast/application/execution.DeliveryFactoryService
+  commerce_application : @commerce.CommercialApplicationService
+  handoff_outbox : @handoff.OutboundHandoffService
+  route_extensions : Array[RouteExtension]
+}
+pub async fn StudioService::adopt_pipeline_result(Self, String, @pipeline.RoutedIngestResult) -> ProjectRecord
+pub async fn StudioService::advance_gate(Self, String, GateCommandRequest) -> ProjectCommandResponse
+pub async fn StudioService::advance_ready_gates(Self, String, String, String, String) -> ProjectRecord
+pub async fn StudioService::analyze_editor_media(Self, String) -> EditorMediaAnalysisView
+pub async fn StudioService::apply_project_command(Self, String, ProjectCommandRequest) -> ProjectCommandResponse
+pub async fn StudioService::apply_provider_command(Self, String, @vectie/mooncast/execution.ProviderExecutionCommand) -> ProviderCommandResponse
+pub async fn StudioService::authorize_provider_job(Self, ProviderAuthorizationRequest) -> ProviderJobRecord
+pub async fn StudioService::capacity_board_projection(Self, String) -> CapacityBoardProjection
+pub async fn StudioService::commercial_dashboard_projection(Self) -> CommercialDashboardProjection
+pub async fn StudioService::commercial_lead_projection(Self, String) -> LeadProjection
+pub async fn StudioService::commercial_quote_projection(Self, String) -> QuoteProjection
+pub async fn StudioService::complete_editor_intake(Self, String, String, Bytes) -> @media.CompletedIntake
+pub async fn StudioService::convert_commercial_quote(Self, String, QuoteConversionInput) -> ConversionResultProjection
+pub async fn StudioService::create_capacity_reservation(Self, ReservationInput) -> ReservationProjection
+pub async fn StudioService::create_capacity_resource(Self, ResourceInput) -> ResourceProjection
+pub async fn StudioService::create_commercial_lead(Self, LeadCreateInput) -> LeadProjection
+pub async fn StudioService::create_editor_export(Self, String, EditorExportCreateRequest) -> EditorJobView
+pub async fn StudioService::create_editor_preview(Self, String, EditorPreviewCreateRequest) -> EditorJobView
+pub async fn StudioService::create_editor_project(Self, EditorCreateRequest) -> EditorOpenView
+pub async fn StudioService::create_or_revise_quote(Self, String, String?, QuoteInput) -> QuoteProjection
+pub async fn StudioService::create_project(Self, @project.ProjectGraph, String) -> ProjectRecord
+pub async fn StudioService::create_repeat_order(Self, String, RepeatOrderInput) -> RepeatOrderResultProjection
+pub async fn StudioService::creative_view(Self, String, @creative.ArtifactKind) -> CreativeView
+pub async fn StudioService::creative_workspace_projection(Self, String, @creative.ArtifactKind) -> Json
+pub async fn StudioService::decide_commercial_quote(Self, String, String, HumanDecisionInput) -> QuoteProjection
+pub async fn StudioService::delete_project(Self, String, Int) -> Unit
+pub async fn StudioService::dispatch_application_http(Self, @http.Request) -> @http.Response?
+pub async fn StudioService::dispatch_editor_command(Self, String, @domain.EditCommand, String) -> EditorOpenView
+pub async fn StudioService::dispatch_http(Self, @http.Request) -> @http.Response
+pub async fn StudioService::editor_export_path_for_digest(Self, String, String) -> String
+pub async fn StudioService::get_editor_job(Self, String, String) -> EditorJobView
+pub async fn StudioService::get_editor_project(Self, String) -> EditorOpenView
+pub async fn StudioService::get_project(Self, String) -> ProjectRecord
+pub async fn StudioService::get_provider_job(Self, String) -> ProviderJobRecord
+pub async fn StudioService::get_routed_execution(Self, String, String) -> RoutedExecutionRecord
+pub async fn StudioService::governance_stage_projection(Self, String, String) -> Json
+pub async fn StudioService::governance_view(Self, String) -> GovernanceView
+pub async fn StudioService::import_editor_from_canonical_project(Self, String) -> EditorOpenView
+pub async fn StudioService::import_editor_production(Self, EditorProductionImportRequest) -> EditorOpenView
+pub async fn StudioService::list_editor_projects(Self) -> Array[EditorProjectSummary]
+pub async fn StudioService::list_projects(Self) -> Array[ProjectSummary]
+pub async fn StudioService::list_provider_jobs(Self) -> Array[ProviderJobRecord]
+pub async fn StudioService::list_routed_executions(Self, String) -> Array[RoutedExecutionRecord]
+pub fn StudioService::new(String, provider_catalog? : @vectie/mooncast/application/execution.ProviderCatalog) -> Self
+pub async fn StudioService::plan_routed_execution(Self, String, RoutedPlanRequest) -> RoutedExecutionRecord
+pub async fn StudioService::prepare_editor_intake(Self, String, EditorPrepareIntakeRequest) -> EditorPreparedIntake
+pub async fn StudioService::promote_editor_master(Self, String, String, EditorMasterPromotionEnvelope) -> @integration.MasterPromotionReceipt
+pub async fn StudioService::qualify_commercial_lead(Self, String, HumanDecisionInput) -> LeadProjection
+pub async fn StudioService::record_creative_artifact(Self, String, CreativeArtifactRequest) -> ProjectCommandResponse
+pub async fn StudioService::record_creative_decision(Self, String, CreativeDecisionRequest) -> ProjectCommandResponse
+pub async fn StudioService::record_editor_review_comment(Self, String, EditorReviewCommentRequest) -> @integration.ReviewComment
+pub async fn StudioService::record_project_qualification(Self, String, ProjectExperienceMetadata, String) -> ProjectCommandResponse
+pub async fn StudioService::register_media(Self, MediaRecord, Bytes) -> MediaRecord
+pub fn StudioService::register_route_extension(Self, RouteExtension) -> Unit
+pub fn StudioService::register_standard_application_routes(Self) -> Unit
+pub fn StudioService::register_workflow_agent_routes(Self) -> Unit
+pub async fn StudioService::reschedule_capacity_reservation(Self, String, ReservationRescheduleInput) -> ReservationProjection
+pub async fn StudioService::resolve_editor_job_media(Self, String, String) -> Bytes
+pub async fn StudioService::resolve_editor_media(Self, String, Bool) -> (@media.MediaObjectRecord, Bytes)
+pub async fn StudioService::resolve_media(Self, String) -> ResolvedMedia
+pub async fn StudioService::retry_editor_job(Self, String, String) -> EditorJobView
+pub async fn StudioService::save_project_experience(Self, String, ProjectExperienceMetadata) -> Unit
+pub async fn StudioService::seed_initial_creative_drafts(Self, String, ProjectExperienceMetadata, String) -> ProjectRecord
+pub async fn StudioService::studio_project_projection(Self, ProjectRecord) -> Json
+
+type WorkflowBatchQcInput derive(@json.FromJson)
+
+type WorkflowBatchQcProjection derive(ToJson)
+
+type WorkflowQcReceipt derive(ToJson)
+
+type WorkflowRunPendingInput derive(@json.FromJson)
+
+type WorkflowRunPendingProjection derive(ToJson)
+
+type WorkflowShotOutputBinding derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkflowShotRunReceipt derive(ToJson)
+
+// Type aliases
+
+// Traits
+

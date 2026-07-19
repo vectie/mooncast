@@ -1,0 +1,9 @@
+import {
+  "moonbitlang/async/tls",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/x/crypto",
+  "vectie/moonlib/clock",
+}
+
+supported_targets = "native"

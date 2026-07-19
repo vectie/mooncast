@@ -1,0 +1,77 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/native_host/http"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn content_type(String) -> String
+
+pub fn etag(Bytes) -> String
+
+pub fn json_response(Int, String, String) -> Response
+
+pub fn not_found() -> Response
+
+pub fn parse_range(String, Int) -> ByteRange?
+
+pub fn payload_too_large() -> Response
+
+pub fn response(Int, String, Bytes, content_type? : String, headers? : Map[String, String]) -> Response
+
+pub fn safe_static_path(String) -> String?
+
+pub fn split_target(String) -> (String, String?)
+
+pub fn static_response(String, Bytes, range? : String, if_none_match? : String) -> Response
+
+pub fn text_response(Int, String, String, content_type? : String) -> Response
+
+// Errors
+
+// Types and methods
+pub(all) struct ByteRange {
+  start : Int
+  end_inclusive : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Method {
+  Get
+  Head
+  Post
+  Put
+  Delete
+  Patch
+  Options
+  Other(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Request {
+  request_method : Method
+  path : String
+  query : String?
+  headers : Map[String, String]
+  body : Bytes
+} derive(@debug.Debug)
+
+pub(all) struct Response {
+  status : Int
+  reason : String
+  headers : Map[String, String]
+  body : Bytes
+} derive(@debug.Debug)
+
+type Route
+
+pub struct Router {
+  routes : Array[Route]
+}
+pub fn Router::add(Self, Method, String, (Request) -> Response) -> Unit
+pub fn Router::dispatch(Self, Request) -> Response
+pub fn Router::new() -> Self
+
+// Type aliases
+
+// Traits
+
