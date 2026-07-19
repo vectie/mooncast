@@ -1,0 +1,154 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/handoff"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn exact_ref(RecordRef, RecordRef) -> Bool
+
+pub fn external_handoff_receipt_reference_valid(ExternalHandoffReceiptReference) -> Bool
+
+pub fn external_handoff_request_valid(ExternalHandoffRequest) -> Bool
+
+pub fn final_deliverable_evidence_valid(FinalDeliverableEvidence) -> Bool
+
+pub fn production_outcome_evidence_valid(ProductionOutcomeEvidence) -> Bool
+
+// Errors
+
+// Types and methods
+pub(all) struct BookkeeperDurableRecord {
+  contract_version : String
+  record : BookkeeperRecordReference
+  stage : String
+  subject : BookkeeperRecordReference?
+  links : Array[BookkeeperRecordReference]
+  title : String
+  summary : String
+  owner_route : String
+  status : String
+  evidence_refs : Array[BookkeeperEvidenceReference]
+  issue_refs : Array[String]
+  requires_human_review : Bool
+  next_action : String
+  source_product : String
+  recorded_at : Int
+  payload : Json
+  side_effects_applied : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct BookkeeperEvidenceReference {
+  reference_id : String
+  reference_version : String
+  digest : String
+  provenance_ref : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct BookkeeperIngressBundle {
+  contract : String
+  request_ref : RecordRef
+  record : BookkeeperDurableRecord
+  envelope : BookkeeperTransportEnvelope
+  post_order : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct BookkeeperRecordReference {
+  record_id : String
+  record_version : String
+  record_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct BookkeeperTransportEnvelope {
+  contract_version : String
+  envelope : BookkeeperRecordReference
+  direction : String
+  source_product : String
+  destination_product : String
+  message_kind : String
+  subject : BookkeeperRecordReference
+  links : Array[BookkeeperRecordReference]
+  evidence_refs : Array[BookkeeperEvidenceReference]
+  authority_ref : String
+  recorded_at : Int
+  payload : Json
+  external_activation_allowed : Bool
+  side_effects_applied : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ExternalHandoffReceiptReference {
+  contract : String
+  record : RecordRef
+  request_ref : RecordRef
+  issuer_product : String
+  issuer_contract : String
+  external_receipt_ref : RecordRef
+  recorded_at : String
+  authoritative_payload_stored : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ExternalHandoffRequest {
+  contract : String
+  record : RecordRef
+  transport_contract : String
+  destination_product : String
+  destination_contract : String
+  record_kind : String
+  subject_ref : RecordRef
+  evidence_refs : Array[RecordRef]
+  authority_request_ref : RecordRef?
+  review_receipt_ref : RecordRef?
+  payload_digest : String
+  requested_at : String
+  external_effect_authorized : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct FinalDeliverableEvidence {
+  contract : String
+  record : RecordRef
+  project_id : String
+  episode_id : String
+  export_job_id : String
+  editor_output_digest : String
+  render_plan_digest : String
+  lineage_evidence_digest : String
+  duration_seconds : Int
+  source_refs : Array[RecordRef]
+  publication_authority : Bool
+  external_effect_authorized : Bool
+  prepared_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct HumanReview {
+  reviewer_id : String
+  reviewer_kind : String
+  role : String
+  authority_ref : String
+  authorized : Bool
+  evidence_refs : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionOutcomeEvidence {
+  contract : String
+  record : RecordRef
+  final_deliverable_ref : RecordRef
+  status : String
+  observation_digest : String
+  evidence_refs : Array[RecordRef]
+  inference_used : Bool
+  observed_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RecordRef {
+  record_id : String
+  record_version : String
+  record_digest : String
+  provenance_ref : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/contracts/production-outcome-evidence.v1.schema.json",
+  "title": "Mooncast production outcome evidence",
+  "type": "object",
+  "properties": {
+    "contract": {"const": "mooncast.production-outcome-evidence.v1"},
+    "record": {"$ref": "final-deliverable-evidence.schema.json#/$defs/recordRef"},
+    "final_deliverable_ref": {"$ref": "final-deliverable-evidence.schema.json#/$defs/recordRef"},
+    "status": {"type": "string", "minLength": 1},
+    "observation_digest": {"type": "string", "minLength": 1},
+    "evidence_refs": {"type": "array", "minItems": 1, "items": {"$ref": "final-deliverable-evidence.schema.json#/$defs/recordRef"}},
+    "inference_used": {"type": "boolean"},
+    "observed_at": {"type": "string", "minLength": 1}
+  },
+  "required": ["contract", "record", "final_deliverable_ref", "status", "observation_digest", "evidence_refs", "inference_used", "observed_at"],
+  "additionalProperties": false
+}

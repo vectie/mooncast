@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/contracts/bookkeeper-ingress-bundle.v1.schema.json",
+  "title": "Mooncast materialized MoonBook Bookkeeper ingress bundle",
+  "type": "object",
+  "required": ["contract", "request_ref", "record", "envelope", "post_order"],
+  "properties": {
+    "contract": {"const": "mooncast.bookkeeper-ingress-bundle.v1"},
+    "request_ref": {"$ref": "final-deliverable-evidence.schema.json#/$defs/recordRef"},
+    "record": {"$ref": "#/$defs/durableRecord"},
+    "envelope": {"$ref": "#/$defs/transportEnvelope"},
+    "post_order": {
+      "const": ["/api/bookkeeper/records", "/api/bookkeeper/envelopes/ingress"]
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "bookkeeperRecordRef": {
+      "type": "object",
+      "required": ["record_id", "record_version", "record_digest"],
+      "properties": {
+        "record_id": {"type": "string", "minLength": 1},
+        "record_version": {"type": "string", "minLength": 1},
+        "record_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "evidenceRef": {
+      "type": "object",
+      "required": ["reference_id", "reference_version", "digest", "provenance_ref"],
+      "properties": {
+        "reference_id": {"type": "string", "minLength": 1},
+        "reference_version": {"type": "string", "minLength": 1},
+        "digest": {"type": "string", "minLength": 1},
+        "provenance_ref": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "durableRecord": {
+      "type": "object",
+      "required": ["contract_version", "record", "stage", "subject", "links", "title", "summary", "owner_route", "status", "evidence_refs", "issue_refs", "requires_human_review", "next_action", "source_product", "recorded_at", "payload", "side_effects_applied"],
+      "properties": {
+        "contract_version": {"const": "moonbook.bookkeeper.store.v1"},
+        "record": {"$ref": "#/$defs/bookkeeperRecordRef"},
+        "stage": {"enum": ["DeliverableAcceptance", "OutcomeBinding"]},
+        "subject": {"oneOf": [{"$ref": "#/$defs/bookkeeperRecordRef"}, {"type": "null"}]},
+        "links": {"type": "array", "items": {"$ref": "#/$defs/bookkeeperRecordRef"}},
+        "title": {"type": "string", "minLength": 1},
+        "summary": {"type": "string", "minLength": 1},
+        "owner_route": {"const": "moonbook.bookkeeper"},
+        "status": {"type": "string", "minLength": 1},
+        "evidence_refs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/evidenceRef"}},
+        "issue_refs": {"type": "array", "items": {"type": "string"}},
+        "requires_human_review": {"type": "boolean"},
+        "next_action": {"type": "string", "minLength": 1},
+        "source_product": {"const": "mooncast"},
+        "recorded_at": {"type": "integer", "minimum": 0},
+        "payload": {"type": "object"},
+        "side_effects_applied": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "transportEnvelope": {
+      "type": "object",
+      "required": ["contract_version", "envelope", "direction", "source_product", "destination_product", "message_kind", "subject", "links", "evidence_refs", "authority_ref", "recorded_at", "payload", "external_activation_allowed", "side_effects_applied"],
+      "properties": {
+        "contract_version": {"const": "moonbook.bookkeeper.transport.v1"},
+        "envelope": {"$ref": "#/$defs/bookkeeperRecordRef"},
+        "direction": {"const": "Ingress"},
+        "source_product": {"const": "mooncast"},
+        "destination_product": {"const": "moonbook"},
+        "message_kind": {"enum": ["deliverable.candidate", "outcome.observation"]},
+        "subject": {"$ref": "#/$defs/bookkeeperRecordRef"},
+        "links": {"type": "array", "items": {"$ref": "#/$defs/bookkeeperRecordRef"}},
+        "evidence_refs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/evidenceRef"}},
+        "authority_ref": {"type": "string", "minLength": 1},
+        "recorded_at": {"type": "integer", "minimum": 0},
+        "payload": {"type": "object"},
+        "external_activation_allowed": {"const": false},
+        "side_effects_applied": {"const": false}
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "contract": "mooncast.producer-http-tools.v1",
+  "adapter": "moon run cmd/mooncast_producer_tool --",
+  "moonclaw_execution_tool": "shell",
+  "custom_tool_registration": false,
+  "base_url_env": "MOONCAST_STUDIO_URL",
+  "default_base_url": "http://127.0.0.1:8765",
+  "tools": [
+    {"id":"health","method":"GET","path":"/health","authority":"Observe","body":"none"},
+    {"id":"project.list","method":"GET","path":"/api/v2/projects","authority":"Observe","body":"none"},
+    {"id":"project.get","method":"GET","path":"/api/v2/projects/{project_id}","authority":"Observe","body":"none"},
+    {"id":"project.events","method":"GET","path":"/api/v2/projects/{project_id}/events","authority":"Observe","body":"none"},
+    {"id":"project.governance","method":"GET","path":"/api/v2/projects/{project_id}/governance","authority":"Observe","body":"none"},
+    {"id":"project.advance","method":"POST","path":"/api/v2/projects/{project_id}/advance","authority":"WorkspaceMutation","body":"json","human_review_required":true},
+    {"id":"routed-execution.list","method":"GET","path":"/api/v2/projects/{project_id}/routed-executions","authority":"Observe","body":"none"},
+    {"id":"routed-execution.get","method":"GET","path":"/api/v2/projects/{project_id}/routed-executions/{execution_id}","authority":"Observe","body":"none"},
+    {"id":"routed-execution.create","method":"POST","path":"/api/v2/projects/{project_id}/routed-executions","authority":"WorkspaceMutation","body":"json","human_review_required":true},
+    {"id":"production-coordinator.run-pending","method":"POST","path":"/api/v2/projects/{project_id}/production-coordinator/routed-executions/{execution_id}/run-pending","authority":"ExternalEffect","body":"json","human_review_required":true},
+    {"id":"production-coordinator.confirm-qc","method":"POST","path":"/api/v2/projects/{project_id}/production-coordinator/qc-batches","authority":"WorkspaceMutation","body":"json","human_review_required":true},
+    {"id":"editor.production-import","method":"POST","path":"/api/editor/projects/{project_id}/production-import","authority":"WorkspaceMutation","body":"json-or-empty"},
+    {"id":"editor.get","method":"GET","path":"/api/editor/projects/{project_id}","authority":"Observe","body":"none"},
+    {"id":"editor.export.create","method":"POST","path":"/api/editor/projects/{project_id}/exports","authority":"SandboxExecution","body":"json"},
+    {"id":"editor.export.get","method":"GET","path":"/api/editor/projects/{project_id}/exports/{job_id}","authority":"Observe","body":"none"},
+    {"id":"editor.export.promote-master","method":"POST","path":"/api/editor/projects/{project_id}/exports/{job_id}/promote-master","authority":"WorkspaceMutation","body":"json","human_review_required":true},
+    {"id":"delivery-build.list","method":"GET","path":"/api/v2/projects/{project_id}/delivery-builds","authority":"Observe","body":"none"},
+    {"id":"delivery-build.get","method":"GET","path":"/api/v2/projects/{project_id}/delivery-builds/{build_id}","authority":"Observe","body":"none"},
+    {"id":"delivery-build.create","method":"POST","path":"/api/v2/projects/{project_id}/delivery-builds","authority":"WorkspaceMutation","body":"json"},
+    {"id":"delivery-build.build","method":"POST","path":"/api/v2/projects/{project_id}/delivery-builds/{build_id}/build","authority":"SandboxExecution","body":"json"},
+    {"id":"delivery-build.retry","method":"POST","path":"/api/v2/projects/{project_id}/delivery-builds/{build_id}/retry","authority":"SandboxExecution","body":"json"},
+    {"id":"delivery-build.accept","method":"POST","path":"/api/v2/projects/{project_id}/delivery-builds/{build_id}/acceptance","authority":"WorkspaceMutation","body":"json","human_review_required":true}
+  ],
+  "limits": {
+    "request_body_bytes": 1048576,
+    "response_bytes": 8388608,
+    "request_timeout_ms": 600000,
+    "network_scope": "loopback-http-only"
+  },
+  "excluded_effects": ["publication", "payment", "client-impersonation"]
+}
