@@ -16,6 +16,7 @@ pub struct StudioService {
   asset_factory : @asset_factory_app.AssetFactoryService
   animatic : @animatic_app.AnimaticService
   postprocess : @postprocess_app.PostprocessService
+  automated_qc : @automated_qc_app.AnalyzerService
   route_extensions : Array[RouteExtension]
 }
 
@@ -79,6 +80,12 @@ pub fn StudioService::new(
       root + "/application/postprocess",
       execution_application,
     ),
+    automated_qc: @automated_qc_app.AnalyzerService::new(
+      root + "/application/automated-qc",
+      execution_application,
+      "ffmpeg",
+      "ffprobe",
+    ),
     route_extensions: [],
   }
   service.register_standard_application_routes()
@@ -87,6 +94,7 @@ pub fn StudioService::new(
   service.register_asset_factory_routes()
   service.register_animatic_routes()
   service.register_postprocess_routes()
+  service.register_automated_qc_routes()
   service
 }
 

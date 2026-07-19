@@ -134,7 +134,10 @@
     {"id":"rendered-animatic-approval","version":"1.0.0","path":"schemas/rendered-animatic-approval.schema.json"},
     {"id":"postprocess-task","version":"1.0.0","path":"schemas/postprocess-task.schema.json"},
     {"id":"postprocess-output","version":"1.0.0","path":"schemas/postprocess-output.schema.json"},
-    {"id":"postprocess-import-binding","version":"1.0.0","path":"schemas/postprocess-import-binding.schema.json"}
+    {"id":"postprocess-import-binding","version":"1.0.0","path":"schemas/postprocess-import-binding.schema.json"},
+    {"id":"qc-analyzer-task","version":"1.0.0","path":"schemas/qc-analyzer-task.schema.json"},
+    {"id":"qc-analyzer-finding","version":"1.0.0","path":"schemas/qc-analyzer-finding.schema.json"},
+    {"id":"qc-analyzer-receipt","version":"1.0.0","path":"schemas/qc-analyzer-receipt.schema.json"}
   ],
   "tools": [
     {"id":"brief.validate","owner_product":"mooncast","input_schema_id":"creative-brief","output_schema_id":"creative-brief","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["records/briefs"],"review_required":false},
@@ -178,6 +181,8 @@
     {"id":"postprocess.task.record","owner_product":"mooncast","input_schema_id":"postprocess-task","output_schema_id":"postprocess-task","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["postprocess/tasks"],"review_required":true},
     {"id":"postprocess.execute","owner_product":"mooncast","input_schema_id":"postprocess-task","output_schema_id":"postprocess-output","authority":"ExternalEffect","idempotent":false,"evidence_outputs":["postprocess/outputs","provider-executions"],"review_required":true},
     {"id":"postprocess.import","owner_product":"mooncast","input_schema_id":"postprocess-output","output_schema_id":"postprocess-import-binding","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["postprocess/bindings","editor-media"],"review_required":true},
+    {"id":"qc-analyzer.task.record","owner_product":"mooncast","input_schema_id":"qc-analyzer-task","output_schema_id":"qc-analyzer-task","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["automated-qc/tasks"],"review_required":true},
+    {"id":"qc-analyzer.execute","owner_product":"mooncast","input_schema_id":"qc-analyzer-task","output_schema_id":"qc-analyzer-receipt","authority":"ExternalEffect","idempotent":false,"evidence_outputs":["automated-qc/receipts","automated-qc/findings","provider-executions","projects","project-events"],"review_required":true},
     {"id":"routed-execution.execute","owner_product":"mooncast","input_schema_id":"routed-execution-action","output_schema_id":"provider-execution-job","authority":"ExternalEffect","idempotent":false,"evidence_outputs":["provider-executions","projects","project-events"],"review_required":true},
     {"id":"routed-execution.control","owner_product":"mooncast","input_schema_id":"routed-execution-action","output_schema_id":"routed-execution","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["provider-executions/routed","provider-executions/jobs","project-events"],"review_required":true},
     {"id":"production-coordinator.run-pending","owner_product":"mooncast","input_schema_id":"production-coordinator-run-request","output_schema_id":"production-coordinator-run-result","authority":"ExternalEffect","idempotent":false,"evidence_outputs":["provider-executions","projects","project-events"],"review_required":true},
@@ -253,6 +258,7 @@
     {"id":"lip-sync","version":"1.0.0","path":"providers/lip-sync.port.md"},
     {"id":"translation","version":"1.0.0","path":"providers/translation.port.md"},
     {"id":"upscale","version":"1.0.0","path":"providers/upscale.port.md"},
+    {"id":"semantic-qc","version":"1.0.0","path":"providers/semantic-qc.port.md"},
     {"id":"timeline-compositor","version":"1.0.0","path":"providers/timeline-compositor.port.md"},
     {"id":"analytics","version":"1.0.0","path":"providers/analytics.port.md"},
     {"id":"economics","version":"1.0.0","path":"providers/economics.port.md"}

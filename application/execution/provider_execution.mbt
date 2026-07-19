@@ -182,7 +182,17 @@ async fn ProviderExecutionService::deterministic_fixture_result(
     let input : AssetProviderRequest = @json.from_json(record.http_plan.body) catch {
       _ => raise ProviderResponseInvalid("deterministic asset input is invalid")
     }
-    let payload = "MOONCAST VALIDATION ASSET\n" +
+    let payload = if input.capability.has_prefix("qc-") {
+      let result : Json = {
+        "contract": "mooncast.qc-semantic-result.v1",
+        "score": 0.96,
+        "threshold": 0.80,
+        "status": "pass",
+        "note": "deterministic validation-only semantic analyzer receipt",
+      }
+      result.stringify()
+    } else {
+      "MOONCAST VALIDATION ASSET\n" +
       input.kind +
       "\n" +
       input.asset_id +
@@ -192,11 +202,13 @@ async fn ProviderExecutionService::deterministic_fixture_result(
       input.prompt_digest +
       "\ncontinuity=" +
       input.continuity_key
+    }
     let mime = match input.capability {
       "text" | "translation" => "text/plain; charset=utf-8"
       "image" => "image/x-mooncast-validation"
       "voice" | "music" => "audio/x-mooncast-validation"
       "video" | "lip-sync" | "upscale" => "video/x-mooncast-validation"
+      capability if capability.has_prefix("qc-") => "application/json"
       _ => "application/octet-stream"
     }
     let bytes = @utf8.encode(payload)

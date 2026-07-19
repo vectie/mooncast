@@ -169,6 +169,9 @@ pub fn manifest() -> @pack.MoonPackManifest {
       schema("postprocess-task"),
       schema("postprocess-output"),
       schema("postprocess-import-binding"),
+      schema("qc-analyzer-task"),
+      schema("qc-analyzer-finding"),
+      schema("qc-analyzer-receipt"),
     ],
     tools: [
       tool(
@@ -496,6 +499,23 @@ pub fn manifest() -> @pack.MoonPackManifest {
         "postprocess-import-binding",
         WorkspaceMutation,
         ["postprocess/bindings", "editor-media"],
+        review_required=true,
+      ),
+      tool(
+        "qc-analyzer.task.record",
+        "qc-analyzer-task",
+        "qc-analyzer-task",
+        WorkspaceMutation,
+        ["automated-qc/tasks"],
+        review_required=true,
+      ),
+      tool(
+        "qc-analyzer.execute",
+        "qc-analyzer-task",
+        "qc-analyzer-receipt",
+        ExternalEffect,
+        ["automated-qc/receipts", "automated-qc/findings", "provider-executions", "projects", "project-events"],
+        idempotent=false,
         review_required=true,
       ),
       tool(
@@ -850,6 +870,7 @@ pub fn manifest() -> @pack.MoonPackManifest {
       contract("lip-sync", "providers/lip-sync.port.md"),
       contract("translation", "providers/translation.port.md"),
       contract("upscale", "providers/upscale.port.md"),
+      contract("semantic-qc", "providers/semantic-qc.port.md"),
       contract("timeline-compositor", "providers/timeline-compositor.port.md"),
       contract("analytics", "providers/analytics.port.md"),
       contract("economics", "providers/economics.port.md"),

@@ -289,6 +289,33 @@ struct PostprocessWorkspaceProjection {
 } derive(FromJson)
 
 ///|
+struct AnalyzerTaskProjection {
+  reference : AnimaticRenderRefProjection
+  analyzer : String
+  execution_mode : String
+} derive(FromJson)
+
+///|
+struct AnalyzerFindingProjection {
+  analyzer : String
+  governance_dimension : String
+  status : String
+  evidence_digest : String
+  human_decision_required : Bool
+} derive(FromJson)
+
+///|
+struct AnalyzerWorkspaceProjection {
+  tasks : Array[AnalyzerTaskProjection]
+  receipts : Array[Json]
+  findings : Array[AnalyzerFindingProjection]
+  total_cost_cny : Double
+  human_decisions : Int
+  provider_execution_authority : Bool
+  publication_authority : Bool
+} derive(FromJson)
+
+///|
 #warnings("-unused_field")
 struct AssetFactoryBindingProjection {
   binding_id : String
@@ -1009,6 +1036,8 @@ struct Model {
   animatic_plan_draft : String
   postprocess_workspace : PostprocessWorkspaceProjection?
   postprocess_task_draft : String
+  analyzer_workspace : AnalyzerWorkspaceProjection?
+  analyzer_task_draft : String
   selected_intake_id : String
   intake_packet_draft : String
   intake_seed_project_id : String
@@ -1063,6 +1092,10 @@ enum Msg {
   SetPostprocessTaskDraft(String)
   RecordPostprocessTask
   RunPostprocessTask
+  LoadedAnalyzerWorkspace(Result[AnalyzerWorkspaceProjection, Error])
+  SetAnalyzerTaskDraft(String)
+  RecordAnalyzerTask
+  RunAnalyzerTask
   SelectIntake(String)
   SetIntakePacketDraft(String)
   SetIntakeSeedProjectId(String)
@@ -1307,6 +1340,43 @@ fn starter_postprocess_task(
 }
 
 ///|
+fn starter_analyzer_task(project : ProjectProjection) -> String {
+  let shot = project.shots.iter().find_first(value => value.asset_id is Some(_))
+  let shot_id = shot.map(value => value.id).unwrap_or("shot-required")
+  let source = match shot {
+    Some(value) => value.asset_id.unwrap_or("sha256:provider-output-required")
+    None => "sha256:provider-output-required"
+  }
+  let duration_ms = shot.map(value => (value.duration_seconds * 1000.0).to_int()).unwrap_or(1000)
+  let value : Json = {
+    "contract": "mooncast.qc-analyzer-task.v1",
+    "reference": { "id": project.id + "-codec-analysis", "version": 1, "digest": "" },
+    "project_id": project.id,
+    "project_revision": project.revision,
+    "shot_id": shot_id,
+    "attempt_digest": source,
+    "source_artifact_digest": source,
+    "analyzer": "codec",
+    "execution_mode": "local-technical",
+    "expected_duration_ms": duration_ms,
+    "duration_tolerance_ms": 100,
+    "subtitle_cue_count": 0,
+    "subtitle_last_end_ms": 0,
+    "subtitle_safe_area_ratio": 0.9,
+    "identity_refs": [],
+    "continuity_refs": [],
+    "rights_refs": ["rights://contract-cleared/qc"],
+    "permitted_data_class": "rights-cleared-confidential",
+    "cost_ceiling_cny": 0,
+    "retry_limit": 1,
+    "created_at": "2026-07-19T00:00:00+08:00",
+    "provider_execution_authority": false,
+    "publication_authority": false,
+  }
+  value.stringify(indent=2)
+}
+
+///|
 fn initial_model() -> Model {
   {
     tab: Overview,
@@ -1329,6 +1399,8 @@ fn initial_model() -> Model {
     animatic_plan_draft: "",
     postprocess_workspace: None,
     postprocess_task_draft: "",
+    analyzer_workspace: None,
+    analyzer_task_draft: "",
     selected_intake_id: "",
     intake_packet_draft: starter_moonwiki_packet(),
     intake_seed_project_id: "brand-episode-001",

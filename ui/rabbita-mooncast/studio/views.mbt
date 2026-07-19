@@ -1404,6 +1404,57 @@ fn render_qc_workbench(
         form.finding_digest,
       ),
     ]),
+    div(class="qc-divider", ([] : Array[@rabbita.Html])),
+    div(class="panel-heading", [
+      div([small("Machine evidence, human decision"), h2("Automated analyzer jobs")]),
+      p(
+        "Run codec, duration, blank-frame, audio, subtitle, flicker, lip-sync, identity and continuity analyzers against the exact output. Receipts create evidence-bound findings but never approve them.",
+      ),
+    ]),
+    div(class="metrics", [
+      metric(
+        "Analyzer tasks",
+        "\{model.analyzer_workspace.map(value => value.tasks.length()).unwrap_or(0)}",
+        "Local technical or external semantic",
+      ),
+      metric(
+        "Receipts",
+        "\{model.analyzer_workspace.map(value => value.receipts.length()).unwrap_or(0)}",
+        "Immutable measurements",
+      ),
+      metric(
+        "Findings",
+        "\{model.analyzer_workspace.map(value => value.findings.length()).unwrap_or(0)}",
+        "Still require human decisions",
+      ),
+      metric(
+        "Human decisions",
+        "\{model.analyzer_workspace.map(value => value.human_decisions).unwrap_or(0)}",
+        "Never performed by analyzers",
+      ),
+    ]),
+    text_field(
+      "Analyzer task JSON",
+      model.analyzer_task_draft,
+      "Choose one exact technical or semantic analyzer",
+      16,
+      fn(value) { dispatch(SetAnalyzerTaskDraft(value)) },
+    ),
+    div(class="form-actions", [
+      button(
+        class="secondary",
+        disabled=model.busy || !model.operator.human_confirmed,
+        on_click=dispatch(RecordAnalyzerTask),
+        "Record analyzer task",
+      ),
+      button(
+        class="primary",
+        disabled=model.busy || !model.operator.human_confirmed ||
+          model.analyzer_workspace.map(value => value.tasks.is_empty()).unwrap_or(true),
+        on_click=dispatch(RunAnalyzerTask),
+        "Run / resume analyzer",
+      ),
+    ]),
     div(class="form-grid", [
       form_field("Shot id", form.shot_id, "select a shot above", fn(value) {
         dispatch(SetQcField("shot_id", value))

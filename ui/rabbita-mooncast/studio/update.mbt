@@ -141,8 +141,11 @@ fn update(
       let postprocess = @http.get(
         "/api/v2/projects/" + project.id + "/postprocess-jobs",
       ).expect_json(emit.map(fn(result) { LoadedPostprocessWorkspace(result) }))
+      let analyzers = @http.get(
+        "/api/v2/projects/" + project.id + "/automated-qc",
+      ).expect_json(emit.map(fn(result) { LoadedAnalyzerWorkspace(result) }))
       (
-        @rabbita.batch([routed, deliveries, portals, billing, assets, animatic, postprocess]),
+        @rabbita.batch([routed, deliveries, portals, billing, assets, animatic, postprocess, analyzers]),
         {
           ..model,
           project: Some(project),
@@ -587,6 +590,48 @@ fn update(
           (cmd, { ..model, busy: true, error: None })
         }
         _ => (@rabbita.none, { ..model, error: Some("Record a postprocess task first.") })
+      }
+    LoadedAnalyzerWorkspace(Ok(value)) => {
+      let draft = match model.project {
+        Some(project) if model.analyzer_task_draft == "" => starter_analyzer_task(project)
+        _ => model.analyzer_task_draft
+      }
+      (@rabbita.none, { ..model, analyzer_workspace: Some(value), analyzer_task_draft: draft })
+    }
+    LoadedAnalyzerWorkspace(Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Automated QC: \{error}") })
+    SetAnalyzerTaskDraft(value) =>
+      (@rabbita.none, { ..model, analyzer_task_draft: value })
+    RecordAnalyzerTask =>
+      match model.project {
+        None => (@rabbita.none, model)
+        Some(project) => {
+          let task = @json.parse(model.analyzer_task_draft) catch {
+            _ => return (@rabbita.none, { ..model, error: Some("Analyzer task must be valid JSON.") })
+          }
+          let cmd = @http.post("/api/v2/projects/" + project.id + "/automated-qc/tasks")
+            .with_json({ "task": task })
+            .expect_json(emit.map(fn(result) { ActionCompleted("Exact QC analyzer task", result) }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+      }
+    RunAnalyzerTask =>
+      match (model.project, model.analyzer_workspace) {
+        (Some(project), Some(workspace)) if !workspace.tasks.is_empty() => {
+          let task = workspace.tasks[workspace.tasks.length() - 1]
+          let body : Json = {
+              "expected_task_version": task.reference.version,
+              "expected_task_digest": task.reference.digest,
+              "actor": model.operator.actor,
+              "human_confirmed": model.operator.human_confirmed,
+              "network_authority": task.execution_mode == "external-semantic" && model.operator.human_confirmed,
+            }
+          let cmd = @http.post("/api/v2/projects/" + project.id + "/automated-qc/run")
+            .with_json(body)
+            .expect_json(emit.map(fn(result) { ActionCompleted("Automated QC evidence", result) }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+        _ => (@rabbita.none, { ..model, error: Some("Record an analyzer task first.") })
       }
     SelectIntake(value) =>
       (@rabbita.none, { ..model, selected_intake_id: value })
