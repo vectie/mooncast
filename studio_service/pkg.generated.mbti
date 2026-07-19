@@ -167,12 +167,14 @@ pub(all) struct EditorJobView {
   render_receipt : @render_exec.RenderReceipt?
   export_receipt : @integration.ExportReceipt?
   export_spec : @integration.ExportSpec?
+  export_request : @integration.ProductionExportRequest?
   media_url : String?
   publication_authority : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct EditorMasterPromotionEnvelope {
   request : @integration.MasterPromotionRequest
+  production_source : @integration.ProductionSourceBinding
   master_id : String
   subtitle_ref : String
   promoted_at : String
@@ -193,6 +195,8 @@ pub(all) struct EditorOpenView {
   media_bindings : Array[@domain.LocalMediaBinding]
   takes : Array[EditorTakeRecord]
   review_comments : Array[@integration.ReviewComment]
+  production_source : @integration.ProductionSourceBinding?
+  master_promotion : @integration.MasterPromotionReceipt?
   publication_authority : Bool
   provider_authority : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -328,12 +332,6 @@ type LegacyCreativeRevisionInput derive(@json.FromJson)
 
 type LegacyEditorCommandEnvelope derive(@json.FromJson)
 
-type LegacyExportProvenance derive(@json.FromJson)
-
-type LegacyExportRequest derive(@json.FromJson)
-
-type LegacyExportSpec derive(@json.FromJson)
-
 type LegacyNestedClipPayload derive(@json.FromJson)
 
 type LegacyNestedClipSettings derive(@json.FromJson)
@@ -366,6 +364,10 @@ pub(all) struct MediaRecord {
   source_digest : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+type OutcomeHandoffPrepareInput derive(@json.FromJson)
+
+type OutcomeHandoffPrepareProjection derive(ToJson)
+
 type PerformanceEconomicsInput derive(ToJson, @json.FromJson)
 
 type PerformanceMetricsInput derive(ToJson, @json.FromJson)
@@ -373,6 +375,20 @@ type PerformanceMetricsInput derive(ToJson, @json.FromJson)
 type PerformanceReviewInput derive(@json.FromJson)
 
 type PortalsProjection derive(ToJson)
+
+type ProductionBatchQcInput derive(@json.FromJson)
+
+type ProductionBatchQcProjection derive(ToJson)
+
+type ProductionQcReceipt derive(ToJson)
+
+type ProductionRunPendingInput derive(@json.FromJson)
+
+type ProductionRunPendingProjection derive(ToJson)
+
+type ProductionShotOutputBinding derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type ProductionShotRunReceipt derive(ToJson)
 
 pub(all) struct ProjectCommandReceipt {
   command_id : String
@@ -591,9 +607,9 @@ pub async fn StudioService::record_creative_decision(Self, String, CreativeDecis
 pub async fn StudioService::record_editor_review_comment(Self, String, EditorReviewCommentRequest) -> @integration.ReviewComment
 pub async fn StudioService::record_project_qualification(Self, String, ProjectExperienceMetadata, String) -> ProjectCommandResponse
 pub async fn StudioService::register_media(Self, MediaRecord, Bytes) -> MediaRecord
+pub fn StudioService::register_production_coordinator_routes(Self) -> Unit
 pub fn StudioService::register_route_extension(Self, RouteExtension) -> Unit
 pub fn StudioService::register_standard_application_routes(Self) -> Unit
-pub fn StudioService::register_workflow_agent_routes(Self) -> Unit
 pub async fn StudioService::reschedule_capacity_reservation(Self, String, ReservationRescheduleInput) -> ReservationProjection
 pub async fn StudioService::resolve_editor_job_media(Self, String, String) -> Bytes
 pub async fn StudioService::resolve_editor_media(Self, String, Bool) -> (@media.MediaObjectRecord, Bytes)
@@ -602,20 +618,6 @@ pub async fn StudioService::retry_editor_job(Self, String, String) -> EditorJobV
 pub async fn StudioService::save_project_experience(Self, String, ProjectExperienceMetadata) -> Unit
 pub async fn StudioService::seed_initial_creative_drafts(Self, String, ProjectExperienceMetadata, String) -> ProjectRecord
 pub async fn StudioService::studio_project_projection(Self, ProjectRecord) -> Json
-
-type WorkflowBatchQcInput derive(@json.FromJson)
-
-type WorkflowBatchQcProjection derive(ToJson)
-
-type WorkflowQcReceipt derive(ToJson)
-
-type WorkflowRunPendingInput derive(@json.FromJson)
-
-type WorkflowRunPendingProjection derive(ToJson)
-
-type WorkflowShotOutputBinding derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type WorkflowShotRunReceipt derive(ToJson)
 
 // Type aliases
 

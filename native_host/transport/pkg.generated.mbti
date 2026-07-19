@@ -8,6 +8,8 @@ import {
 // Values
 pub async fn send_json(JsonRequest) -> JsonResponse
 
+pub async fn send_loopback_json(JsonRequest) -> JsonResponse
+
 // Errors
 pub suberror TransportError {
   HttpsRequired

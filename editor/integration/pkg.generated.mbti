@@ -330,6 +330,21 @@ pub(all) struct ProductionRegisterMasterRequest {
   publication_authority : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct ProductionSourceBinding {
+  contract : String
+  project_id : String
+  episode_id : String
+  production_revision : Int
+  production_digest : String
+  g4_evidence_digest : String
+  g4_receipt_digest : String
+  g4_snapshot_revision : Int
+  provenance_ref : String
+  binding_digest : String
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct ProductionVersionRef {
   id : String
   version : Int
