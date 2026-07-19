@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/contracts/external-handoff-request.v1.schema.json",
+  "title": "Mooncast external handoff request",
+  "type": "object",
+  "properties": {
+    "contract": {"const": "mooncast.external-handoff-request.v1"},
+    "record": {"$ref": "final-deliverable-evidence.schema.json#/$defs/recordRef"},
+    "transport_contract": {"const": "moonflow.pack-handoff.v1"},
+    "destination_product": {"const": "moonbook"},
+    "destination_contract": {"const": "moonbook.bookkeeper.v1"},
+    "record_kind": {"enum": ["PackDeliverableCandidateV1", "PackOutcomeObservationV1"]},
+    "subject_ref": {"$ref": "final-deliverable-evidence.schema.json#/$defs/recordRef"},
+    "evidence_refs": {"type": "array", "minItems": 1, "items": {"$ref": "final-deliverable-evidence.schema.json#/$defs/recordRef"}},
+    "authority_request_ref": {"oneOf": [{"$ref": "final-deliverable-evidence.schema.json#/$defs/recordRef"}, {"type": "null"}]},
+    "review_receipt_ref": {"oneOf": [{"$ref": "final-deliverable-evidence.schema.json#/$defs/recordRef"}, {"type": "null"}]},
+    "payload_digest": {"type": "string", "minLength": 1},
+    "requested_at": {"type": "string", "minLength": 1},
+    "external_effect_authorized": {"const": false}
+  },
+  "required": ["contract", "record", "transport_contract", "destination_product", "destination_contract", "record_kind", "subject_ref", "evidence_refs", "payload_digest", "requested_at", "external_effect_authorized"],
+  "additionalProperties": false
+}

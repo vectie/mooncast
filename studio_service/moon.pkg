@@ -1,0 +1,38 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/semaphore",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x/crypto",
+  "vectie/mooncast/editor/domain" @editor_domain,
+  "vectie/mooncast/editor/store" @editor_store,
+  "vectie/mooncast/editor/media" @editor_media,
+  "vectie/mooncast/editor/render_plan" @editor_plan,
+  "vectie/mooncast/editor/jobs" @editor_jobs,
+  "vectie/mooncast/editor/integration" @editor_integration,
+  "vectie/mooncast/editor/http" @editor_http,
+  "vectie/mooncast/editor/render_exec" @editor_render,
+  "vectie/mooncast/application/execution" @execution_app,
+  "vectie/mooncast/application/production" @production_app,
+  "vectie/mooncast/application/pipeline" @pipeline_app,
+  "vectie/mooncast/application/commerce" @commerce_app,
+  "vectie/mooncast/application/handoff" @handoff_app,
+  "vectie/mooncast/application/http_contracts" @app_http,
+  "vectie/mooncast/commerce",
+  "vectie/mooncast/handoff",
+  "vectie/mooncast/execution",
+  "vectie/mooncast/kernel",
+  "vectie/mooncast/native_host/store" @host_store,
+  "vectie/mooncast/native_host/http" @host_http,
+  "vectie/mooncast/native_host/process",
+  "vectie/mooncast/native_host/runtime",
+  "vectie/mooncast/production/creative",
+  "vectie/mooncast/production/governance",
+  "vectie/mooncast/production/project",
+}
+
+supported_targets = "native"
+
+warnings = "-29"

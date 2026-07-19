@@ -1,0 +1,24 @@
+import {
+  "moonbit-community/rabbita/cmd",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/common",
+  "moonbit-community/rabbita/dom",
+  "moonbit-community/rabbita/html",
+  "moonbit-community/rabbita/html/canvas",
+  "moonbit-community/rabbita/http",
+  "moonbit-community/rabbita/js",
+  "moonbit-community/rabbita/nav",
+  "moonbit-community/rabbita/sub",
+  "moonbit-community/rabbita/url",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x/crypto",
+  "moonbitlang/core/encoding/utf8",
+  "vectie/mooncast-rabbita/shared" @api,
+}
+
+supported_targets = "js"
+
+options(
+  "is-main": true,
+)

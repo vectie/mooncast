@@ -1,0 +1,220 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/application/http_contracts"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/application/handoff",
+  "vectie/mooncast/application/pipeline",
+  "vectie/mooncast/application/production",
+  "vectie/mooncast/native_host/http",
+  "vectie/mooncast/production/creative",
+}
+
+// Values
+pub fn all_application_routes() -> Array[ApplicationRouteDescriptor]
+
+pub async fn billing_list_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, String) -> @http.Response
+
+pub async fn billing_state_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, String, @http.Request) -> @http.Response
+
+pub async fn client_annotation_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, String, String, Double, @http.Request) -> @http.Response
+
+pub async fn client_decision_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, String, String, @http.Request) -> @http.Response
+
+pub async fn client_download_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, @vectie/mooncast/application/execution.DeliveryFactoryService, String, String) -> @http.Response
+
+pub async fn client_master_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, @production.LongformProductionService, String, String) -> @http.Response
+
+pub async fn client_observation_list_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, String) -> @http.Response
+
+pub async fn client_portal_control_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, String, String, @http.Request) -> @http.Response
+
+pub async fn client_portal_create_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, @http.Request) -> @http.Response
+
+pub async fn client_portal_list_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, String) -> @http.Response
+
+pub async fn client_projection_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, String, String, String, String, @vectie/mooncast/execution.DeliveryBuild) -> @http.Response
+
+pub async fn commercial_capacity_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, quote_id? : String) -> @http.Response
+
+pub async fn commercial_command_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, @http.Request) -> @http.Response
+
+pub async fn commercial_dashboard_handler(@vectie/mooncast/application/commerce.CommercialApplicationService) -> @http.Response
+
+pub async fn commercial_lead_get_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, String) -> @http.Response
+
+pub async fn commercial_quote_get_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, String) -> @http.Response
+
+pub async fn commercial_reschedule_handler(@vectie/mooncast/application/commerce.CommercialApplicationService, @http.Request) -> @http.Response
+
+pub fn commercial_routes() -> Array[ApplicationRouteDescriptor]
+
+pub async fn creative_artifact_get_handler(@production.ProjectRepository, String, @creative.ArtifactKind) -> @http.Response
+
+pub async fn delivery_acceptance_handler(@vectie/mooncast/application/execution.DeliveryFactoryService, String, @http.Request) -> @http.Response
+
+pub async fn delivery_action_handler(@vectie/mooncast/application/execution.DeliveryFactoryService, String, String, @http.Request) -> @http.Response
+
+pub async fn delivery_create_handler(@vectie/mooncast/application/execution.DeliveryFactoryService, @http.Request) -> @http.Response
+
+pub async fn delivery_download_handler(@vectie/mooncast/application/execution.DeliveryFactoryService, String) -> @http.Response
+
+pub async fn delivery_get_handler(@vectie/mooncast/application/execution.DeliveryFactoryService, String, String) -> @http.Response
+
+pub async fn delivery_list_handler(@vectie/mooncast/application/execution.DeliveryFactoryService, String) -> @http.Response
+
+pub fn execution_routes() -> Array[ApplicationRouteDescriptor]
+
+pub async fn final_deliverable_evidence_handler(@handoff.OutboundHandoffService, @http.Request) -> @http.Response
+
+pub fn handoff_routes() -> Array[ApplicationRouteDescriptor]
+
+pub fn health_handler(@production.LegacyPreviewService) -> @http.Response
+
+pub fn legacy_routes() -> Array[ApplicationRouteDescriptor]
+
+pub async fn master_assemble_handler(@production.ProjectRepository, @production.LongformProductionService, String, @http.Request) -> @http.Response
+
+pub async fn master_provenance_handler(@production.LongformProductionService, String) -> @http.Response
+
+pub async fn outbound_handoff_receipt_reference_handler(@handoff.OutboundHandoffService, @http.Request) -> @http.Response
+
+pub async fn outbound_handoff_record_handler(@handoff.OutboundHandoffService, String, String) -> @http.Response
+
+pub async fn outbound_handoff_request_handler(@handoff.OutboundHandoffService, @http.Request) -> @http.Response
+
+pub async fn pipeline_routed_action_handler(@pipeline.ProductionPipelineService, String, String, String, String, @http.Request) -> @http.Response
+
+pub async fn prepare_delivery_handler(@production.ProjectRepository, @production.LongformProductionService, String) -> @http.Response
+
+pub async fn preview_asset_get_handler(@production.LegacyPreviewService, String) -> @http.Response
+
+pub async fn preview_asset_list_handler(@production.LegacyPreviewService) -> @http.Response
+
+pub fn preview_config_handler(@production.LegacyPreviewService) -> @http.Response
+
+pub async fn preview_generate_handler(@production.LegacyPreviewService, @http.Request) -> @http.Response
+
+pub async fn preview_media_handler(@production.LegacyPreviewService, String) -> @http.Response
+
+pub async fn preview_review_handler(@production.LegacyPreviewService, String, @http.Request) -> @http.Response
+
+pub async fn production_analytics_handler(@production.ProjectRepository, String, @http.Request) -> @http.Response
+
+pub async fn production_command_handler(@production.ProjectRepository, @http.Request) -> @http.Response
+
+pub async fn production_outcome_evidence_handler(@handoff.OutboundHandoffService, @http.Request) -> @http.Response
+
+pub async fn production_project_create_handler(@production.ProjectRepository, @http.Request) -> @http.Response
+
+pub async fn production_project_events_handler(@production.ProjectRepository, String) -> @http.Response
+
+pub async fn production_project_get_handler(@production.ProjectRepository, String) -> @http.Response
+
+pub async fn production_project_list_handler(@production.ProjectRepository) -> @http.Response
+
+pub fn production_routes() -> Array[ApplicationRouteDescriptor]
+
+pub async fn provider_action_handler(@vectie/mooncast/application/execution.ProviderExecutionService, String, String, @http.Request) -> @http.Response
+
+pub async fn provider_authorize_handler(@vectie/mooncast/application/execution.ProviderExecutionService, @http.Request) -> @http.Response
+
+pub fn provider_config_handler(@vectie/mooncast/application/execution.ProviderExecutionService) -> @http.Response
+
+pub async fn provider_get_handler(@vectie/mooncast/application/execution.ProviderExecutionService, String) -> @http.Response
+
+pub async fn provider_list_handler(@vectie/mooncast/application/execution.ProviderExecutionService) -> @http.Response
+
+pub async fn routed_action_handler(@vectie/mooncast/application/execution.ProviderExecutionService, String, String, String, @http.Request) -> @http.Response
+
+pub async fn routed_create_handler(@production.ProjectRepository, @vectie/mooncast/application/execution.ProviderExecutionService, String, @http.Request) -> @http.Response
+
+pub async fn routed_get_handler(@vectie/mooncast/application/execution.ProviderExecutionService, String, String) -> @http.Response
+
+pub async fn routed_list_handler(@vectie/mooncast/application/execution.ProviderExecutionService, String) -> @http.Response
+
+// Errors
+
+// Types and methods
+pub(all) struct AnalyticsHttpRequest {
+  expected_project_revision : Int
+  source : String
+  views : Int
+  completion_rate : Double
+  recorded_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ApplicationRouteDescriptor {
+  request_method : String
+  path_template : String
+  operation : String
+  request_contract : String?
+  response_contract : String
+  performs_network : Bool
+  performs_process : Bool
+  performs_payment : Bool
+  performs_publication : Bool
+  performs_deployment : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct BillingStateHttpRequest {
+  expected_revision : Int
+  state : String
+  actor : String
+  actor_role : String
+  reference : String
+  recorded_at : String
+  record_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryBuildHttpAction {
+  expected_revision : Int
+  expected_record_digest : String
+  economics_receipt_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PortalControlHttpRequest {
+  expected_revision : Int
+  actor : String
+  observed_at : String
+  record_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreviewReviewHttpRequest {
+  decision : String
+  actor : String
+  note : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderAuthorizationHttpRequest {
+  plan : @vectie/mooncast/application/execution.ProviderHttpPlan
+  authority : @vectie/mooncast/application/execution.ProviderAuthorityReceipt
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderCancelHttpRequest {
+  actor_id : String
+  note : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ReservationRescheduleHttpRequest {
+  expected : @vectie/mooncast/commerce.CapacityReservation
+  updated : @vectie/mooncast/commerce.CapacityReservation
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RoutedActionHttpRequest {
+  expected_revision : Int
+  actor_id : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RoutedCreateHttpRequest {
+  expected_project_revision : Int
+  actor_id : String
+  binding_digest : String
+  network_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

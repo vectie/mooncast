@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moonsuite.local/mooncast/schemas/editor-media-analysis.schema.json",
+  "title": "Mooncast editor public media analysis",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "state", "source_digest", "analysis_digest", "thumbnail", "waveform"],
+  "properties": {
+    "contract": {"const": "mooncast.editor-media-analysis.v1"},
+    "analysis_version": {"type": "string", "minLength": 1},
+    "analysis_id": {"type": "string", "minLength": 1},
+    "source_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "source_size": {"type": "integer", "minimum": 0},
+    "source_mime": {"type": "string", "minLength": 1},
+    "state": {"enum": ["available", "missing", "unavailable", "unsupported"]},
+    "duration_seconds": {"type": ["number", "null"], "minimum": 0},
+    "video": {"$ref": "#/$defs/video"},
+    "audio": {"$ref": "#/$defs/audio"},
+    "thumbnail": {"$ref": "#/$defs/thumbnail"},
+    "waveform": {"$ref": "#/$defs/waveform"},
+    "analysis_digest": {"type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$"},
+    "source_url": {"type": ["string", "null"], "pattern": "^/api/editor/"},
+    "thumbnail_url": {"type": ["string", "null"], "pattern": "^/api/editor/"},
+    "publication_authority": {"const": false},
+    "provider_authority": {"const": false}
+  },
+  "$defs": {
+    "availability": {"enum": ["available", "unavailable"]},
+    "video": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "width", "height", "codec"],
+      "properties": {
+        "state": {"$ref": "#/$defs/availability"},
+        "width": {"type": ["integer", "null"], "minimum": 1},
+        "height": {"type": ["integer", "null"], "minimum": 1},
+        "codec": {"type": ["string", "null"]}
+      }
+    },
+    "audio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "channels", "sample_rate", "codec"],
+      "properties": {
+        "state": {"$ref": "#/$defs/availability"},
+        "channels": {"type": ["integer", "null"], "minimum": 1},
+        "sample_rate": {"type": ["integer", "null"], "minimum": 1},
+        "codec": {"type": ["string", "null"]}
+      }
+    },
+    "thumbnail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": {"$ref": "#/$defs/availability"},
+        "digest": {"type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$"},
+        "mime": {"type": ["string", "null"]},
+        "width": {"type": ["integer", "null"], "minimum": 1},
+        "height": {"type": ["integer", "null"], "minimum": 1}
+      }
+    },
+    "waveform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "peaks"],
+      "properties": {
+        "state": {"$ref": "#/$defs/availability"},
+        "peak_count": {"type": "integer", "minimum": 0, "maximum": 192},
+        "peaks": {"type": "array", "maxItems": 192, "items": {"type": "integer", "minimum": 0, "maximum": 1000}},
+        "digest": {"type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$"}
+      }
+    }
+  }
+}

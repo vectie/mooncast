@@ -1,0 +1,14 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/cmd/mooncast_producer_tool"
+
+// Values
+
+// Errors
+
+// Types and methods
+type ProducerCall
+
+// Type aliases
+
+// Traits
+

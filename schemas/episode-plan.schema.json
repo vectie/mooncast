@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://episode-plan/v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "scenes"],
+  "properties": {
+    "id": {"type": "string"}, "title": {"type": "string"},
+    "scenes": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "title", "shot_ids"],
+      "properties": {
+        "id": {"type": "string"}, "title": {"type": "string"}, "summary": {"type": "string"},
+        "characters": {"type": "array", "items": {"type": "string"}},
+        "props": {"type": "array", "items": {"type": "string"}},
+        "locations": {"type": "array", "items": {"type": "string"}},
+        "audio_cues": {"type": "array", "items": {"type": "string"}},
+        "shot_ids": {"type": "array", "items": {"type": "string"}}
+      }
+    }}
+  }
+}

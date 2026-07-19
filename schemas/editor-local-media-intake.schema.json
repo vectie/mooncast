@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/editor-local-media-intake.schema.json",
+  "title": "Mooncast rights-attested local media intake",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["expected_editor_revision", "idempotency_key", "role", "file_name", "mime_type", "size_bytes", "sha256", "duration_ticks", "identity", "rights", "source", "created_by"],
+  "properties": {
+    "expected_editor_revision": {"type": "integer", "minimum": 0},
+    "idempotency_key": {"type": "string", "minLength": 1, "maxLength": 160},
+    "role": {"enum": ["voice", "music", "SFX", "subtitle", "image", "logo"]},
+    "file_name": {"type": "string", "minLength": 1, "maxLength": 255},
+    "mime_type": {"type": "string", "minLength": 1},
+    "size_bytes": {"type": "integer", "minimum": 1, "maximum": 67108864},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "duration_ticks": {"type": "integer", "minimum": 1},
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["project_id", "episode_id", "scene_id", "shot_id", "asset_id"],
+      "properties": {
+        "project_id": {"type": "string"}, "episode_id": {"type": "string"},
+        "scene_id": {"type": "string"}, "shot_id": {"type": "string"}, "asset_id": {"type": "string"}
+      }
+    },
+    "rights": {
+      "type": "object", "additionalProperties": false,
+      "required": ["confirmed", "rights_ref", "owner", "basis", "territory", "channels"],
+      "properties": {
+        "confirmed": {"const": true}, "rights_ref": {"type": "string", "minLength": 1},
+        "owner": {"type": "string", "minLength": 1}, "basis": {"type": "string", "minLength": 1},
+        "territory": {"type": "string", "minLength": 1},
+        "channels": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "source": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "source_id"],
+      "properties": {"kind": {"enum": ["customer-owned", "licensed", "original"]}, "source_id": {"type": "string", "minLength": 1}}
+    },
+    "created_by": {"type": "string", "minLength": 1, "maxLength": 128}
+  }
+}

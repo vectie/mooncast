@@ -1,0 +1,12 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/io",
+  "moonbitlang/async/stdio",
+  "vectie/mooncast/kernel",
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+)

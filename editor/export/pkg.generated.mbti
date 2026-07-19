@@ -1,0 +1,109 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/export"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/domain",
+  "vectie/mooncast/editor/download",
+  "vectie/mooncast/editor/jobs",
+  "vectie/mooncast/editor/observation",
+  "vectie/mooncast/editor/render_exec",
+  "vectie/mooncast/editor/render_plan",
+  "vectie/mooncast/editor/store",
+}
+
+// Values
+pub async fn completed_export(@store.EditorRepository, String, String, String, @render_plan.RenderPlan) -> ExportEnvelope
+
+pub fn create_or_resume(@jobs.EditorJob?, String, String, @render_plan.RenderPlan, FrozenExportSpec, Int, String) -> @jobs.EditorJob raise
+
+pub fn envelope(@jobs.EditorJob, String, @render_plan.RenderPlan) -> ExportEnvelope raise
+
+pub async fn export_media(@store.EditorRepository, String, String, Int) -> @download.DownloadDescriptor
+
+pub fn freeze_spec(@render_plan.RenderPlan, Double, String, String, String, String, String, Bool, Bool) -> FrozenExportSpec raise
+
+pub async fn observe_export(@store.EditorRepository, String, String) -> @observation.JobObservation?
+
+pub async fn prepare_export(@store.EditorRepository, String, String, @render_plan.RenderPlan, Double, String, String, String, String, String, Bool, Int, String, String, Array[@render_exec.ResolvedMedia], String) -> ExportWorkOrder
+
+// Errors
+
+// Types and methods
+pub(all) struct ExportEnvelope {
+  contract : String
+  request : ExportRequestProjection
+  job : ExportJobProjection
+  result : ExportResultProjection
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ExportJobProjection {
+  job_id : String
+  request_id : String
+  state : String
+  project_id : String
+  timeline_id : String
+  project_revision : Int
+  timeline_revision : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ExportRequestProjection {
+  request_id : String
+  project_id : String
+  timeline_id : String
+  project_revision : Int
+  timeline_revision : Int
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ExportResultProjection {
+  job_id : String
+  state : String
+  output_refs : Array[String]
+  publication_authority : Bool
+  project_id : String
+  timeline_id : String
+  project_revision : Int
+  timeline_revision : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ExportWorkOrder {
+  contract : String
+  request_id : String
+  plan : @render_plan.RenderPlan
+  spec : FrozenExportSpec
+  job : @jobs.EditorJob
+  invocation : @render_exec.RenderInvocation
+  expectation : @render_exec.OutputExpectation
+  subtitle_sidecar : @render_exec.SubtitleSidecar
+  publication_authority : Bool
+} derive(@debug.Debug)
+
+pub(all) struct FrozenExportSpec {
+  contract : String
+  width : Int
+  height : Int
+  fps : @domain.FrameRate
+  container : String
+  video_codec : String
+  audio_codec : String
+  subtitle_mode : String
+  ai_label_mode : String
+  retain_sources : Bool
+  project_id : String
+  timeline_id : String
+  project_revision : Int
+  timeline_revision : Int
+  cost_ceiling : String
+  estimated_cost : String
+  estimate_method : String
+  test_only : Bool
+  publication_authority : Bool
+  spec_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

@@ -1,0 +1,28 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/native_host/runtime"
+
+// Values
+pub fn is_supported_platform() -> Bool
+
+pub fn new_id(prefix? : String) -> String raise
+
+pub let platform_name : String
+
+pub fn runtime_json() -> String
+
+pub fn wall_clock_ms() -> Int64
+
+// Errors
+
+// Types and methods
+pub struct SecretRef {
+  env_name : String
+}
+pub fn SecretRef::from_env(String) -> Self?
+pub fn SecretRef::name(Self) -> String
+pub fn SecretRef::resolve(Self) -> String?
+
+// Type aliases
+
+// Traits
+

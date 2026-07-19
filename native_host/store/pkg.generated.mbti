@@ -1,0 +1,41 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/native_host/store"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub suberror StoreError {
+  InvalidKey(String)
+  ObjectTooLarge(key~ : String, size~ : Int64, limit~ : Int)
+  InvalidJson(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub struct AtomicStore {
+  root : String
+  max_read_bytes : Int
+}
+pub async fn AtomicStore::get_blob(Self, String) -> StoredBlob?
+pub async fn AtomicStore::get_json(Self, String) -> Json?
+pub async fn AtomicStore::list_keys(Self, prefix? : String, suffix? : String) -> Array[String]
+pub fn AtomicStore::new(String, max_read_bytes? : Int) -> Self
+pub fn AtomicStore::owned_path(Self, String) -> String raise StoreError
+pub async fn AtomicStore::prepare_owned_path(Self, String) -> String
+pub async fn AtomicStore::put_blob(Self, String, Bytes) -> StoredBlob
+pub async fn AtomicStore::put_json(Self, String, Json) -> StoredBlob
+pub async fn AtomicStore::remove(Self, String) -> Bool
+
+pub(all) struct StoredBlob {
+  key : String
+  bytes : Bytes
+  sha256 : String
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

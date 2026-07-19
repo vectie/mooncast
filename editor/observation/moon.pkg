@@ -1,0 +1,7 @@
+import {
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/host_ports",
+  "vectie/mooncast/editor/jobs",
+}
+
+supported_targets = "native"

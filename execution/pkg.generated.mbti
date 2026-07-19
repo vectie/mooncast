@@ -1,0 +1,303 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/execution"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/production/governance",
+  "vectie/mooncast/production/project",
+}
+
+// Values
+pub fn apply_delivery_event(DeliveryBuild, DeliveryBuildEvent) -> DeliveryBuild
+
+pub fn apply_provider_event(ProviderExecutionJob, ProviderExecutionEvent) -> ProviderExecutionJob
+
+pub fn authorize_publication(DeliveryBuild, DeliveryBuildAcceptance, String, String, String) -> PublicationAuthorityRequest?
+
+pub fn delivery_command_json(StringView) -> String raise
+
+pub fn plan_routed_execution(String, @project.ProjectGraph, @governance.ModelRoutingPlan, String, String, String) -> RoutedPlanResult
+
+pub fn provider_command_json(StringView) -> String raise
+
+pub fn reduce_delivery_command(DeliveryBuildCommand) -> DeliveryBuildResult
+
+pub fn reduce_provider_command(ProviderExecutionCommand) -> ProviderExecutionResult
+
+pub fn replay_delivery_build(DeliveryBuild, Array[DeliveryBuildEvent]) -> DeliveryBuild
+
+pub fn replay_provider_job(ProviderExecutionJob, Array[ProviderExecutionEvent]) -> ProviderExecutionJob
+
+pub fn routed_state(Array[ProviderExecutionJob]) -> String
+
+// Errors
+
+// Types and methods
+pub(all) struct DeliveryBuild {
+  contract : String
+  build_id : String
+  build_digest : String
+  project_id : String
+  project_revision : Int
+  master_sha256 : String
+  delivery_version : Int
+  delivery_digest : String
+  profile : DeliveryBuildProfile
+  state : String
+  revision : Int
+  attempt_count : Int
+  recovery_count : Int
+  artifacts : Array[DeliveryBuildArtifact]
+  archive : DeliveryBuildArtifact?
+  economics_receipt_digest : String?
+  last_error_code : String?
+  created_at : String
+  updated_at : String
+  publication_authority : Bool
+  record_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryBuildAcceptance {
+  contract : String
+  build_digest : String
+  build_record_digest : String
+  decision : String
+  actor : String
+  actor_role : String
+  note : String
+  project_revision : Int
+  decided_at : String
+  receipt_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryBuildArtifact {
+  artifact_id : String
+  kind : String
+  filename : String
+  media_type : String
+  bytes : Int
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryBuildCommand {
+  contract : String
+  command_id : String
+  action : String
+  expected_revision : Int
+  recorded_at : String
+  evidence_digest : String
+  build : DeliveryBuild
+  artifacts : Array[DeliveryBuildArtifact]
+  archive : DeliveryBuildArtifact?
+  economics_receipt_digest : String?
+  error_code : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryBuildEvent {
+  contract : String
+  event_id : String
+  kind : String
+  recorded_at : String
+  evidence_digest : String
+  artifacts : Array[DeliveryBuildArtifact]
+  archive : DeliveryBuildArtifact?
+  economics_receipt_digest : String?
+  error_code : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryBuildProfile {
+  contract : String
+  profile_version : Int
+  profile_digest : String
+  outputs : Array[DeliveryOutputSpec]
+  include_provenance_manifest : Bool
+  include_rights_ledger : Bool
+  include_acceptance_receipt : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryBuildResult {
+  contract : String
+  command_id : String
+  ok : Bool
+  error_code : String?
+  build : DeliveryBuild
+  events : Array[DeliveryBuildEvent]
+  external_effect_performed : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryOutputSpec {
+  output_id : String
+  kind : String
+  container : String
+  codec : String
+  width : Int
+  height : Int
+  subtitle_mode : String
+  metadata_digest : String
+  source_output_id : String?
+  orientation : String?
+  framing_policy : String?
+  in_seconds : Double?
+  out_seconds : Double?
+  timestamp_seconds : Double?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderAttemptPhase {
+  attempt_id : String
+  phase : String
+  state : String
+  start_timestamp : String?
+  end_timestamp : String?
+  error_code : String?
+  error_message : String?
+  phase_digest : String
+  usage_cost_receipt_digest : String?
+  attachment_receipt_digest : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderExecutionAuthority {
+  actor_id : String
+  authority_receipt_digest : String
+  network_authority : Bool
+  publication_authority : Bool
+  external_effect_performed_by_reducer : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderExecutionCommand {
+  contract : String
+  command_id : String
+  action : String
+  actor_id : String
+  recorded_at : String
+  evidence_digest : String
+  expected_revision : Int
+  job : ProviderExecutionJob
+  attempt : ProviderAttemptPhase?
+  artifacts : Array[ProviderResultArtifact]
+  cost_cny : Double?
+  project_ingest_digest : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderExecutionEvent {
+  contract : String
+  event_id : String
+  kind : String
+  recorded_at : String
+  evidence_digest : String
+  attempt : ProviderAttemptPhase?
+  artifacts : Array[ProviderResultArtifact]
+  cost_cny : Double?
+  project_ingest_digest : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderExecutionJob {
+  contract : String
+  job_id : String
+  state : String
+  revision : Int
+  plan : ProviderRequestPlan
+  plan_digest : String
+  config_digest : String
+  binding_digest : String
+  authority : ProviderExecutionAuthority
+  attempt_count : Int
+  max_attempts : Int
+  attempt_history : Array[ProviderAttemptPhase]
+  artifacts : Array[ProviderResultArtifact]
+  spent_cny : Double
+  last_error_code : String?
+  last_error_message : String?
+  project_ingest_digest : String?
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderExecutionResult {
+  contract : String
+  command_id : String
+  ok : Bool
+  error_code : String?
+  job : ProviderExecutionJob
+  events : Array[ProviderExecutionEvent]
+  external_effect_performed : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderRequestPlan {
+  contract : String
+  request_id : String
+  adapter_id : String
+  capability : String
+  provider : String
+  endpoint : String
+  request_method : String
+  model : String
+  timeout_seconds : Int
+  max_attempts : Int
+  cost_ceiling_cny : Double
+  secret_refs : Array[String]
+  input_digest : String
+  plan_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderResultArtifact {
+  artifact_id : String
+  kind : String
+  artifact_digest : String
+  media_type : String
+  bytes : Int
+  rights_refs : Array[String]
+  provider_receipt_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PublicationAuthorityRequest {
+  contract : String
+  project_id : String
+  build_digest : String
+  acceptance_receipt_digest : String
+  destination_id : String
+  actor : String
+  authorized_at : String
+  external_effect_performed : Bool
+  publication_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RoutedExecution {
+  contract : String
+  execution_id : String
+  project_id : String
+  project_revision_anchor : Int
+  routing_plan : @project.VersionRef
+  binding_digest : String
+  aggregate_cost_ceiling_cny : Double
+  currency : String
+  actor_id : String
+  state : String
+  revision : Int
+  shots : Array[ShotJobBinding]
+  created_at : String
+  updated_at : String
+  publication_authority : Bool
+  record_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RoutedPlanResult {
+  ok : Bool
+  error_code : String?
+  execution : RoutedExecution?
+  external_effect_performed : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ShotJobBinding {
+  shot_id : String
+  route_id : String
+  job_id : String
+  cost_ceiling_cny : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

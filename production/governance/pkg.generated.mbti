@@ -1,0 +1,239 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/production/governance"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/production/project",
+}
+
+// Values
+pub fn delivery_acceptance_valid(DeliveryPackage?, DeliveryAcceptance) -> Bool
+
+pub fn delivery_exact_accepted(DeliveryPackage?, Master?, Array[DeliveryAcceptance]) -> Bool
+
+pub fn delivery_package_valid(DeliveryPackage, Master?, Array[MasterDecision]) -> Bool
+
+pub fn gate_sequence() -> Array[Gate]
+
+pub fn generation_attempt_valid(GenerationAttempt, @project.ProjectGraph, ModelRoutingPlan?) -> Bool
+
+pub fn master_decision_valid(Master?, MasterDecision) -> Bool
+
+pub fn master_exact_approved(Master?, Array[MasterDecision]) -> Bool
+
+pub fn master_internal_approved(Master?, Array[MasterDecision]) -> Bool
+
+pub fn master_record_valid(Master, Int) -> Bool
+
+pub fn no_external_authority() -> AuthorityBoundary
+
+pub fn performance_current(DeliveryPackage?, Array[PerformanceReview]) -> Bool
+
+pub fn performance_review_valid(DeliveryPackage?, PerformanceReview) -> Bool
+
+pub fn publication_authorization_valid(DeliveryPackage?, PublicationAuthorization) -> Bool
+
+pub fn publication_exact_authorized(DeliveryPackage?, Array[PublicationAuthorization]) -> Bool
+
+pub fn publication_observation_valid(DeliveryPackage?, Array[PublicationAuthorization], PublicationObservation) -> Bool
+
+pub fn qc_decision_valid(QcDecision, Array[QcFinding]) -> Bool
+
+pub fn qc_dimensions() -> Array[QcDimension]
+
+pub fn qc_finding_valid(QcFinding, Array[GenerationAttempt]) -> Bool
+
+pub fn qualification_valid(ClientQualification) -> Bool
+
+pub fn routing_decision_valid(ModelRoutingPlan?, RoutingDecision) -> Bool
+
+pub fn routing_exact_approved(ModelRoutingPlan?, Array[RoutingDecision], Double) -> Bool
+
+pub fn routing_plan_valid(ModelRoutingPlan, @project.ProjectGraph) -> Bool
+
+pub fn shot_passes_qc(String, Array[GenerationAttempt], Array[QcFinding], Array[QcDecision]) -> Bool
+
+// Errors
+
+// Types and methods
+pub(all) struct AuthorityBoundary {
+  external_effect_performed : Bool
+  filesystem_authorized : Bool
+  provider_transport_authorized : Bool
+  secret_access_authorized : Bool
+  payment_authorized : Bool
+  publication_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ClientQualification {
+  reference : @project.VersionRef
+  customer_id : String
+  payable_problem : String
+  acceptance_method : String
+  distribution_channel : String
+  payment_path : String
+  repeat_purchase_hypothesis : String
+  accepted : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryAcceptance {
+  delivery_package : @project.VersionRef
+  milestone : String
+  decision : String
+  actor : String
+  decided_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryPackage {
+  reference : @project.VersionRef
+  master : @project.VersionRef
+  destination_ids : Array[String]
+  manifest_digest : String
+  rights_ledger_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum Gate {
+  G0
+  G1
+  G2
+  G3
+  G4
+  G5
+  G6
+  G7
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Gate::parse(String) -> Self?
+pub fn Gate::to_string(Self) -> String
+
+pub(all) struct GateReceipt {
+  gate : Gate
+  actor : String
+  role : String
+  evidence_digest : String
+  snapshot_revision : Int
+  decided_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GenerationAttempt {
+  attempt : @project.VersionRef
+  shot_id : String
+  route_id : String
+  route_plan : @project.VersionRef
+  prompt_digest : String
+  source_asset_digests : Array[String]
+  seed : Int?
+  duration_ms : Int
+  cost_cny : Double
+  output_digest : String
+  status : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Master {
+  reference : @project.VersionRef
+  duration_seconds : Int
+  video_digest : String
+  audio_digest : String
+  subtitle_digest : String
+  provenance_digest : String
+  ai_label : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterDecision {
+  master : @project.VersionRef
+  kind : String
+  decision : String
+  actor : String
+  role : String
+  decided_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ModelRoute {
+  route_id : String
+  shot_ids : Array[String]
+  asset_kind : String
+  provider : String
+  model : String
+  model_version : String
+  permitted_data_class : String
+  cost_ceiling_cny : Double
+  fallback_route_ids : Array[String]
+  retry_limit : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ModelRoutingPlan {
+  reference : @project.VersionRef
+  routes : Array[ModelRoute]
+  total_cost_ceiling_cny : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PerformanceReview {
+  delivery_package : @project.VersionRef
+  status : String
+  evidence_digest : String
+  reach : Int
+  completion_rate : Double
+  conversion_rate : Double
+  revenue_cny : Double
+  provider_cost_cny : Double
+  founder_hours : Double
+  repeat_purchase_status : String
+  actor : String
+  reviewed_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PublicationAuthorization {
+  delivery_package : @project.VersionRef
+  destination_id : String
+  decision : String
+  actor : String
+  decided_at : String
+  external_effect_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PublicationObservation {
+  delivery_package : @project.VersionRef
+  destination_id : String
+  receipt_digest : String
+  observed_at : String
+  external_effect_performed_by_host : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct QcDecision {
+  finding : @project.VersionRef
+  decision : String
+  actor : String
+  role : String
+  decided_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum QcDimension {
+  Technical
+  Continuity
+  Safety
+  Claims
+  Rights
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct QcFinding {
+  finding : @project.VersionRef
+  shot_id : String
+  attempt_digest : String
+  dimension : QcDimension
+  status : String
+  evidence_digest : String
+  note : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RoutingDecision {
+  plan : @project.VersionRef
+  decision : String
+  actor : String
+  role : String
+  decided_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

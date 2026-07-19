@@ -1,0 +1,15 @@
+import {
+  "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+  "vectie/mooncast/execution" @execution_domain,
+  "vectie/mooncast/production/governance",
+  "vectie/mooncast/production/project",
+  "vectie/mooncast/native_host/process" @host_process,
+  "vectie/mooncast/native_host/runtime",
+  "vectie/mooncast/native_host/store",
+  "vectie/mooncast/native_host/transport",
+}
+
+supported_targets = "native"

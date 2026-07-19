@@ -1,0 +1,28 @@
+{
+  "contract": "mooncast.moonclaw-producer.v1",
+  "profile_id": "mooncast-producer",
+  "profile_path": "moonclaw.jobs.json",
+  "skill_id": "mooncast-producer",
+  "skill_path": "skills/mooncast-producer/SKILL.md",
+  "model": "gpt-5.6-sol",
+  "runtime_model_selector": "codex/gpt-5.6-sol",
+  "runtime_owner": "moonclaw",
+  "domain_owner": "mooncast",
+  "execution_tool": "shell",
+  "tool_registration": "none",
+  "tool_adapter": "moon run cmd/mooncast_producer_tool --",
+  "tool_manifest": "integrations/moonclaw/mooncast-producer.tools.json",
+  "studio": {
+    "base_url_env": "MOONCAST_STUDIO_URL",
+    "default_base_url": "http://127.0.0.1:8765"
+  },
+  "forbidden_pack_capabilities": [
+    "agent_loop",
+    "session_store",
+    "memory_runtime",
+    "planner",
+    "model_driver",
+    "generic_job_runtime",
+    "moonflow_domain_runtime"
+  ]
+}

@@ -1,0 +1,39 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/application/pipeline"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/mooncast/application/production",
+  "vectie/mooncast/kernel",
+}
+
+// Values
+
+// Errors
+pub suberror PipelineApplicationError {
+  PipelineProjectNotFound(String)
+  PipelineRoutingConflict(String)
+  PipelineProviderJobMissing(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub struct ProductionPipelineService {
+  projects : @production.ProjectRepository
+  providers : @vectie/mooncast/application/execution.ProviderExecutionService
+}
+pub fn ProductionPipelineService::new(@production.ProjectRepository, @vectie/mooncast/application/execution.ProviderExecutionService) -> Self
+pub async fn ProductionPipelineService::routed_action_and_ingest(Self, String, String, String, String, Int, String) -> RoutedIngestResult
+
+pub(all) struct RoutedIngestResult {
+  contract : String
+  execution : @vectie/mooncast/execution.RoutedExecution
+  project_result : @kernel.CommandResult?
+  provider_artifact_ingested : Bool
+  external_effect_performed_by_pipeline : Bool
+  publication_effect_performed : Bool
+} derive(ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

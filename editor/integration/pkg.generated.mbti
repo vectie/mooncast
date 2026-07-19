@@ -1,0 +1,421 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/integration"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/domain",
+  "vectie/mooncast/editor/export",
+  "vectie/mooncast/editor/media",
+  "vectie/mooncast/editor/render_plan",
+}
+
+// Values
+pub fn import_production(ProductionImport) -> @domain.EditorSession raise
+
+pub async fn import_production_materialized(ProductionProjectBinding, Array[GeneratedTake], ProductionIntent, Array[TakePayload], @media.MediaRegistry, @domain.EditorProject?, String) -> ProductionImportResult
+
+pub fn materialize_handoff_candidate(MoonFlowCandidateRequest, AuthoritativeDeliveryBindings, @export.ExportEnvelope, String, String) -> MoonFlowHandoffCandidate raise
+
+pub fn production_register_master_request(RegisterMasterHandoff, String, Int, String, String, String, String) -> ProductionRegisterMasterRequest raise
+
+pub fn promote_master(String, Int, Int, MasterPromotionRequest, ExportReceipt, String, String, String) -> MasterPromotionReceipt raise
+
+pub fn promote_master_bundle(String, Int, Int, MasterPromotionRequest, ExportReceipt, MasterProvenance, Array[ShotAttemptBinding], String?, String, Int, String, String, String, String) -> MasterPromotionBundle raise
+
+pub fn register_master_handoff(String, Int, MasterProvenance, Array[ShotAttemptBinding], String?) -> RegisterMasterHandoff raise
+
+pub fn validate_review_comments(Array[ReviewComment], Int, Int) -> Unit raise
+
+// Errors
+
+// Types and methods
+pub(all) struct AuthoritativeDeliveryBindings {
+  delivery_id : String
+  delivery_digest : String
+  delivery_state : String
+  publication_status : String
+  output_sha256 : String
+  master_digest : String
+  source_bindings_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryIntent {
+  delivery_id : String
+  orientation : String
+  width : Int
+  height : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ExportReceipt {
+  digest : String
+  size : Int
+  output_ref : String
+  provider_ref : String
+  provider_version : String
+  plan_digest : String
+  spec_digest : String
+  test_only : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ExportSpec {
+  width : Int
+  height : Int
+  fps : @domain.FrameRate
+  container : String
+  video_codec : String
+  audio_codec : String
+  subtitle_mode : String
+  ai_label_mode : String
+  retain_sources : Bool
+  cost_ceiling : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GeneratedTake {
+  contract : String
+  take_id : String
+  attempt_id : String
+  project_id : String
+  episode_id : String
+  scene_id : String
+  shot_id : String
+  asset_id : String
+  role : String
+  variant : String
+  provider_ref : String
+  model_ref : String
+  model_version : String
+  seed : Int
+  prompt_digest : String
+  content_sha256 : String
+  mime_type : String
+  duration_ticks : Int
+  source_asset_ids : Array[String]
+  cost : Money
+  rights : TakeRights
+  qc : TakeQc
+  created_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterLabels {
+  explicit : String
+  implicit : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterMedia {
+  duration_seconds : Double
+  width : Int
+  height : Int
+  video_codec : String
+  audio_codec : String
+  format_name : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterPromotionBundle {
+  contract : String
+  promotion : MasterPromotionReceipt
+  editor_handoff : RegisterMasterHandoff
+  production_request : ProductionRegisterMasterRequest
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterPromotionEvidence {
+  actor : String
+  authority_ref : String
+  promoted_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterPromotionReceipt {
+  contract : String
+  master_id : String
+  project_id : String
+  project_revision : Int
+  editor_revision : Int
+  job_id : String
+  digest : String
+  size : Int
+  video_ref : String
+  subtitle_ref : String
+  plan_digest : String
+  actor : String
+  authority_ref : String
+  promoted_at : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterPromotionRequest {
+  job_id : String
+  expected_project_revision : Int
+  actor : String
+  authority_ref : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterProvenance {
+  contract : String
+  master_id : String
+  project_id : String
+  sha256 : String
+  video_url : String
+  subtitle_url : String
+  provenance_url : String
+  timeline : Array[MasterTimelineEntry]
+  media : MasterMedia
+  labels : MasterLabels
+  qc : MasterQc
+  editor_export_digest : String
+  timeline_id : String
+  project_revision : Int
+  timeline_revision : Int
+  plan_digest : String
+  local_media_bindings : Array[@domain.LocalMediaBinding]
+  promotion : MasterPromotionEvidence
+  created_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterQc {
+  status : String
+  checks : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterTimelineEntry {
+  shot_id : String
+  asset_id : String
+  asset_sha256 : String
+  duration_seconds : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Money {
+  amount : String
+  currency : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MoonFlowCandidateRequest {
+  candidate_id : String
+  candidate_version : String
+  idempotency_key : String
+  project_id : String
+  episode_id : String
+  expected_project_revision : Int
+  workflow_ref : RecordRef
+  ability_ref : RecordRef
+  intake_authority_ref : RecordRef
+  submitted_at : String
+  duration_seconds : Int
+  lineage_evidence_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MoonFlowHandoffCandidate {
+  contract : String
+  generic_contract : String
+  record_id : String
+  record_version : String
+  workflow_ref : RecordRef
+  terminal_receipt_ref : RecordRef
+  ability_ref : RecordRef
+  intake_authority_ref : RecordRef
+  source_bindings_digest : String
+  lineage_evidence_digest : String
+  editor_output_digest : String
+  artifact_evidence_digest : String
+  output_sha256 : String
+  duration_seconds : Int
+  submitted_at : String
+  publication_authority : Bool
+  external_effect_authorized : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Placement {
+  placement_id : String
+  take_id : String
+  role : String
+  start_tick : Int
+  duration_ticks : Int
+  source_in_tick : Int
+  source_start_tick : Int
+  intent_ref : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionActionContext {
+  command_id : String
+  expected_revision : Int
+  recorded_at : String
+  evidence_digest : String
+  actor : String?
+  role : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionExportRequest {
+  job_id : String
+  request_id : String
+  expected_editor_revision : Int
+  quality : String
+  range : @render_plan.TickRange
+  max_attempts : Int
+  spec : ExportSpec
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionImport {
+  contract : String
+  snapshot : @domain.EditorProject
+  command_log : Array[@domain.CommandLogRecord]
+  media_records : Array[@media.MediaObjectRecord]
+  lineage : Array[GeneratedTake]
+  annotations : Array[TimelineAnnotation]
+  review_comments : Array[ReviewComment]
+  delivery_intents : Array[DeliveryIntent]
+  track_roles : Array[TrackRole]
+  import_digest : String
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionImportResult {
+  contract : String
+  base_snapshot : @domain.EditorProject
+  snapshot : @domain.EditorProject
+  command_log : Array[@domain.CommandLogRecord]
+  media_records : Array[@media.MediaObjectRecord]
+  lineage : Array[GeneratedTake]
+  annotations : Array[TimelineAnnotation]
+  review_comments : Array[ReviewComment]
+  delivery_intents : Array[DeliveryIntent]
+  track_roles : Array[TrackRole]
+  import_digest : String
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionIntent {
+  contract : String
+  project_id : String
+  expected_production_revision : Int
+  expected_editor_revision : Int
+  ticks_per_second : Int
+  budget_ceiling : Money
+  current_client_revision_rounds : Int
+  max_client_revision_rounds : Int
+  take_selections : Array[TakeSelection]
+  placements : Array[Placement]
+  track_role_map : Array[TrackRole]
+  annotations : Array[TimelineAnnotation]
+  review_comments : Array[ReviewComment]
+  delivery_intents : Array[DeliveryIntent]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionMasterRecord {
+  reference : ProductionVersionRef
+  duration_seconds : Int
+  video_digest : String
+  audio_digest : String
+  subtitle_digest : String
+  provenance_digest : String
+  ai_label : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionProjectBinding {
+  contract : String
+  project_id : String
+  revision : Int
+  maximum_cost_cny : String
+  identities : Array[@domain.ProductionIdentity]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionRegisterMasterRequest {
+  contract : String
+  project_id : String
+  context : ProductionActionContext
+  master : ProductionMasterRecord
+  source : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionSourceBinding {
+  contract : String
+  project_id : String
+  episode_id : String
+  production_revision : Int
+  production_digest : String
+  g4_evidence_digest : String
+  g4_receipt_digest : String
+  g4_snapshot_revision : Int
+  provenance_ref : String
+  binding_digest : String
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionVersionRef {
+  id : String
+  version : Int
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RecordRef {
+  record_id : String
+  record_version : String
+  record_digest : String
+  provenance_ref : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RegisterMasterHandoff {
+  contract : String
+  project_id : String
+  expected_project_revision : Int
+  source : String
+  master : MasterProvenance
+  shot_attempt_digests : Array[ShotAttemptBinding]
+  supersedes_master_digest : String?
+  invalidate_from_gate : String
+  reset_reviews : Bool
+  next_stage : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ReviewComment {
+  comment_id : String
+  range : @render_plan.TickRange
+  text : String
+  revision_round : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ShotAttemptBinding {
+  shot_id : String
+  attempt_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct TakePayload {
+  take_id : String
+  bytes : Bytes
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TakeQc {
+  status : String
+  findings : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct TakeRights {
+  status : String
+  refs : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct TakeSelection {
+  shot_id : String
+  take_id : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct TimelineAnnotation {
+  annotation_id : String
+  kind : String
+  range : @render_plan.TickRange
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct TrackRole {
+  role : String
+  track_id : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

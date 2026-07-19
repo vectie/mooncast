@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/native_host/transport"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub async fn send_json(JsonRequest) -> JsonResponse
+
+pub async fn send_loopback_json(JsonRequest) -> JsonResponse
+
+// Errors
+pub suberror TransportError {
+  HttpsRequired
+  InvalidUrl
+  InvalidLimit
+  ResponseTooLarge(Int)
+  InvalidJsonResponse
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) enum JsonMethod {
+  Get
+  Post
+  Put
+  Patch
+  Delete
+} derive(Eq, @debug.Debug)
+
+pub(all) struct JsonRequest {
+  request_method : JsonMethod
+  url : String
+  headers : Map[String, String]
+  body : Json?
+  timeout_ms : Int
+  max_response_bytes : Int
+} derive(@debug.Debug)
+
+pub(all) struct JsonResponse {
+  status : Int
+  headers : Map[String, String]
+  body : Json
+} derive(@debug.Debug)
+
+// Type aliases
+
+// Traits
+

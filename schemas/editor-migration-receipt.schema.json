@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/editor-migration-receipt.schema.json",
+  "title": "Mooncast editor migration receipt v1",
+  "type": "object",
+  "required": [
+    "contract",
+    "schema_version",
+    "from_version",
+    "to_version",
+    "input_digest",
+    "output_digest",
+    "steps"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mooncast.editor-migration-receipt.v1"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "from_version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "to_version": {
+      "const": 1
+    },
+    "input_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "output_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "v0_to_v1"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

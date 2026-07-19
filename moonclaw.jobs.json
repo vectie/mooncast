@@ -1,0 +1,123 @@
+{
+  "jobs": {
+    "profiles": {
+      "mooncast-producer": {
+        "family": "mooncast_producer",
+        "role": "producer",
+        "priority": 180,
+        "tags": ["mooncast", "producer", "episode", "aigc", "production"],
+        "match": {
+          "all": ["mooncast"],
+          "any": ["produce", "producer", "episode", "production", "generate", "editor", "delivery"]
+        },
+        "steps": [
+          {
+            "id": "inspect_production_state",
+            "title": "Inspect exact production state",
+            "kind": "job.analysis",
+            "prompt_template": "Act as the Mooncast Producer for ${proposal.title}. Inspect the exact project, governance, routed-execution, editor, and delivery state by using MoonClaw's generic shell execution tool to run `moon run cmd/mooncast_producer_tool -- ...` from the Mooncast workspace. Identify the current gate, stale bindings, missing named-human decisions, executable work, and the next bounded stage. Do not mutate state in this step.",
+            "metadata": {
+              "model": "codex/gpt-5.6-sol",
+              "preferred_skills": ["mooncast-producer"],
+              "enable_tools": true,
+              "web_search": false,
+              "board_lane": "Inspect",
+              "board_order": 0,
+              "role_runtime": {
+                "planning_layer": "execution",
+                "runtime_mode": "executor",
+                "tool_access": "full",
+                "memory_scope": "workspace",
+                "allow_delegate": false,
+                "allow_workspace_write": false,
+                "allow_execution_tools": true,
+                "output_contract": "mooncast.producer.inspection.v1"
+              }
+            }
+          },
+          {
+            "id": "run_authorized_production_stage",
+            "title": "Run authorized production stage",
+            "kind": "job.analysis",
+            "prompt_template": "Continue as the Mooncast Producer for ${proposal.title}. Using the inspection evidence, call the native pack adapter through MoonClaw's generic shell tool as `moon run cmd/mooncast_producer_tool -- ...`, and run only the next stage that the request explicitly authorizes. Prefer the deterministic Production coordinator for complete pending routed executions and complete batch QC. Never invent a human confirmation, actor, revision, digest, evidence, rights clearance, client acceptance, publication authority, or payment authority. If authority or exact bindings are missing, stop at a precise actionable request instead of bypassing the gate.",
+            "metadata": {
+              "model": "codex/gpt-5.6-sol",
+              "preferred_skills": ["mooncast-producer"],
+              "enable_tools": true,
+              "web_search": false,
+              "board_lane": "Produce",
+              "board_order": 1,
+              "role_runtime": {
+                "planning_layer": "execution",
+                "runtime_mode": "executor",
+                "tool_access": "full",
+                "memory_scope": "workspace",
+                "allow_delegate": false,
+                "allow_workspace_write": false,
+                "allow_execution_tools": true,
+                "output_contract": "mooncast.producer.stage-result.v1"
+              }
+            }
+          },
+          {
+            "id": "prepare_editor_or_delivery",
+            "title": "Prepare editor or delivery handoff",
+            "kind": "job.analysis",
+            "prompt_template": "Continue as the Mooncast Producer for ${proposal.title}. Re-read current Mooncast state after production. If G4 is exactly passed, prepare the canonical production-to-editor import and report the real editor state. If an accepted master and G5 authority already exist, run only an explicitly authorized delivery-build action. Do not make editorial choices, approve a master, accept a delivery, publish, or record payment on behalf of a human.",
+            "metadata": {
+              "model": "codex/gpt-5.6-sol",
+              "preferred_skills": ["mooncast-producer"],
+              "enable_tools": true,
+              "web_search": false,
+              "board_lane": "Editor / Delivery",
+              "board_order": 2,
+              "role_runtime": {
+                "planning_layer": "execution",
+                "runtime_mode": "executor",
+                "tool_access": "full",
+                "memory_scope": "workspace",
+                "allow_delegate": false,
+                "allow_workspace_write": false,
+                "allow_execution_tools": true,
+                "output_contract": "mooncast.producer.handoff-result.v1"
+              }
+            }
+          },
+          {
+            "id": "report_receipts_and_next_gate",
+            "title": "Report receipts and next gate",
+            "kind": "job.analysis",
+            "prompt_template": "Produce the final Mooncast Producer report for ${proposal.title}. Report exact project/execution/editor/build revisions and digests, receipts created, costs surfaced by Mooncast, stage failures, human decisions still required, and the single next recommended action. Separate observed facts from recommendations. Never claim publication, payment, approval, or successful media generation without the corresponding Mooncast receipt.",
+            "metadata": {
+              "model": "codex/gpt-5.6-sol",
+              "preferred_skills": ["mooncast-producer"],
+              "enable_tools": true,
+              "web_search": false,
+              "board_lane": "Report",
+              "board_order": 3,
+              "role_runtime": {
+                "planning_layer": "execution",
+                "runtime_mode": "executor",
+                "tool_access": "full",
+                "memory_scope": "workspace",
+                "allow_delegate": false,
+                "allow_workspace_write": false,
+                "allow_execution_tools": true,
+                "output_contract": "mooncast.producer.result.v1"
+              }
+            }
+          }
+        ],
+        "metadata": {
+          "model": "codex/gpt-5.6-sol",
+          "integration_contract": "mooncast.moonclaw-producer.v1",
+          "tool_manifest": "integrations/moonclaw/mooncast-producer.tools.json",
+          "execution_tool": "shell",
+          "tool_registration": "none",
+          "tool_adapter": "moon run cmd/mooncast_producer_tool --",
+          "runtime_owner": "moonclaw"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/contracts/provider-execution-authority.v1.schema.json",
+  "title": "Named host authority for one exact provider request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "receipt_id", "actor_id", "decision", "plan_digest", "config_digest", "cost_ceiling", "max_attempts", "granted_at", "network_authority", "publication_authority", "receipt_digest"],
+  "properties": {
+    "contract": {"const": "mooncast.provider-execution-authority.v1"},
+    "receipt_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "actor_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "decision": {"const": "authorize"},
+    "plan_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "config_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "cost_ceiling": {"type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"},
+    "max_attempts": {"type": "integer", "minimum": 1, "maximum": 5},
+    "granted_at": {"type": "string", "minLength": 1},
+    "network_authority": {"const": true},
+    "publication_authority": {"const": false},
+    "receipt_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

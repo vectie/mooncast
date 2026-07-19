@@ -1,0 +1,153 @@
+{
+  "artifacts": [
+    {
+      "artifact_id": "artifact.generated.01",
+      "contract": "mooncast.editor-aigc-artifact.v1",
+      "model": "model-v1",
+      "output_media_ref_ids": [
+        "media.generated.01"
+      ],
+      "prompt_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "provider": "provider.example",
+      "review_state": "accepted",
+      "rights_state": "cleared",
+      "source_refs": [
+        "shot.01",
+        "moonwiki:intent:story.demo.v1"
+      ]
+    }
+  ],
+  "contract": "mooncast.editor-project.v0",
+  "identity_graph": [
+    {
+      "asset_id": "asset.generated.01",
+      "episode_id": "episode.01",
+      "project_id": "project.demo",
+      "scene_id": "scene.01",
+      "shot_id": "shot.01"
+    },
+    {
+      "asset_id": "asset.recorded.02",
+      "episode_id": "episode.01",
+      "project_id": "project.demo",
+      "scene_id": "scene.01",
+      "shot_id": "shot.02"
+    }
+  ],
+  "intent_refs": [
+    {
+      "intent_ref": "moonwiki:intent:story.demo.v1"
+    }
+  ],
+  "media_refs": [
+    {
+      "contract": "mooncast.editor-media-ref.v1",
+      "locator": {
+        "kind": "pack-relative",
+        "uri": "fixtures/media/generated-01.mp4"
+      },
+      "media_ref_id": "media.generated.01",
+      "metadata": {
+        "duration_ticks": 120,
+        "mime_type": "video/mp4",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "size_bytes": 1000
+      }
+    },
+    {
+      "contract": "mooncast.editor-media-ref.v1",
+      "locator": {
+        "kind": "pack-relative",
+        "uri": "fixtures/media/recorded-02.wav"
+      },
+      "media_ref_id": "media.recorded.02",
+      "metadata": {
+        "duration_ticks": 240,
+        "mime_type": "audio/wav",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "size_bytes": 500
+      }
+    }
+  ],
+  "project_id": "project.demo",
+  "revision": 0,
+  "schema_version": 0,
+  "timeline": {
+    "contract": "mooncast.editor-timeline.v1",
+    "fps": 24,
+    "revision": 0,
+    "timeline_id": "timeline.main",
+    "tracks": [
+      {
+        "clips": [
+          {
+            "artifact_id": "artifact.generated.01",
+            "clip_id": "clip.generated",
+            "duration_ticks": 120,
+            "identity": {
+              "asset_id": "asset.generated.01",
+              "episode_id": "episode.01",
+              "project_id": "project.demo",
+              "scene_id": "scene.01",
+              "shot_id": "shot.01"
+            },
+            "intent": {
+              "intent_ref": "moonwiki:intent:story.demo.v1"
+            },
+            "media_ref_id": "media.generated.01",
+            "source_in_tick": 0,
+            "source_out_tick": 120,
+            "start_tick": 0
+          },
+          {
+            "artifact_id": "artifact.generated.01",
+            "clip_id": "clip.second",
+            "duration_ticks": 48,
+            "identity": {
+              "asset_id": "asset.generated.01",
+              "episode_id": "episode.01",
+              "project_id": "project.demo",
+              "scene_id": "scene.01",
+              "shot_id": "shot.01"
+            },
+            "intent": {
+              "intent_ref": "moonwiki:intent:story.demo.v1"
+            },
+            "media_ref_id": "media.generated.01",
+            "source_in_tick": 0,
+            "source_out_tick": 48,
+            "start_tick": 144
+          }
+        ],
+        "kind": "video",
+        "order": 0,
+        "track_id": "track.video"
+      },
+      {
+        "clips": [
+          {
+            "clip_id": "clip.audio",
+            "duration_ticks": 240,
+            "identity": {
+              "asset_id": "asset.recorded.02",
+              "episode_id": "episode.01",
+              "project_id": "project.demo",
+              "scene_id": "scene.01",
+              "shot_id": "shot.02"
+            },
+            "intent": {
+              "intent_ref": "moonwiki:intent:story.demo.v1"
+            },
+            "media_ref_id": "media.recorded.02",
+            "source_in_tick": 0,
+            "source_out_tick": 240,
+            "start_tick": 0
+          }
+        ],
+        "kind": "audio",
+        "order": 1,
+        "track_id": "track.audio"
+      }
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+import {
+  "moonbitlang/core/json",
+  "vectie/mooncast/production/creative",
+  "vectie/mooncast/production/governance",
+  "vectie/mooncast/production/project",
+}
+
+supported_targets = "native"

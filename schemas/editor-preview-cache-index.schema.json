@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/editor-preview-cache-index.schema.json",
+  "title": "Durable responsive preview segment index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "version", "segments"],
+  "properties": {
+    "contract": {"const": "mooncast.editor-preview-segment-cache.v1"},
+    "version": {"const": 1},
+    "segments": {"type": "object", "additionalProperties": {"type": "object"}}
+  }
+}

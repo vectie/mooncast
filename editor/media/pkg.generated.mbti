@@ -1,0 +1,216 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/media"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/domain",
+  "vectie/mooncast/native_host/store",
+}
+
+// Values
+pub fn binding_with_subtitles(@domain.LocalMediaBinding, SubtitleParseResult) -> @domain.LocalMediaBinding
+
+pub fn binding_with_visual(@domain.LocalMediaBinding, VisualInspection) -> @domain.LocalMediaBinding
+
+pub async fn complete_intake(MediaRegistry, IntakeRequest, Bytes, Int, String, String, String) -> CompletedIntake
+
+pub fn inspect_visual(Bytes, String) -> VisualInspection raise
+
+pub fn parse_subtitles(Bytes, String, Int, Int) -> SubtitleParseResult raise
+
+pub fn prepare_intake(@domain.EditorProject, Int, String, String, String, String, Int, String, Int, @domain.ProductionIdentity, @domain.RightsAttestation, @domain.MediaSourceAttestation, String, String) -> PreparedIntake raise
+
+pub async fn probe(String, String, String, Int, String, String, String) -> MediaAnalysis
+
+pub fn waveform_peaks(Bytes, count? : Int) -> Array[Int] raise
+
+pub fn waveform_svg(Array[Int], String) -> Bytes
+
+// Errors
+
+// Types and methods
+pub(all) struct AudioAnalysis {
+  state : String
+  channels : Int?
+  sample_rate : Int?
+  codec : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ByteRange {
+  start : Int
+  length : Int
+  total : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CompletedIntake {
+  receipt : @domain.LocalMediaReceipt
+  binding : @domain.LocalMediaBinding
+  media_ref : @domain.MediaRef
+  media_record : MediaObjectRecord
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct IntakeRequest {
+  contract : String
+  project_id : String
+  expected_editor_revision : Int
+  idempotency_key : String
+  role : String
+  file_name : String
+  mime_type : String
+  size_bytes : Int
+  sha256 : String
+  duration_ticks : Int
+  identity : @domain.ProductionIdentity
+  rights : @domain.RightsAttestation
+  source : @domain.MediaSourceAttestation
+  created_by : String
+  created_at : String
+  request_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MediaAnalysis {
+  contract : String
+  analysis_version : String
+  analysis_id : String
+  source_digest : String
+  source_size : Int
+  source_mime : String
+  state : String
+  duration_seconds : Double?
+  video : VideoAnalysis
+  audio : AudioAnalysis
+  thumbnail : ThumbnailAnalysis
+  waveform : WaveformAnalysis
+  analysis_digest : String?
+  source_url : String?
+  thumbnail_url : String?
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MediaAvailability {
+  state : String
+  digest : String
+  mime : String?
+  size : Int?
+  source_descriptor : MediaByteDescriptor?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MediaByteDescriptor {
+  digest : String
+  object_key : String
+  mime : String
+  range : ByteRange
+  etag : String
+  immutable : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MediaFinding {
+  code : String
+  digest : String
+  locator : String
+  detail : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MediaObjectRecord {
+  contract : String
+  digest : String
+  size : Int
+  mime : String
+  duration : Double?
+  role : String
+  original_digest : String
+  locator : String
+  source_refs : Array[String]
+  provenance_refs : Array[String]
+  rights_refs : Array[String]
+  created_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MediaRecoveryPlan {
+  contract : String
+  findings : Array[MediaFinding]
+  regenerate_digests : Array[String]
+  restore_original_digests : Array[String]
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct MediaRegistry {
+  objects : @store.AtomicStore
+  records : @store.AtomicStore
+  analyses : @store.AtomicStore
+}
+pub async fn MediaRegistry::analysis(Self, String) -> MediaAnalysis?
+pub async fn MediaRegistry::analysis_thumbnail(Self, String) -> MediaByteDescriptor?
+pub async fn MediaRegistry::availability(Self, String) -> MediaAvailability
+pub async fn MediaRegistry::bytes(Self, String) -> Bytes?
+pub async fn MediaRegistry::complete_analysis(Self, MediaAnalysis, Bytes?, String?, Int?, Int?, Bytes?, String) -> MediaAnalysis
+pub async fn MediaRegistry::describe_range(Self, String, Int, Int) -> MediaByteDescriptor?
+pub async fn MediaRegistry::get(Self, String) -> MediaObjectRecord?
+pub async fn MediaRegistry::ingest(Self, Bytes, String, Double?, String, String?, Array[String], Array[String], Array[String], String) -> MediaObjectRecord
+pub async fn MediaRegistry::list_proxies(Self, String) -> Array[MediaObjectRecord]
+pub fn MediaRegistry::new(String) -> Self
+pub async fn MediaRegistry::recovery_plan(Self) -> MediaRecoveryPlan
+pub async fn MediaRegistry::resolve(Self, String) -> MediaResolution
+pub async fn MediaRegistry::save_analysis(Self, MediaAnalysis) -> MediaAnalysis
+
+pub(all) struct MediaResolution {
+  record : MediaObjectRecord?
+  findings : Array[MediaFinding]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreparedIntake {
+  contract : String
+  intake_id : String
+  request : IntakeRequest
+  status : String
+  upload_path : String
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type ProbeDocument derive(@json.FromJson)
+
+type ProbeFormat derive(@json.FromJson)
+
+type ProbeStream derive(@json.FromJson)
+
+pub(all) struct SubtitleParseResult {
+  parser_version : String
+  cues : Array[@domain.SubtitleCue]
+  cue_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ThumbnailAnalysis {
+  state : String
+  digest : String?
+  mime : String?
+  width : Int?
+  height : Int?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct VideoAnalysis {
+  state : String
+  width : Int?
+  height : Int?
+  codec : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct VisualInspection {
+  inspector_version : String
+  width : Int
+  height : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WaveformAnalysis {
+  state : String
+  peak_count : Int
+  peaks : Array[Int]
+  digest : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

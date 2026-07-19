@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/editor-store-record.schema.json",
+  "title": "Mooncast editor store record v1",
+  "type": "object",
+  "required": ["contract", "schema_version", "project_id", "stored_revision", "base_snapshot", "current_snapshot", "command_log", "content_digest", "backup_ref", "metadata"],
+  "properties": {
+    "contract": {"const": "mooncast.editor-store-record.v1"},
+    "schema_version": {"const": 1},
+    "project_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "stored_revision": {"type": "integer", "minimum": 0},
+    "base_snapshot": {"type": "object"},
+    "current_snapshot": {"type": "object"},
+    "command_log": {"type": "array", "items": {"$ref": "editor-command-log-record.schema.json"}},
+    "content_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "backup_ref": {"oneOf": [{"type": "null"}, {"type": "object", "required": ["digest", "path"], "properties": {"digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "path": {"type": "string", "pattern": "^backups/[0-9a-f]{64}\\.json$"}}, "additionalProperties": false}]},
+    "metadata": {"type": "object", "required": ["migration_receipts", "recovery"], "properties": {"migration_receipts": {"type": "array"}, "recovery": {"type": "array"}}, "additionalProperties": true}
+  },
+  "additionalProperties": false
+}

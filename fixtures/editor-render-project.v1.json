@@ -1,0 +1,101 @@
+{
+  "contract": "mooncast.editor-render-fixture.v1",
+  "snapshot": {
+    "contract": "mooncast.editor-project.v1",
+    "project_id": "p1",
+    "revision": 4,
+    "identity_graph": [{
+      "project_id": "p1",
+      "episode_id": "e1",
+      "scene_id": "s1",
+      "shot_id": "sh1",
+      "asset_id": "a1"
+    }],
+    "intent_refs": [{"intent_ref": "moonwiki:intent:story.demo.v1"}],
+    "media_refs": [{
+      "contract": "mooncast.editor-media-ref.v1",
+      "media_ref_id": "m1",
+      "locator": {"kind": "pack-relative", "uri": "fixtures/media/original.bin"},
+      "metadata": {
+        "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5",
+        "mime_type": "video/test",
+        "size_bytes": 8,
+        "duration_ticks": 30
+      }
+    }],
+    "artifacts": [],
+    "timeline": {
+      "contract": "mooncast.editor-timeline.v1",
+      "timeline_id": "t1",
+      "revision": 2,
+      "timebase": {"ticks_per_second": 30},
+      "output": {
+        "preset": "horizontal-1080p",
+        "orientation": "horizontal",
+        "width": 1920,
+        "height": 1080,
+        "fps": {"numerator": 30, "denominator": 1},
+        "background": "#000000"
+      },
+      "tracks": [{
+        "track_id": "a",
+        "kind": "video",
+        "order": 0,
+        "clips": [{
+          "clip_id": "c1",
+          "media_ref_id": "m1",
+          "identity": {
+            "project_id": "p1",
+            "episode_id": "e1",
+            "scene_id": "s1",
+            "shot_id": "sh1",
+            "asset_id": "a1"
+          },
+          "intent": {"intent_ref": "moonwiki:intent:story.demo.v1"},
+          "start_tick": 0,
+          "duration_ticks": 30,
+          "source_in_tick": 0,
+          "source_out_tick": 30
+        }]
+      }, {
+        "track_id": "z",
+        "kind": "audio",
+        "order": 1,
+        "clips": []
+      }]
+    }
+  },
+  "media": [{
+    "media_id": "original-render-media",
+    "bytes_utf8": "original",
+    "role": "original",
+    "digest": "sha256:0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5",
+    "mime": "video/test",
+    "duration": 1,
+    "source_refs": ["source:camera"],
+    "provenance_refs": ["capture:1"],
+    "rights_refs": ["rights:cleared"],
+    "created_at": "2025-01-01T00:00:00Z"
+  }, {
+    "media_id": "proxy-render-media",
+    "bytes_utf8": "proxy",
+    "role": "proxy",
+    "digest": "sha256:1241936d4dd3aad68fe7bfbdfe854b935926bc678fc72377e15166078916227a",
+    "original_digest": "sha256:0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5",
+    "mime": "video/test",
+    "duration": 1,
+    "source_refs": ["source:camera"],
+    "provenance_refs": ["transcode:1"],
+    "rights_refs": ["rights:cleared"],
+    "created_at": "2025-01-01T00:00:00Z"
+  }],
+  "request": {
+    "project_id": "p1",
+    "project_revision": 4,
+    "timeline_id": "t1",
+    "timeline_revision": 2,
+    "quality": "proxy",
+    "timebase": {"ticks_per_second": 30},
+    "range": {"start_tick": 0, "duration_ticks": 30}
+  }
+}

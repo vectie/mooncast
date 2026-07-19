@@ -1,9 +1,10 @@
 name = "vectie/mooncast"
 
-version = "0.1.0"
+version = "0.2.0"
 
 import {
   "moonbitlang/async@0.16.6",
+  "moonbitlang/x@0.4.40",
   "vectie/moonlib@0.1.17",
 }
 
@@ -13,8 +14,8 @@ repository = "https://github.com/vectie/mooncast"
 
 license = "Apache-2.0"
 
-keywords = [ "aigc", "campaign", "moonsuite-pack" ]
+keywords = [ "aigc", "production", "moonsuite-pack" ]
 
-description = "Rights-aware AIGC campaign production pack for MoonSuite"
+description = "Systematic rights-aware long-form AIGC production pack for MoonSuite"
 
 preferred_target = "native"

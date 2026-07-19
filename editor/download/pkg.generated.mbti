@@ -1,0 +1,37 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/download"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/jobs",
+  "vectie/mooncast/editor/media",
+}
+
+// Values
+pub fn export_download(@jobs.EditorJob, Int) -> DownloadDescriptor raise
+
+pub fn media_download(@media.MediaByteDescriptor, String) -> DownloadDescriptor
+
+pub fn preview_download(@jobs.EditorJob, Int) -> DownloadDescriptor raise
+
+// Errors
+
+// Types and methods
+pub(all) struct DownloadDescriptor {
+  contract : String
+  content_key : String
+  digest : String
+  mime_type : String
+  file_name : String
+  disposition : String
+  size_bytes : Int
+  range_supported : Bool
+  immutable : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

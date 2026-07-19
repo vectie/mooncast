@@ -1,0 +1,68 @@
+{
+  "$id": "https://mooncast.local/contracts/editor-aigc-artifact.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "type": "string"
+    },
+    "contract": {
+      "const": "mooncast.editor-aigc-artifact.v1"
+    },
+    "model": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "output_media_ref_ids": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "prompt_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "provider": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "type": "string"
+    },
+    "review_state": {
+      "enum": [
+        "pending",
+        "accepted",
+        "rejected"
+      ]
+    },
+    "rights_state": {
+      "enum": [
+        "unknown",
+        "cleared",
+        "restricted"
+      ]
+    },
+    "source_refs": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "contract",
+    "artifact_id",
+    "source_refs",
+    "output_media_ref_ids",
+    "provider",
+    "model",
+    "prompt_digest",
+    "rights_state",
+    "review_state"
+  ],
+  "title": "AIGC Artifact v1",
+  "type": "object"
+}

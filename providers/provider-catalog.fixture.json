@@ -1,0 +1,23 @@
+{
+  "contract": "mooncast.provider-catalog.v1",
+  "adapters": [
+    {
+      "adapter_id": "mooncast-local-video-fixture",
+      "capability": "video",
+      "provider": "mooncast-local",
+      "endpoint": "https://deterministic-fixture.invalid/v1/video",
+      "model": "ffmpeg-lavfi-motion-v1",
+      "api_style": "mooncast-deterministic-ffmpeg-v1",
+      "secret_refs": {},
+      "timeout_seconds": 45,
+      "max_response_bytes": 67108864,
+      "default_parameters": {
+        "maximum_shot_duration_seconds": 12,
+        "validation_only": true
+      },
+      "commercial_use": "local validation only; never satisfies commercial provider acceptance",
+      "network_authority": false
+    }
+  ],
+  "authority_actors": ["studio-operator"]
+}

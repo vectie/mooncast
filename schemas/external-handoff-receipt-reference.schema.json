@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/contracts/external-handoff-receipt-reference.v1.schema.json",
+  "title": "Mooncast external handoff receipt reference",
+  "type": "object",
+  "properties": {
+    "contract": {"const": "mooncast.external-handoff-receipt-reference.v1"},
+    "record": {"$ref": "final-deliverable-evidence.schema.json#/$defs/recordRef"},
+    "request_ref": {"$ref": "final-deliverable-evidence.schema.json#/$defs/recordRef"},
+    "issuer_product": {"enum": ["moonflow", "moonbook"]},
+    "issuer_contract": {"type": "string", "minLength": 1},
+    "external_receipt_ref": {"$ref": "final-deliverable-evidence.schema.json#/$defs/recordRef"},
+    "recorded_at": {"type": "string", "minLength": 1},
+    "authoritative_payload_stored": {"const": false}
+  },
+  "required": ["contract", "record", "request_ref", "issuer_product", "issuer_contract", "external_receipt_ref", "recorded_at", "authoritative_payload_stored"],
+  "additionalProperties": false
+}

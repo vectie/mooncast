@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/editor-interactive-preview.schema.json",
+  "title": "Ephemeral interactive editor preview projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "project_id", "project_revision", "timeline_revision", "clock", "loop", "renderer", "proxy_readiness", "missing_ranges", "drift_ms", "ephemeral", "approval_authority", "publication_authority"],
+  "properties": {
+    "contract": {"const": "mooncast.editor-interactive-preview.v1"},
+    "project_id": {"type": "string", "minLength": 1},
+    "project_revision": {"type": "integer", "minimum": 0},
+    "timeline_revision": {"type": "integer", "minimum": 0},
+    "clock": {
+      "type": "object", "additionalProperties": false,
+      "required": ["tick", "playing", "explicit_user_playback"],
+      "properties": {"tick": {"type": "integer", "minimum": 0}, "playing": {"type": "boolean"}, "explicit_user_playback": {"type": "boolean"}}
+    },
+    "loop": {
+      "type": "object", "additionalProperties": false,
+      "required": ["enabled", "in_tick", "out_tick"],
+      "properties": {"enabled": {"type": "boolean"}, "in_tick": {"type": "integer", "minimum": 0}, "out_tick": {"type": ["integer", "null"], "minimum": 1}}
+    },
+    "renderer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "approval_pixel_authority"],
+      "properties": {"state": {"enum": ["webgl2", "canvas-fallback", "uninitialized"]}, "approval_pixel_authority": {"const": "ffmpeg-authoritative-render"}}
+    },
+    "proxy_readiness": {
+      "type": "array", "items": {"type": "object", "additionalProperties": false,
+        "required": ["source_digest", "state", "url"],
+        "properties": {"source_digest": {"$ref": "#/$defs/digest"}, "proxy_digest": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]}, "state": {"enum": ["ready", "missing", "loading", "unavailable"]}, "url": {"type": ["string", "null"]}}
+      }
+    },
+    "missing_ranges": {"type": "array", "items": {"$ref": "#/$defs/range"}},
+    "drift_ms": {"type": "number", "minimum": 0},
+    "ephemeral": {"const": true},
+    "approval_authority": {"const": false},
+    "publication_authority": {"const": false}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "range": {"type": "object", "additionalProperties": false, "required": ["start_tick", "duration_ticks"], "properties": {"start_tick": {"type": "integer", "minimum": 0}, "duration_ticks": {"type": "integer", "minimum": 1}, "clip_id": {"type": "string", "minLength": 1}}}
+  }
+}

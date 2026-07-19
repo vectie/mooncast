@@ -12,7 +12,15 @@ pub fn delivery_ready(DeliveryGate) -> Bool
 
 pub fn manifest() -> @pack.MoonPackManifest
 
+pub fn next_production_gate(Array[GateReceipt]) -> ProductionGate?
+
+pub fn production_gate_ready(ProductionGate, ProductionReadiness) -> Bool
+
+pub fn production_gate_sequence() -> Array[ProductionGate]
+
 pub fn publication_ready(CampaignStage, DeliveryGate) -> Bool
+
+pub fn systematic_delivery_ready(ProductionProjectSummary, ProductionReadiness) -> Bool
 
 // Errors
 
@@ -32,6 +40,66 @@ pub(all) struct DeliveryGate {
   safety_passed : Bool
   human_approved : Bool
   provenance_complete : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GateReceipt {
+  gate : ProductionGate
+  actor : String
+  evidence_digest : String
+  decided_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum ProductionGate {
+  G0Brief
+  G1RightsBible
+  G2Creative
+  G3ProductionAuthorization
+  G4Assets
+  G5Master
+  G6ClientAcceptance
+  G7Delivery
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionProjectSummary {
+  project_id : String
+  stage : ProductionStage
+  target_duration_seconds : Int
+  episode_count : Int
+  scene_count : Int
+  shot_count : Int
+  budget_cny : Double
+  spent_cny : Double
+  gate_receipts : Array[GateReceipt]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionReadiness {
+  brief_complete : Bool
+  rights_cleared : Bool
+  bible_locked : Bool
+  script_approved : Bool
+  storyboard_approved : Bool
+  animatic_approved : Bool
+  route_authorized : Bool
+  budget_authorized : Bool
+  shots_complete : Bool
+  provenance_complete : Bool
+  qc_approved : Bool
+  editorial_approved : Bool
+  client_accepted : Bool
+  delivery_planned : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum ProductionStage {
+  Draft
+  BriefReady
+  RightsReady
+  CreativeApproved
+  ProductionAuthorized
+  AssetsReady
+  MasterApproved
+  ClientAccepted
+  DeliveryAuthorized
+  Delivered
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases

@@ -1,0 +1,9 @@
+import {
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+  "vectie/mooncast/handoff" @handoff_domain,
+  "vectie/mooncast/native_host/store",
+}
+
+supported_targets = "native"

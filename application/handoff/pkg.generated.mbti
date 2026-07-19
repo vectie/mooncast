@@ -1,0 +1,91 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/application/handoff"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/native_host/store",
+}
+
+// Values
+pub fn canonical_record_digest(Json) -> String
+
+pub fn canonical_record_json(Json) -> String
+
+pub fn final_deliverable_bookkeeper_bundle(@vectie/mooncast/handoff.ExternalHandoffRequest, @vectie/mooncast/handoff.FinalDeliverableEvidence) -> @vectie/mooncast/handoff.BookkeeperIngressBundle?
+
+pub fn moonbook_handoff_request(@vectie/mooncast/handoff.RecordRef, String, @vectie/mooncast/handoff.RecordRef, Array[@vectie/mooncast/handoff.RecordRef], String, String, authority_request_ref? : @vectie/mooncast/handoff.RecordRef, review_receipt_ref? : @vectie/mooncast/handoff.RecordRef) -> @vectie/mooncast/handoff.ExternalHandoffRequest?
+
+pub fn outcome_bookkeeper_bundle(@vectie/mooncast/handoff.ExternalHandoffRequest, @vectie/mooncast/handoff.ProductionOutcomeEvidence, @vectie/mooncast/handoff.FinalDeliverableEvidence) -> @vectie/mooncast/handoff.BookkeeperIngressBundle?
+
+pub fn valid_record_id(String) -> Bool
+
+// Errors
+pub suberror ImmutableRecordError {
+  InvalidRecordIdentity(String)
+  ImmutableRecordConflict(String)
+  ImmutableRecordCorrupt(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct ImmutableChainVerification {
+  record_type : String
+  valid : Bool
+  record_count : Int
+  anchor_digest : String?
+  error_code : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ImmutablePutResult {
+  envelope : ImmutableRecordEnvelope
+  created : Bool
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ImmutableRecordEnvelope {
+  contract : String
+  record_type : String
+  record_id : String
+  idempotency_key : String
+  payload_digest : String
+  previous_anchor_digest : String?
+  envelope_digest : String
+  payload : Json
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub struct ImmutableRecordStore {
+  store : @store.AtomicStore
+}
+pub async fn ImmutableRecordStore::get(Self, String, String) -> ImmutableRecordEnvelope?
+pub async fn ImmutableRecordStore::list(Self, String) -> Array[ImmutableRecordEnvelope]
+pub fn ImmutableRecordStore::new(String) -> Self
+pub async fn ImmutableRecordStore::put(Self, String, String, String, Json) -> ImmutablePutResult
+pub async fn ImmutableRecordStore::verify(Self, String) -> ImmutableChainVerification
+
+pub struct LegacyBookkeeperReadOnlyAdapter {
+  state_store : @store.AtomicStore
+  learning_store : @store.AtomicStore
+  immutable_store : ImmutableRecordStore
+}
+pub async fn LegacyBookkeeperReadOnlyAdapter::immutable_record(Self, String, String) -> ImmutableRecordEnvelope?
+pub async fn LegacyBookkeeperReadOnlyAdapter::learning_record(Self, String) -> Json?
+pub fn LegacyBookkeeperReadOnlyAdapter::new(String, String) -> Self
+pub async fn LegacyBookkeeperReadOnlyAdapter::snapshot(Self) -> Json?
+
+pub struct OutboundHandoffService {
+  outbox : ImmutableRecordStore
+}
+pub async fn OutboundHandoffService::get(Self, String, String) -> ImmutableRecordEnvelope?
+pub async fn OutboundHandoffService::list_external_handoff_requests(Self) -> Array[@vectie/mooncast/handoff.ExternalHandoffRequest]
+pub async fn OutboundHandoffService::list_final_deliverable_evidence(Self) -> Array[@vectie/mooncast/handoff.FinalDeliverableEvidence]
+pub async fn OutboundHandoffService::list_production_outcome_evidence(Self) -> Array[@vectie/mooncast/handoff.ProductionOutcomeEvidence]
+pub fn OutboundHandoffService::new(String) -> Self
+pub async fn OutboundHandoffService::prepare_request(Self, @vectie/mooncast/handoff.ExternalHandoffRequest) -> ImmutablePutResult
+pub async fn OutboundHandoffService::record_final_deliverable_evidence(Self, @vectie/mooncast/handoff.FinalDeliverableEvidence) -> ImmutablePutResult
+pub async fn OutboundHandoffService::record_json(Self, String, String) -> Json?
+pub async fn OutboundHandoffService::record_production_outcome_evidence(Self, @vectie/mooncast/handoff.ProductionOutcomeEvidence) -> ImmutablePutResult
+pub async fn OutboundHandoffService::record_receipt_reference(Self, @vectie/mooncast/handoff.ExternalHandoffReceiptReference) -> ImmutablePutResult
+
+// Type aliases
+
+// Traits
+

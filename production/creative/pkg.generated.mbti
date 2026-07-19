@@ -1,0 +1,70 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/production/creative"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/production/project",
+}
+
+// Values
+pub fn artifact_bindings_current(CreativeArtifact, Array[CreativeArtifact]) -> Bool
+
+pub fn artifact_for_reference(Array[CreativeArtifact], @project.VersionRef) -> CreativeArtifact?
+
+pub fn artifact_revision_valid(CreativeArtifact, Array[CreativeArtifact]) -> Bool
+
+pub fn creative_decision_is_current(Array[CreativeArtifact], CreativeDecision) -> Bool
+
+pub fn creative_decision_valid(CreativeArtifact?, CreativeDecision) -> Bool
+
+pub fn current_artifact(Array[CreativeArtifact], ArtifactKind) -> CreativeArtifact?
+
+pub fn exact_approval(CreativeArtifact?, Array[CreativeDecision]) -> Bool
+
+pub fn invalidation_for(CreativeArtifact) -> DependencyInvalidation
+
+// Errors
+
+// Types and methods
+pub(all) enum ArtifactKind {
+  Brief
+  RightsLedger
+  IpBible
+  Script
+  ClaimsLedger
+  Storyboard
+  Animatic
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ArtifactKind::to_string(Self) -> String
+
+pub(all) struct CreativeArtifact {
+  reference : @project.VersionRef
+  kind : ArtifactKind
+  dependency_digests : Array[String]
+  duration_seconds : Int?
+  expected_cost_cny : Double?
+  rights_cleared : Bool
+  content : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CreativeDecision {
+  artifact : @project.VersionRef
+  decision : String
+  actor : String
+  role : String
+  decided_at : String
+  note : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DependencyInvalidation {
+  changed : @project.VersionRef
+  invalidated_kinds : Array[ArtifactKind]
+  from_gate : String
+  reason : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

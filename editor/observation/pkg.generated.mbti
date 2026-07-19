@@ -1,0 +1,59 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/observation"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/host_ports",
+  "vectie/mooncast/editor/jobs",
+}
+
+// Values
+pub fn job_stream_descriptor() -> @host_ports.StreamDescriptor
+
+pub fn observe_job(@jobs.EditorJob) -> JobObservation
+
+pub fn sse_event(JobObservation) -> String
+
+// Errors
+
+// Types and methods
+pub(all) struct JobFailureProjection {
+  code : String
+  message : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct JobObservation {
+  contract : String
+  cursor : String
+  project_id : String
+  job_id : String
+  session_id : String
+  kind : String
+  state : String
+  attempts : Int
+  max_attempts : Int
+  progress_numerator : Int
+  progress_denominator : Int
+  plan_digest : String
+  request_digest : String
+  output : JobOutputProjection?
+  error : JobFailureProjection?
+  created_at : String
+  updated_at : String
+  retryable : Bool
+  terminal : Bool
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct JobOutputProjection {
+  digest : String
+  output_ref : String
+  download_path : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

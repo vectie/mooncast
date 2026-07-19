@@ -1,0 +1,76 @@
+{
+  "contract": "mooncast.provider-catalog.v1",
+  "adapters": [
+    {
+      "adapter_id": "example-text",
+      "capability": "text",
+      "provider": "example-provider",
+      "endpoint": "https://api.example.invalid/v1/responses",
+      "model": "configured-text-model",
+      "api_style": "openai-compatible",
+      "secret_refs": {"Authorization": "host-secret:MOONCAST_EXAMPLE_TEXT_TOKEN"},
+      "timeout_seconds": 120,
+      "max_response_bytes": 8388608,
+      "default_parameters": {},
+      "commercial_use": "subject to the operator's provider contract",
+      "network_authority": false
+    },
+    {
+      "adapter_id": "example-image",
+      "capability": "image",
+      "provider": "example-provider",
+      "endpoint": "https://api.example.invalid/v1/images",
+      "model": "configured-image-model",
+      "api_style": "json",
+      "secret_refs": {"Authorization": "host-secret:MOONCAST_EXAMPLE_IMAGE_TOKEN"},
+      "timeout_seconds": 300,
+      "max_response_bytes": 67108864,
+      "default_parameters": {},
+      "commercial_use": "subject to the operator's provider contract",
+      "network_authority": false
+    },
+    {
+      "adapter_id": "example-video",
+      "capability": "video",
+      "provider": "example-provider",
+      "endpoint": "https://api.example.invalid/v1/videos",
+      "model": "configured-video-model",
+      "api_style": "json",
+      "secret_refs": {"Authorization": "host-secret:MOONCAST_EXAMPLE_VIDEO_TOKEN"},
+      "timeout_seconds": 1800,
+      "max_response_bytes": 536870912,
+      "default_parameters": {"estimated_cost_per_second_cny": 1.0},
+      "commercial_use": "subject to the operator's provider contract",
+      "network_authority": false
+    },
+    {
+      "adapter_id": "example-voice",
+      "capability": "voice",
+      "provider": "example-provider",
+      "endpoint": "https://api.example.invalid/v1/audio/speech",
+      "model": "configured-voice-model",
+      "api_style": "openai-compatible",
+      "secret_refs": {"Authorization": "host-secret:MOONCAST_EXAMPLE_VOICE_TOKEN"},
+      "timeout_seconds": 300,
+      "max_response_bytes": 67108864,
+      "default_parameters": {},
+      "commercial_use": "subject to voice and likeness clearance",
+      "network_authority": false
+    },
+    {
+      "adapter_id": "example-music",
+      "capability": "music",
+      "provider": "example-provider",
+      "endpoint": "https://api.example.invalid/v1/music",
+      "model": "configured-music-model",
+      "api_style": "json",
+      "secret_refs": {"Authorization": "host-secret:MOONCAST_EXAMPLE_MUSIC_TOKEN"},
+      "timeout_seconds": 600,
+      "max_response_bytes": 67108864,
+      "default_parameters": {},
+      "commercial_use": "subject to composition and model-output rights",
+      "network_authority": false
+    }
+  ],
+  "authority_actors": ["studio-operator"]
+}
