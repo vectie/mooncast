@@ -260,6 +260,36 @@ struct AnimaticWorkspaceProjection {
 
 ///|
 #warnings("-unused_field")
+struct PostprocessTaskProjection {
+  reference : AnimaticRenderRefProjection
+  operation : String
+  provider : String
+  model : String
+  cost_ceiling_cny : Double
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct PostprocessOutputProjection {
+  reference : Json
+  operation : String
+  cost_cny : Double
+  provenance_digest : String
+  immutable : Bool
+} derive(FromJson)
+
+///|
+struct PostprocessWorkspaceProjection {
+  tasks : Array[PostprocessTaskProjection]
+  outputs : Array[PostprocessOutputProjection]
+  bindings : Array[Json]
+  total_cost_cny : Double
+  publication_authority : Bool
+  provider_execution_authority : Bool
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
 struct AssetFactoryBindingProjection {
   binding_id : String
   shot_id : String
@@ -977,6 +1007,8 @@ struct Model {
   asset_plan_draft : String
   animatic_workspace : AnimaticWorkspaceProjection?
   animatic_plan_draft : String
+  postprocess_workspace : PostprocessWorkspaceProjection?
+  postprocess_task_draft : String
   selected_intake_id : String
   intake_packet_draft : String
   intake_seed_project_id : String
@@ -1027,6 +1059,10 @@ enum Msg {
   RecordAnimaticPlan
   RenderAnimatic
   ApproveRenderedAnimatic
+  LoadedPostprocessWorkspace(Result[PostprocessWorkspaceProjection, Error])
+  SetPostprocessTaskDraft(String)
+  RecordPostprocessTask
+  RunPostprocessTask
   SelectIntake(String)
   SetIntakePacketDraft(String)
   SetIntakeSeedProjectId(String)
@@ -1240,6 +1276,37 @@ fn starter_animatic_plan(
 }
 
 ///|
+fn starter_postprocess_task(
+  project : ProjectProjection,
+  factory : AssetFactoryWorkspaceProjection,
+) -> String {
+  let sources = factory.approved_assets.map(value => value.reference)
+  let value : Json = {
+    "contract": "mooncast.postprocess-task.v1",
+    "reference": { "id": project.id + "-lip-sync-task", "version": 1, "digest": "" },
+    "project_id": project.id,
+    "project_revision": project.revision,
+    "operation": "lip-sync",
+    "source_assets": sources,
+    "prompt_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "rights_refs": ["rights://contract-cleared/postprocess"],
+    "shot_ids": project.shots.map(shot => shot.id),
+    "editor_project_id": project.id,
+    "terminology_refs": [],
+    "provider_adapter_id": "approved-lip-sync",
+    "provider": "approved-provider",
+    "model": "approved-lip-sync-model",
+    "permitted_data_class": "rights-cleared-confidential",
+    "cost_ceiling_cny": 1000,
+    "retry_limit": 2,
+    "created_at": "2026-07-19T00:00:00+08:00",
+    "provider_execution_authority": false,
+    "publication_authority": false,
+  }
+  value.stringify(indent=2)
+}
+
+///|
 fn initial_model() -> Model {
   {
     tab: Overview,
@@ -1260,6 +1327,8 @@ fn initial_model() -> Model {
     asset_plan_draft: "",
     animatic_workspace: None,
     animatic_plan_draft: "",
+    postprocess_workspace: None,
+    postprocess_task_draft: "",
     selected_intake_id: "",
     intake_packet_draft: starter_moonwiki_packet(),
     intake_seed_project_id: "brand-episode-001",

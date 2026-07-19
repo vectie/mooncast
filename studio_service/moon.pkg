@@ -22,6 +22,7 @@ import {
   "vectie/mooncast/application/intake" @intake_app,
   "vectie/mooncast/application/asset_factory" @asset_factory_app,
   "vectie/mooncast/application/animatic" @animatic_app,
+  "vectie/mooncast/application/postprocess" @postprocess_app,
   "vectie/mooncast/application/http_contracts" @app_http,
   "vectie/mooncast/commerce",
   "vectie/mooncast/handoff",
@@ -37,6 +38,7 @@ import {
   "vectie/mooncast/production/intake",
   "vectie/mooncast/production/asset_factory",
   "vectie/mooncast/production/animatic",
+  "vectie/mooncast/production/postprocess",
 }
 
 supported_targets = "native"

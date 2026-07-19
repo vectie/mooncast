@@ -138,8 +138,11 @@ fn update(
       let animatic = @http.get(
         "/api/v2/projects/" + project.id + "/animatic-workspace",
       ).expect_json(emit.map(fn(result) { LoadedAnimaticWorkspace(result) }))
+      let postprocess = @http.get(
+        "/api/v2/projects/" + project.id + "/postprocess-jobs",
+      ).expect_json(emit.map(fn(result) { LoadedPostprocessWorkspace(result) }))
       (
-        @rabbita.batch([routed, deliveries, portals, billing, assets, animatic]),
+        @rabbita.batch([routed, deliveries, portals, billing, assets, animatic, postprocess]),
         {
           ..model,
           project: Some(project),
@@ -277,7 +280,17 @@ fn update(
           starter_animatic_plan(project, value, 1)
         _ => model.animatic_plan_draft
       }
-      (@rabbita.none, { ..model, asset_factory: Some(value), animatic_plan_draft: draft })
+      let postprocess_draft = match model.project {
+        Some(project) if model.postprocess_task_draft == "" =>
+          starter_postprocess_task(project, value)
+        _ => model.postprocess_task_draft
+      }
+      (@rabbita.none, {
+        ..model,
+        asset_factory: Some(value),
+        animatic_plan_draft: draft,
+        postprocess_task_draft: postprocess_draft,
+      })
     }
     LoadedAssetFactory(Err(error)) =>
       (
@@ -530,6 +543,51 @@ fn update(
         }
         _ => (@rabbita.none, { ..model, error: Some("Render an animatic first.") })
       }
+    LoadedPostprocessWorkspace(Ok(value)) =>
+      (@rabbita.none, { ..model, postprocess_workspace: Some(value) })
+    LoadedPostprocessWorkspace(Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Postprocess jobs: \{error}") })
+    SetPostprocessTaskDraft(value) =>
+      (@rabbita.none, { ..model, postprocess_task_draft: value })
+    RecordPostprocessTask =>
+      match model.project {
+        None => (@rabbita.none, model)
+        Some(project) => {
+          let task = @json.parse(model.postprocess_task_draft) catch {
+            _ => return (@rabbita.none, { ..model, error: Some("Postprocess task must be valid JSON.") })
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/postprocess-jobs/tasks",
+            )
+            .with_json({ "task": task })
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Exact multimodal postprocess task", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+      }
+    RunPostprocessTask =>
+      match (model.project, model.postprocess_workspace) {
+        (Some(project), Some(workspace)) if !workspace.tasks.is_empty() => {
+          let task = workspace.tasks[workspace.tasks.length() - 1]
+          let body : Json = {
+            "expected_task_version": task.reference.version,
+            "expected_task_digest": task.reference.digest,
+            "actor": model.operator.actor,
+            "human_confirmed": model.operator.human_confirmed,
+            "network_authority": model.operator.human_confirmed,
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/postprocess-jobs/run",
+            )
+            .with_json(body)
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Bounded postprocess provider job", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+        _ => (@rabbita.none, { ..model, error: Some("Record a postprocess task first.") })
+      }
     SelectIntake(value) =>
       (@rabbita.none, { ..model, selected_intake_id: value })
     SetIntakePacketDraft(value) =>
@@ -715,6 +773,11 @@ fn update(
               @http.get("/api/v2/projects/" + model.selected_project_id).expect_json(
                 emit.map(fn(result) { LoadedProject(result) }),
               ),
+            )
+            commands.push(
+              @http.get(
+                "/api/v2/projects/" + model.selected_project_id + "/postprocess-jobs",
+              ).expect_json(emit.map(fn(result) { LoadedPostprocessWorkspace(result) })),
             )
             commands.push(
               @http.get(

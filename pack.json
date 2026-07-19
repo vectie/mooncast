@@ -131,7 +131,10 @@
     {"id":"animatic-plan","version":"1.0.0","path":"schemas/animatic-plan.schema.json"},
     {"id":"animatic-render-attempt","version":"1.0.0","path":"schemas/animatic-render-attempt.schema.json"},
     {"id":"rendered-animatic","version":"1.0.0","path":"schemas/rendered-animatic.schema.json"},
-    {"id":"rendered-animatic-approval","version":"1.0.0","path":"schemas/rendered-animatic-approval.schema.json"}
+    {"id":"rendered-animatic-approval","version":"1.0.0","path":"schemas/rendered-animatic-approval.schema.json"},
+    {"id":"postprocess-task","version":"1.0.0","path":"schemas/postprocess-task.schema.json"},
+    {"id":"postprocess-output","version":"1.0.0","path":"schemas/postprocess-output.schema.json"},
+    {"id":"postprocess-import-binding","version":"1.0.0","path":"schemas/postprocess-import-binding.schema.json"}
   ],
   "tools": [
     {"id":"brief.validate","owner_product":"mooncast","input_schema_id":"creative-brief","output_schema_id":"creative-brief","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["records/briefs"],"review_required":false},
@@ -172,6 +175,9 @@
     {"id":"animatic.plan.record","owner_product":"mooncast","input_schema_id":"animatic-plan","output_schema_id":"animatic-plan","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["animatic/plans"],"review_required":true},
     {"id":"animatic.render","owner_product":"mooncast","input_schema_id":"animatic-plan","output_schema_id":"rendered-animatic","authority":"SandboxExecution","idempotent":false,"evidence_outputs":["animatic/attempts","animatic/media","animatic/renders"],"review_required":true},
     {"id":"animatic.approve","owner_product":"mooncast","input_schema_id":"rendered-animatic","output_schema_id":"rendered-animatic-approval","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["animatic/approvals","projects","project-events"],"review_required":true},
+    {"id":"postprocess.task.record","owner_product":"mooncast","input_schema_id":"postprocess-task","output_schema_id":"postprocess-task","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["postprocess/tasks"],"review_required":true},
+    {"id":"postprocess.execute","owner_product":"mooncast","input_schema_id":"postprocess-task","output_schema_id":"postprocess-output","authority":"ExternalEffect","idempotent":false,"evidence_outputs":["postprocess/outputs","provider-executions"],"review_required":true},
+    {"id":"postprocess.import","owner_product":"mooncast","input_schema_id":"postprocess-output","output_schema_id":"postprocess-import-binding","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["postprocess/bindings","editor-media"],"review_required":true},
     {"id":"routed-execution.execute","owner_product":"mooncast","input_schema_id":"routed-execution-action","output_schema_id":"provider-execution-job","authority":"ExternalEffect","idempotent":false,"evidence_outputs":["provider-executions","projects","project-events"],"review_required":true},
     {"id":"routed-execution.control","owner_product":"mooncast","input_schema_id":"routed-execution-action","output_schema_id":"routed-execution","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["provider-executions/routed","provider-executions/jobs","project-events"],"review_required":true},
     {"id":"production-coordinator.run-pending","owner_product":"mooncast","input_schema_id":"production-coordinator-run-request","output_schema_id":"production-coordinator-run-result","authority":"ExternalEffect","idempotent":false,"evidence_outputs":["provider-executions","projects","project-events"],"review_required":true},
@@ -246,6 +252,7 @@
     {"id":"music-generation","version":"1.0.0","path":"providers/music-generation.port.md"},
     {"id":"lip-sync","version":"1.0.0","path":"providers/lip-sync.port.md"},
     {"id":"translation","version":"1.0.0","path":"providers/translation.port.md"},
+    {"id":"upscale","version":"1.0.0","path":"providers/upscale.port.md"},
     {"id":"timeline-compositor","version":"1.0.0","path":"providers/timeline-compositor.port.md"},
     {"id":"analytics","version":"1.0.0","path":"providers/analytics.port.md"},
     {"id":"economics","version":"1.0.0","path":"providers/economics.port.md"}

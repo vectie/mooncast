@@ -15,6 +15,7 @@ pub struct StudioService {
   needs_intake : @intake_app.NeedsIntakeService
   asset_factory : @asset_factory_app.AssetFactoryService
   animatic : @animatic_app.AnimaticService
+  postprocess : @postprocess_app.PostprocessService
   route_extensions : Array[RouteExtension]
 }
 
@@ -74,6 +75,10 @@ pub fn StudioService::new(
       root + "/application/animatic/state",
       root + "/application/animatic/media",
     ),
+    postprocess: @postprocess_app.PostprocessService::new(
+      root + "/application/postprocess",
+      execution_application,
+    ),
     route_extensions: [],
   }
   service.register_standard_application_routes()
@@ -81,6 +86,7 @@ pub fn StudioService::new(
   service.register_needs_intake_routes()
   service.register_asset_factory_routes()
   service.register_animatic_routes()
+  service.register_postprocess_routes()
   service
 }
 

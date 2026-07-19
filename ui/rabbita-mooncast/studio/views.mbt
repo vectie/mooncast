@@ -758,6 +758,58 @@ fn render_creative(
               ])
           },
         ]),
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([small("After approved source assets"), h2("Lip-sync · translation · upscale")]),
+            p(
+              "Run first-class postprocess jobs with exact source versions, rights, prompt, provider/model, retry and cost evidence; import immutable outputs into a shot, the Cut Editor, or a delivery build.",
+            ),
+          ]),
+          div(class="metrics", [
+            metric(
+              "Tasks",
+              "\{model.postprocess_workspace.map(value => value.tasks.length()).unwrap_or(0)}",
+              "Versioned provider routes",
+            ),
+            metric(
+              "Outputs",
+              "\{model.postprocess_workspace.map(value => value.outputs.length()).unwrap_or(0)}",
+              "Immutable provenance",
+            ),
+            metric(
+              "Imports",
+              "\{model.postprocess_workspace.map(value => value.bindings.length()).unwrap_or(0)}",
+              "Shot · editor · delivery",
+            ),
+            metric(
+              "Actual cost",
+              "CNY \{model.postprocess_workspace.map(value => value.total_cost_cny).unwrap_or(0.0)}",
+              "Recorded provider spend",
+            ),
+          ]),
+          text_field(
+            "Postprocess task JSON",
+            model.postprocess_task_draft,
+            "Choose lip-sync, translation, or upscale and its exact bindings",
+            16,
+            fn(value) { dispatch(SetPostprocessTaskDraft(value)) },
+          ),
+          div(class="form-actions", [
+            button(
+              class="secondary",
+              disabled=model.busy || !model.operator.human_confirmed,
+              on_click=dispatch(RecordPostprocessTask),
+              "Record exact task",
+            ),
+            button(
+              class="primary",
+              disabled=model.busy || !model.operator.human_confirmed ||
+                model.postprocess_workspace.map(value => value.tasks.is_empty()).unwrap_or(true),
+              on_click=dispatch(RunPostprocessTask),
+              "Authorize / resume provider job",
+            ),
+          ]),
+        ]),
       ])
     }
   }

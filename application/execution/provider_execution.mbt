@@ -100,7 +100,8 @@ async fn ProviderExecutionService::materialize_artifacts(
         "artifact modality differs from authorized capability",
       )
     }
-    let (bytes, media_type) = if artifact.modality == "text" {
+    let (bytes, media_type) = if artifact.modality == "text" ||
+      artifact.modality == "translation" {
       match artifact.text {
         Some(value) if value != "" =>
           (@utf8.encode(value), "text/plain; charset=utf-8")
@@ -192,10 +193,10 @@ async fn ProviderExecutionService::deterministic_fixture_result(
       "\ncontinuity=" +
       input.continuity_key
     let mime = match input.capability {
-      "text" => "text/plain; charset=utf-8"
+      "text" | "translation" => "text/plain; charset=utf-8"
       "image" => "image/x-mooncast-validation"
       "voice" | "music" => "audio/x-mooncast-validation"
-      "video" => "video/x-mooncast-validation"
+      "video" | "lip-sync" | "upscale" => "video/x-mooncast-validation"
       _ => "application/octet-stream"
     }
     let bytes = @utf8.encode(payload)
@@ -204,17 +205,17 @@ async fn ProviderExecutionService::deterministic_fixture_result(
       artifacts: [
         {
           modality: input.capability,
-          text: if input.capability == "text" {
+          text: if input.capability == "text" || input.capability == "translation" {
             Some(payload)
           } else {
             None
           },
-          content_base64: if input.capability == "text" {
+          content_base64: if input.capability == "text" || input.capability == "translation" {
             None
           } else {
             Some(@base64.encode(bytes))
           },
-          mime_type: if input.capability == "text" {
+          mime_type: if input.capability == "text" || input.capability == "translation" {
             None
           } else {
             Some(mime)

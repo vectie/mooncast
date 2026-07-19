@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/postprocess-output.schema.json",
+  "type": "object",
+  "required": ["contract", "reference", "task", "provider_job_id", "provider_artifact_id", "operation", "source_assets", "rights_refs", "cost_cny", "provenance_digest", "created_at", "network_effect_performed", "publication_authority", "immutable"],
+  "properties": {
+    "contract": {"const": "mooncast.postprocess-output.v1"},
+    "operation": {"enum": ["lip-sync", "translation", "upscale"]},
+    "cost_cny": {"type": "number", "minimum": 0},
+    "provenance_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "publication_authority": {"const": false},
+    "immutable": {"const": true}
+  },
+  "additionalProperties": true
+}
