@@ -1993,12 +1993,16 @@ pub async fn StudioService::dispatch_application_http(
           input.actor_id,
         ),
       )
+      let approved_assets_by_shot = self.approved_asset_map(
+        project_id, canonical.snapshot.revision,
+      )
       let record = self.execution_application.create_routed_from_catalog(
         canonical.snapshot.graph,
         routing,
         input.actor_id,
         binding_digest,
         input.network_authority,
+        approved_assets_by_shot~,
       )
       Some(
         json_value_response(

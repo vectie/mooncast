@@ -191,6 +191,9 @@ async fn StudioService::run_pending_shots_feature(
     )
   }
   validate_complete_execution_binding(initial.snapshot, routed.execution)
+  let approved_assets_by_shot = self.approved_asset_map(
+    project_id, initial.snapshot.revision,
+  )
 
   // Preflight every pending provider job before the first external action. This
   // rejects structurally partial batches without executing an early subset.
@@ -217,6 +220,17 @@ async fn StudioService::run_pending_shots_feature(
       let expected_source_assets = initial.snapshot.graph.assets.filter(asset => {
         shot.source_asset_ids.contains(asset.asset_id)
       })
+      match approved_assets_by_shot.get(binding.shot_id) {
+        Some(assets) =>
+          for asset in assets {
+            if !expected_source_assets.any(value => {
+              value.asset_id == asset.asset_id && value.version == asset.version
+            }) {
+              expected_source_assets.push(asset)
+            }
+          }
+        None => ()
+      }
       let request_id = routed.execution.execution_id + ":" + binding.shot_id
       let body = job.http_plan.body
       let body_digest = "sha256:" + sha256_text(body.stringify())

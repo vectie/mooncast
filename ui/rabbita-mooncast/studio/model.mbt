@@ -5,6 +5,7 @@ enum StudioTab {
   Overview
   NeedsStrategy
   Creative
+  AssetFactory
   Routing
   ShotBoard
   Delivery
@@ -131,6 +132,92 @@ struct NeedsIntakeWorkspaceProjection {
   intakes : Array[ImportedIntakeProjection]
   decisions : Array[IntakeDecisionProjection]
   bindings : Array[IntakeBindingProjection]
+  publication_authority : Bool
+  provider_execution_authority : Bool
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct AssetVersionRefProjection {
+  id : String
+  version : Int
+  digest : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct AssetFactorySpecProjection {
+  asset_id : String
+  asset_version : Int
+  kind : String
+  capability : String
+  title : String
+  variant_limit : Int
+  retry_limit : Int
+  cost_ceiling_cny : Double
+  dependent_shot_ids : Array[String]
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct AssetFactoryPlanProjection {
+  plan : AssetVersionRefProjection
+  project_id : String
+  project_revision : Int
+  specs : Array[AssetFactorySpecProjection]
+  total_cost_ceiling_cny : Double
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct AssetFactoryDecisionProjection {
+  plan : AssetVersionRefProjection
+  decision : String
+  actor : String
+  actor_role : String
+  decided_at : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct AssetFactoryVariantProjection {
+  variant_id : String
+  asset_id : String
+  asset_version : Int
+  variant : Int
+  modality : String
+  state : String
+  output_digest : String?
+  cost_cny : Double
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct AssetFactoryApprovedProjection {
+  variant_id : String
+  modality : String
+  approval_actor : String
+  approval_digest : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct AssetFactoryBindingProjection {
+  binding_id : String
+  shot_id : String
+  assets : Array[Json]
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct AssetFactoryWorkspaceProjection {
+  plans : Array[AssetFactoryPlanProjection]
+  plan_decisions : Array[AssetFactoryDecisionProjection]
+  variants : Array[AssetFactoryVariantProjection]
+  findings : Array[Json]
+  approved_assets : Array[AssetFactoryApprovedProjection]
+  shot_bindings : Array[AssetFactoryBindingProjection]
+  total_spent_cny : Double
   publication_authority : Bool
   provider_execution_authority : Bool
 } derive(FromJson)
@@ -828,6 +915,8 @@ struct Model {
   commercial : CommercialDashboardProjection?
   capacity_board : CapacityBoardProjection?
   needs_intake : NeedsIntakeWorkspaceProjection?
+  asset_factory : AssetFactoryWorkspaceProjection?
+  asset_plan_draft : String
   selected_intake_id : String
   intake_packet_draft : String
   intake_seed_project_id : String
@@ -865,6 +954,14 @@ enum Msg {
   LoadedCommercial(Result[CommercialDashboardProjection, Error])
   LoadedCapacity(Result[CapacityBoardProjection, Error])
   LoadedNeedsIntake(Result[NeedsIntakeWorkspaceProjection, Error])
+  LoadedAssetFactory(Result[AssetFactoryWorkspaceProjection, Error])
+  SetAssetPlanDraft(String)
+  RecordAssetPlan
+  DecideAssetPlan(String)
+  RunAssetFactory
+  RecordAssetVariantQc(String)
+  ApproveAssetVariant(String)
+  BindAssetFactoryShots
   SelectIntake(String)
   SetIntakePacketDraft(String)
   SetIntakeSeedProjectId(String)
@@ -958,6 +1055,61 @@ fn starter_moonwiki_packet() -> String {
 }
 
 ///|
+fn starter_asset_factory_plan(project : ProjectProjection) -> String {
+  let shot_id = project.shots.get(0).map(shot => shot.id).unwrap_or("shot-001")
+  let source_digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  let prompt_digest = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+  let specs : Array[Json] = []
+  for item in [
+    ("hero", "character", "image"),
+    ("main-location", "location", "image"),
+    ("narrator", "voice", "voice"),
+    ("episode-score", "music", "music"),
+    ("hero-motion", "motion", "video"),
+    ("style-copy", "text", "text"),
+  ] {
+    let (asset_id, kind, capability) = item
+    specs.push({
+      "asset_id": asset_id,
+      "asset_version": 1,
+      "kind": kind,
+      "capability": capability,
+      "title": asset_id,
+      "intent": {
+        "source_id": "moonwiki-" + asset_id,
+        "source_version": "1",
+        "source_digest": source_digest,
+        "provenance_ref": "moonwiki://asset-intent/" + asset_id,
+      },
+      "prompt_digest": prompt_digest,
+      "source_asset_refs": [],
+      "rights_refs": ["rights://contract-cleared/" + asset_id],
+      "continuity_key": "continuity:" + asset_id,
+      "provider_adapter_id": "approved-" + capability,
+      "provider": "approved-provider",
+      "model": "approved-" + capability + "-model",
+      "permitted_data_class": "rights-cleared-confidential",
+      "variant_limit": 2,
+      "retry_limit": 2,
+      "cost_ceiling_cny": 0,
+      "dependent_shot_ids": [shot_id],
+    })
+  }
+  let value : Json = {
+    "contract": "mooncast.asset-factory-plan.v1",
+    "plan": { "id": "asset-factory:" + project.id, "version": 1, "digest": "" },
+    "project_id": project.id,
+    "project_revision": project.revision,
+    "specs": specs,
+    "total_cost_ceiling_cny": 0,
+    "created_at": "2026-07-19T00:00:00+08:00",
+    "publication_authority": false,
+    "provider_execution_authority": false,
+  }
+  value.stringify(indent=2)
+}
+
+///|
 fn initial_model() -> Model {
   {
     tab: Overview,
@@ -974,6 +1126,8 @@ fn initial_model() -> Model {
     commercial: None,
     capacity_board: None,
     needs_intake: None,
+    asset_factory: None,
+    asset_plan_draft: "",
     selected_intake_id: "",
     intake_packet_draft: starter_moonwiki_packet(),
     intake_seed_project_id: "brand-episode-001",

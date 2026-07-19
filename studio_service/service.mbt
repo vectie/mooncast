@@ -13,6 +13,7 @@ pub struct StudioService {
   commerce_application : @commerce_app.CommercialApplicationService
   handoff_outbox : @handoff_app.OutboundHandoffService
   needs_intake : @intake_app.NeedsIntakeService
+  asset_factory : @asset_factory_app.AssetFactoryService
   route_extensions : Array[RouteExtension]
 }
 
@@ -64,11 +65,15 @@ pub fn StudioService::new(
     needs_intake: @intake_app.NeedsIntakeService::new(
       root + "/application/needs-intake",
     ),
+    asset_factory: @asset_factory_app.AssetFactoryService::new(
+      root + "/application/asset-factory", execution_application,
+    ),
     route_extensions: [],
   }
   service.register_standard_application_routes()
   service.register_production_coordinator_routes()
   service.register_needs_intake_routes()
+  service.register_asset_factory_routes()
   service
 }
 

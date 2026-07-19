@@ -33,6 +33,7 @@ fn tab_label(tab : StudioTab) -> String {
     Overview => "Overview"
     NeedsStrategy => "Needs / Strategy"
     Creative => "Creative"
+    AssetFactory => "Asset Factory"
     Routing => "Routing"
     ShotBoard => "Shot board"
     Delivery => "Delivery"
@@ -121,6 +122,7 @@ fn render_header(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
       tab_button(dispatch, model.tab, Overview),
       tab_button(dispatch, model.tab, NeedsStrategy),
       tab_button(dispatch, model.tab, Creative),
+      tab_button(dispatch, model.tab, AssetFactory),
       tab_button(dispatch, model.tab, Routing),
       tab_button(dispatch, model.tab, ShotBoard),
       tab_button(dispatch, model.tab, Delivery),
@@ -1010,6 +1012,128 @@ fn render_routing(
           },
         ]),
       ])
+  }
+}
+
+///|
+fn render_asset_factory(
+  dispatch : Dispatch[Msg],
+  model : Model,
+) -> @rabbita.Html {
+  match model.project {
+    None => render_create_project(dispatch, model)
+    Some(project) => {
+      let workspace = model.asset_factory
+      let plan_count = workspace.map(value => value.plans.length()).unwrap_or(0)
+      let variant_count = workspace.map(value => value.variants.length()).unwrap_or(0)
+      let approved_count = workspace.map(value => value.approved_assets.length()).unwrap_or(0)
+      let binding_count = workspace.map(value => value.shot_bindings.length()).unwrap_or(0)
+      div(class="surface-stack", [
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([
+              small("Reusable assets before dependent shots"),
+              h2("Multimodal Asset Factory"),
+            ]),
+            p(
+              "Create immutable character, location, prop, voice, music, text, image and motion references. Every attempt is provider-, cost-, evidence- and rights-bound; this surface grants no publication authority.",
+            ),
+          ]),
+          div(class="metrics", [
+            metric("Plans", "\{plan_count}", "Exact project revision"),
+            metric("Variants", "\{variant_count}", "Bounded attempts"),
+            metric("Approved", "\{approved_count}", "Immutable references"),
+            metric("Shot bindings", "\{binding_count}", "Exact versions"),
+          ]),
+          text_field(
+            "Asset factory plan JSON",
+            model.asset_plan_draft,
+            "MoonWiki-backed reusable asset specifications",
+            18,
+            fn(value) { dispatch(SetAssetPlanDraft(value)) },
+          ),
+          div(class="form-actions", [
+            button(
+              class="secondary",
+              disabled=model.busy || !model.operator.human_confirmed,
+              on_click=dispatch(RecordAssetPlan),
+              "Record exact plan",
+            ),
+            button(
+              class="secondary",
+              disabled=model.busy || !model.operator.human_confirmed || plan_count == 0,
+              on_click=dispatch(DecideAssetPlan("approve")),
+              "Approve plan",
+            ),
+            button(
+              class="primary",
+              disabled=model.busy || !model.operator.human_confirmed || plan_count == 0,
+              on_click=dispatch(RunAssetFactory),
+              "Authorize and run bounded variants",
+            ),
+            button(
+              class="secondary",
+              disabled=model.busy ||
+                !model.operator.human_confirmed ||
+                approved_count == 0,
+              on_click=dispatch(BindAssetFactoryShots),
+              "Bind approved versions to shots",
+            ),
+          ]),
+        ]),
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([small("Technical · identity · continuity · rights · safety"), h2("Variant QC and immutable approval")]),
+            p(
+              "A named reviewer records all five dimensions before selecting one reusable version. Validation fixtures are not commercial media.",
+            ),
+          ]),
+          match workspace {
+            None => p(class="empty", "Load an asset factory workspace.")
+            Some(value) if value.variants.is_empty() =>
+              p(class="empty", "Approve a plan and run bounded variants.")
+            Some(value) =>
+              div(
+                class="resource-list",
+                value.variants.map(variant => {
+                  let approved = value.approved_assets.any(asset => {
+                    asset.variant_id == variant.variant_id
+                  })
+                  article(class="resource-card", [
+                    div([
+                      strong(variant.asset_id + " · " + variant.modality),
+                      status_chip(if approved { "approved" } else { variant.state }),
+                    ]),
+                    code(variant.variant_id),
+                    small(
+                      "Version \{variant.asset_version} · variant \{variant.variant} · CNY \{variant.cost_cny}",
+                    ),
+                    div(class="form-actions", [
+                      button(
+                        class="secondary",
+                        disabled=model.busy ||
+                          !model.operator.human_confirmed ||
+                          variant.state != "completed",
+                        on_click=dispatch(RecordAssetVariantQc(variant.variant_id)),
+                        "Record five-dimension QC",
+                      ),
+                      button(
+                        class="primary",
+                        disabled=model.busy ||
+                          !model.operator.human_confirmed ||
+                          variant.state != "completed" ||
+                          approved,
+                        on_click=dispatch(ApproveAssetVariant(variant.variant_id)),
+                        if approved { "Approved immutable" } else { "Approve selected output" },
+                      ),
+                    ]),
+                  ])
+                }),
+              )
+          },
+        ]),
+      ])
+    }
   }
 }
 
@@ -2456,6 +2580,7 @@ fn render_surface(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
     Overview => render_overview(dispatch, model, model.project)
     NeedsStrategy => render_needs_strategy(dispatch, model)
     Creative => render_creative(dispatch, model, model.project)
+    AssetFactory => render_asset_factory(dispatch, model)
     Routing => render_routing(dispatch, model, model.project)
     ShotBoard => render_shot_board(dispatch, model, model.project)
     Delivery => render_delivery(dispatch, model, model.project)

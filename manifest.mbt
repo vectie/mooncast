@@ -157,6 +157,11 @@ pub fn manifest() -> @pack.MoonPackManifest {
       schema("moonwiki-needs-export"),
       schema("needs-intake-decision"),
       schema("project-needs-intake-binding"),
+      schema("asset-factory-plan"),
+      schema("asset-generation-variant"),
+      schema("asset-qc-finding"),
+      schema("approved-reusable-asset"),
+      schema("shot-asset-binding"),
     ],
     tools: [
       tool(
@@ -401,6 +406,39 @@ pub fn manifest() -> @pack.MoonPackManifest {
         [
           "provider-executions/routed", "provider-executions/jobs", "project-events",
         ],
+        review_required=true,
+      ),
+      tool(
+        "asset-factory.plan.record",
+        "asset-factory-plan",
+        "asset-factory-plan",
+        WorkspaceMutation,
+        ["asset-factory/plans"],
+        review_required=true,
+      ),
+      tool(
+        "asset-factory.generate",
+        "asset-factory-plan",
+        "asset-generation-variant",
+        ExternalEffect,
+        ["asset-factory/variants", "provider-executions"],
+        idempotent=false,
+        review_required=true,
+      ),
+      tool(
+        "asset-factory.review",
+        "asset-qc-finding",
+        "approved-reusable-asset",
+        WorkspaceMutation,
+        ["asset-factory/findings", "asset-factory/approved-assets"],
+        review_required=true,
+      ),
+      tool(
+        "asset-factory.bind-shots",
+        "approved-reusable-asset",
+        "shot-asset-binding",
+        WorkspaceMutation,
+        ["asset-factory/shot-bindings"],
         review_required=true,
       ),
       tool(
