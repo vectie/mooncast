@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/asset-qc-finding.schema.json",
+  "title": "Mooncast reusable asset QC finding",
+  "type": "object",
+  "required": ["contract", "finding_id", "variant_id", "dimension", "status", "evidence_digest", "reviewer", "reviewer_role", "reviewed_at", "human_confirmed", "immutable"],
+  "properties": {
+    "contract": {"const": "mooncast.asset-qc-finding.v1"},
+    "dimension": {"enum": ["technical", "identity", "continuity", "rights", "safety"]},
+    "status": {"enum": ["pass", "fail"]},
+    "human_confirmed": {"const": true},
+    "immutable": {"const": true}
+  },
+  "additionalProperties": true
+}

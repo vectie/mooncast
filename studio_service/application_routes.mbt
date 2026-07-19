@@ -29,7 +29,6 @@ struct RoutedCreateRequest {
   expected_routing_plan_version : Int
   expected_routing_plan_digest : String
   actor_id : String
-  binding_digest : String?
   network_authority : Bool
   publication_authority : Bool
 } derive(FromJson)
@@ -1981,8 +1980,16 @@ pub async fn StudioService::dispatch_application_http(
           ),
         )
       }
-      let binding_digest = input.binding_digest.unwrap_or(
-        "sha256:" +
+      guard self.approved_rendered_animatic(project_id)
+        is Some(animatic_approval) else {
+        return Some(
+          api_error(
+            409, "routed_animatic_not_approved", "expensive shot generation requires the exact approved rendered animatic",
+          ),
+        )
+      }
+      let approved_animatic_digest = animatic_approval.rendered.video_digest
+      let binding_digest = "sha256:" +
         sha256_text(
           project_id +
           ":" +
@@ -1990,8 +1997,13 @@ pub async fn StudioService::dispatch_application_http(
           ":" +
           routing.reference.digest +
           ":" +
+          approved_animatic_digest +
+          ":" +
           input.actor_id,
-        ),
+        )
+      let approved_assets_by_shot = self.approved_asset_map(
+        project_id,
+        canonical.snapshot.revision,
       )
       let record = self.execution_application.create_routed_from_catalog(
         canonical.snapshot.graph,
@@ -1999,6 +2011,8 @@ pub async fn StudioService::dispatch_application_http(
         input.actor_id,
         binding_digest,
         input.network_authority,
+        approved_assets_by_shot~,
+        approved_animatic_digest~,
       )
       Some(
         json_value_response(

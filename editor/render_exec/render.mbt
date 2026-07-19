@@ -488,11 +488,13 @@ pub fn compile_with_encoding(
   let visual_modes : Array[String] = []
   let audio_labels : Array[String] = []
   let subtitle_paths : Array[String] = []
+  let subtitle_inputs : Array[Int] = []
   for index, clip in clips {
     let subtitle = clip.local_media is Some(binding) &&
       binding.role == "subtitle"
     if subtitle {
       subtitle_paths.push(resolve_path(media, clip.selected_digest))
+      subtitle_inputs.push(index)
     } else if track_kinds[index] != "audio" {
       filters.push(
         visual_filter(
@@ -598,6 +600,10 @@ pub fn compile_with_encoding(
     arguments.push("-map")
     arguments.push("[aout]")
   }
+  for input_index in subtitle_inputs {
+    arguments.push("-map")
+    arguments.push(input_index.to_string() + ":0")
+  }
   let video_encoder = if encoding.video_codec == "h264" {
     "libx264"
   } else {
@@ -620,6 +626,18 @@ pub fn compile_with_encoding(
     "-c:a",
     audio_encoder,
   ])
+  if !subtitle_inputs.is_empty() {
+    arguments.append([
+      "-c:s",
+      if encoding.container == "mp4" {
+        "mov_text"
+      } else if encoding.container == "webm" {
+        "webvtt"
+      } else {
+        "srt"
+      },
+    ])
+  }
   if encoding.container == "mp4" || encoding.container == "mkv" {
     arguments.append(["-movflags", "+faststart"])
   }

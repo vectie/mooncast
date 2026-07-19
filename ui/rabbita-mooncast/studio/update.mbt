@@ -43,8 +43,11 @@ fn update(
       let commercial = @http.get("/api/commercial-intake").expect_json(
         emit.map(fn(result) { LoadedCommercial(result) }),
       )
+      let needs = @http.get("/api/v2/needs-intakes").expect_json(
+        emit.map(fn(result) { LoadedNeedsIntake(result) }),
+      )
       (
-        @rabbita.batch([projects, commercial]),
+        @rabbita.batch([projects, commercial, needs]),
         {
           ..model,
           loading: true,
@@ -129,8 +132,20 @@ fn update(
       let billing = @http.get("/api/v2/projects/" + project.id + "/billing").expect_json(
         emit.map(fn(result) { LoadedBilling(result) }),
       )
+      let assets = @http.get(
+        "/api/v2/projects/" + project.id + "/asset-factory",
+      ).expect_json(emit.map(fn(result) { LoadedAssetFactory(result) }))
+      let animatic = @http.get(
+        "/api/v2/projects/" + project.id + "/animatic-workspace",
+      ).expect_json(emit.map(fn(result) { LoadedAnimaticWorkspace(result) }))
+      let postprocess = @http.get(
+        "/api/v2/projects/" + project.id + "/postprocess-jobs",
+      ).expect_json(emit.map(fn(result) { LoadedPostprocessWorkspace(result) }))
+      let analyzers = @http.get(
+        "/api/v2/projects/" + project.id + "/automated-qc",
+      ).expect_json(emit.map(fn(result) { LoadedAnalyzerWorkspace(result) }))
       (
-        @rabbita.batch([routed, deliveries, portals, billing]),
+        @rabbita.batch([routed, deliveries, portals, billing, assets, animatic, postprocess, analyzers]),
         {
           ..model,
           project: Some(project),
@@ -142,6 +157,11 @@ fn update(
           artifact_draft: artifact_for(project, model.selected_artifact_kind)
           .map(item => item.content.stringify())
           .unwrap_or("{}"),
+          asset_plan_draft: if model.asset_plan_draft == "" {
+            starter_asset_factory_plan(project)
+          } else {
+            model.asset_plan_draft
+          },
         },
       )
     }
@@ -236,6 +256,521 @@ fn update(
           error: Some("Capacity board: \{error}"),
         },
       )
+    LoadedNeedsIntake(Ok(value)) => {
+      let selected = if model.selected_intake_id == "" &&
+        !value.intakes.is_empty() {
+        value.intakes[value.intakes.length() - 1].packet.packet_id
+      } else {
+        model.selected_intake_id
+      }
+      (
+        @rabbita.none,
+        {
+          ..model,
+          needs_intake: Some(value),
+          selected_intake_id: selected,
+        },
+      )
+    }
+    LoadedNeedsIntake(Err(error)) =>
+      (
+        @rabbita.none,
+        { ..model, error: Some("Needs / Strategy intake: \{error}") },
+      )
+    LoadedAssetFactory(Ok(value)) => {
+      let draft = match model.project {
+        Some(project) if model.animatic_plan_draft == "" =>
+          starter_animatic_plan(project, value, 1)
+        _ => model.animatic_plan_draft
+      }
+      let postprocess_draft = match model.project {
+        Some(project) if model.postprocess_task_draft == "" =>
+          starter_postprocess_task(project, value)
+        _ => model.postprocess_task_draft
+      }
+      (@rabbita.none, {
+        ..model,
+        asset_factory: Some(value),
+        animatic_plan_draft: draft,
+        postprocess_task_draft: postprocess_draft,
+      })
+    }
+    LoadedAssetFactory(Err(error)) =>
+      (
+        @rabbita.none,
+        { ..model, error: Some("Asset factory: \{error}") },
+      )
+    SetAssetPlanDraft(value) =>
+      (@rabbita.none, { ..model, asset_plan_draft: value })
+    RecordAssetPlan =>
+      match model.project {
+        None => (@rabbita.none, model)
+        Some(project) => {
+          let plan = @json.parse(model.asset_plan_draft) catch {
+            _ =>
+              return (
+                @rabbita.none,
+                { ..model, error: Some("Asset factory plan must be valid JSON.") },
+              )
+          }
+          let body : Json = { "plan": plan }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/asset-factory/plans",
+            )
+            .with_json(body)
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Reusable asset plan", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+      }
+    DecideAssetPlan(decision) =>
+      match (model.project, model.asset_factory) {
+        (Some(project), Some(workspace)) if !workspace.plans.is_empty() => {
+          let mut plan = workspace.plans[0]
+          for candidate in workspace.plans {
+            if candidate.plan.version > plan.plan.version {
+              plan = candidate
+            }
+          }
+          let body : Json = {
+            "expected_plan_version": plan.plan.version,
+            "expected_plan_digest": plan.plan.digest,
+            "decision": decision,
+            "actor": model.operator.actor,
+            "actor_role": model.operator.role,
+            "note": model.operator.note,
+            "decided_at": model.operator.recorded_at,
+            "human_confirmed": model.operator.human_confirmed,
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/asset-factory/plan-decisions",
+            )
+            .with_json(body)
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Reusable asset plan " + decision, result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+        _ => (@rabbita.none, { ..model, error: Some("Record an asset plan first.") })
+      }
+    RunAssetFactory =>
+      match (model.project, model.asset_factory) {
+        (Some(project), Some(workspace)) if !workspace.plans.is_empty() => {
+          let mut plan = workspace.plans[0]
+          for candidate in workspace.plans {
+            if candidate.plan.version > plan.plan.version {
+              plan = candidate
+            }
+          }
+          let body : Json = {
+            "expected_plan_version": plan.plan.version,
+            "expected_plan_digest": plan.plan.digest,
+            "actor": model.operator.actor,
+            "human_confirmed": model.operator.human_confirmed,
+            "network_authority": model.operator.human_confirmed,
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/asset-factory/run-pending",
+            )
+            .with_json(body)
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Bounded multimodal asset run", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+        _ => (@rabbita.none, { ..model, error: Some("Approve an asset plan first.") })
+      }
+    RecordAssetVariantQc(variant_id) =>
+      match model.project {
+        None => (@rabbita.none, model)
+        Some(project) => {
+          let commands : Array[@rabbita.Cmd] = []
+          for dimension in ["technical", "identity", "continuity", "rights", "safety"] {
+            let body : Json = {
+              "variant_id": variant_id,
+              "dimension": dimension,
+              "status": "pass",
+              "evidence_digest": "review:" + variant_id + ":" + dimension,
+              "reviewer": model.operator.actor,
+              "reviewer_role": model.operator.role,
+              "reviewed_at": model.operator.recorded_at,
+              "human_confirmed": model.operator.human_confirmed,
+            }
+            commands.push(
+              @http.post(
+                  "/api/v2/projects/" + project.id + "/asset-factory/findings",
+                )
+                .with_json(body)
+                .expect_json(emit.map(fn(result) {
+                  ActionCompleted("Asset QC " + dimension, result)
+                })),
+            )
+          }
+          (@rabbita.batch(commands), { ..model, busy: true, error: None })
+        }
+      }
+    ApproveAssetVariant(variant_id) =>
+      match (model.project, model.asset_factory) {
+        (Some(project), Some(workspace)) => {
+          let matches = workspace.variants.filter(value => {
+            value.variant_id == variant_id
+          })
+          if matches.is_empty() {
+            (@rabbita.none, { ..model, error: Some("Variant is not current.") })
+          } else {
+            let variant = matches[0]
+            let body : Json = {
+              "asset_id": variant.asset_id,
+              "asset_version": variant.asset_version,
+              "variant_id": variant.variant_id,
+              "actor": model.operator.actor,
+              "actor_role": model.operator.role,
+              "approved_at": model.operator.recorded_at,
+              "human_confirmed": model.operator.human_confirmed,
+            }
+            let cmd = @http.post(
+                "/api/v2/projects/" + project.id + "/asset-factory/approvals",
+              )
+              .with_json(body)
+              .expect_json(emit.map(fn(result) {
+                ActionCompleted("Immutable reusable asset approval", result)
+              }))
+            (cmd, { ..model, busy: true, error: None })
+          }
+        }
+        _ => (@rabbita.none, model)
+      }
+    BindAssetFactoryShots =>
+      match model.project {
+        None => (@rabbita.none, model)
+        Some(project) => {
+          let body : Json = {
+            "project_revision": project.revision,
+            "bound_at": model.operator.recorded_at,
+            "human_confirmed": model.operator.human_confirmed,
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/asset-factory/bind-shots",
+            )
+            .with_json(body)
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Exact approved shot asset bindings", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+      }
+    LoadedAnimaticWorkspace(Ok(value)) => {
+      let draft = match (model.project, model.asset_factory) {
+        (Some(project), Some(factory)) if model.animatic_plan_draft == "" ||
+          model.animatic_plan_draft == "{}" =>
+          starter_animatic_plan(project, factory, value.plans.length() + 1)
+        _ => model.animatic_plan_draft
+      }
+      (@rabbita.none, { ..model, animatic_workspace: Some(value), animatic_plan_draft: draft })
+    }
+    LoadedAnimaticWorkspace(Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Storyboard / Animatic: \{error}") })
+    SetAnimaticPlanDraft(value) =>
+      (@rabbita.none, { ..model, animatic_plan_draft: value })
+    RecordAnimaticPlan =>
+      match model.project {
+        None => (@rabbita.none, model)
+        Some(project) => {
+          let plan = @json.parse(model.animatic_plan_draft) catch {
+            _ => return (@rabbita.none, { ..model, error: Some("Animatic plan must be valid JSON.") })
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/animatic-workspace/plans",
+            )
+            .with_json({ "plan": plan })
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Exact storyboard / animatic plan", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+      }
+    RenderAnimatic =>
+      match (model.project, model.animatic_workspace) {
+        (Some(project), Some(workspace)) if !workspace.plans.is_empty() => {
+          let plan = workspace.plans[workspace.plans.length() - 1]
+          let reference = match plan {
+            Object(fields) => fields.get("reference")
+            _ => None
+          }
+          guard reference is Some(Object(fields)) &&
+            fields.get("version") is Some(Number(version)) &&
+            fields.get("digest") is Some(String(plan_digest)) else {
+            return (@rabbita.none, { ..model, error: Some("Current animatic plan is malformed.") })
+          }
+          let body : Json = {
+            "expected_plan_version": version.to_int(),
+            "expected_plan_digest": plan_digest,
+            "actor": model.operator.actor,
+            "rendered_at": model.operator.recorded_at,
+            "human_confirmed": model.operator.human_confirmed,
+            "process_authority": model.operator.human_confirmed,
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/animatic-workspace/render",
+            )
+            .with_json(body)
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Rendered storyboard sheet and timed animatic", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+        _ => (@rabbita.none, { ..model, error: Some("Record an animatic plan first.") })
+      }
+    ApproveRenderedAnimatic =>
+      match (model.project, model.animatic_workspace) {
+        (Some(project), Some(workspace)) if !workspace.renders.is_empty() => {
+          let render = workspace.renders[workspace.renders.length() - 1]
+          let body : Json = {
+            "expected_render_version": render.reference.version,
+            "expected_render_digest": render.reference.digest,
+            "actor": model.operator.actor,
+            "actor_role": model.operator.role,
+            "note": model.operator.note,
+            "approved_at": model.operator.recorded_at,
+            "human_confirmed": model.operator.human_confirmed,
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/animatic-workspace/approve",
+            )
+            .with_json(body)
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Exact rendered animatic approval", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+        _ => (@rabbita.none, { ..model, error: Some("Render an animatic first.") })
+      }
+    LoadedPostprocessWorkspace(Ok(value)) =>
+      (@rabbita.none, { ..model, postprocess_workspace: Some(value) })
+    LoadedPostprocessWorkspace(Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Postprocess jobs: \{error}") })
+    SetPostprocessTaskDraft(value) =>
+      (@rabbita.none, { ..model, postprocess_task_draft: value })
+    RecordPostprocessTask =>
+      match model.project {
+        None => (@rabbita.none, model)
+        Some(project) => {
+          let task = @json.parse(model.postprocess_task_draft) catch {
+            _ => return (@rabbita.none, { ..model, error: Some("Postprocess task must be valid JSON.") })
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/postprocess-jobs/tasks",
+            )
+            .with_json({ "task": task })
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Exact multimodal postprocess task", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+      }
+    RunPostprocessTask =>
+      match (model.project, model.postprocess_workspace) {
+        (Some(project), Some(workspace)) if !workspace.tasks.is_empty() => {
+          let task = workspace.tasks[workspace.tasks.length() - 1]
+          let body : Json = {
+            "expected_task_version": task.reference.version,
+            "expected_task_digest": task.reference.digest,
+            "actor": model.operator.actor,
+            "human_confirmed": model.operator.human_confirmed,
+            "network_authority": model.operator.human_confirmed,
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/postprocess-jobs/run",
+            )
+            .with_json(body)
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Bounded postprocess provider job", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+        _ => (@rabbita.none, { ..model, error: Some("Record a postprocess task first.") })
+      }
+    LoadedAnalyzerWorkspace(Ok(value)) => {
+      let draft = match model.project {
+        Some(project) if model.analyzer_task_draft == "" => starter_analyzer_task(project)
+        _ => model.analyzer_task_draft
+      }
+      (@rabbita.none, { ..model, analyzer_workspace: Some(value), analyzer_task_draft: draft })
+    }
+    LoadedAnalyzerWorkspace(Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Automated QC: \{error}") })
+    SetAnalyzerTaskDraft(value) =>
+      (@rabbita.none, { ..model, analyzer_task_draft: value })
+    RecordAnalyzerTask =>
+      match model.project {
+        None => (@rabbita.none, model)
+        Some(project) => {
+          let task = @json.parse(model.analyzer_task_draft) catch {
+            _ => return (@rabbita.none, { ..model, error: Some("Analyzer task must be valid JSON.") })
+          }
+          let cmd = @http.post("/api/v2/projects/" + project.id + "/automated-qc/tasks")
+            .with_json({ "task": task })
+            .expect_json(emit.map(fn(result) { ActionCompleted("Exact QC analyzer task", result) }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+      }
+    RunAnalyzerTask =>
+      match (model.project, model.analyzer_workspace) {
+        (Some(project), Some(workspace)) if !workspace.tasks.is_empty() => {
+          let task = workspace.tasks[workspace.tasks.length() - 1]
+          let body : Json = {
+              "expected_task_version": task.reference.version,
+              "expected_task_digest": task.reference.digest,
+              "actor": model.operator.actor,
+              "human_confirmed": model.operator.human_confirmed,
+              "network_authority": task.execution_mode == "external-semantic" && model.operator.human_confirmed,
+            }
+          let cmd = @http.post("/api/v2/projects/" + project.id + "/automated-qc/run")
+            .with_json(body)
+            .expect_json(emit.map(fn(result) { ActionCompleted("Automated QC evidence", result) }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+        _ => (@rabbita.none, { ..model, error: Some("Record an analyzer task first.") })
+      }
+    SelectIntake(value) =>
+      (@rabbita.none, { ..model, selected_intake_id: value })
+    SetIntakePacketDraft(value) =>
+      (@rabbita.none, { ..model, intake_packet_draft: value })
+    SetIntakeSeedProjectId(value) =>
+      (@rabbita.none, { ..model, intake_seed_project_id: value })
+    ImportNeedsPacket => {
+      let packet = @json.parse(model.intake_packet_draft) catch {
+        _ =>
+          return (
+            @rabbita.none,
+            { ..model, error: Some("MoonWiki export packet must be valid JSON.") },
+          )
+      }
+      let packet_id = match packet {
+        Object(fields) =>
+          match fields.get("packet_id") {
+            Some(String(value)) => value
+            _ => ""
+          }
+        _ => ""
+      }
+      if packet_id.trim().is_empty() {
+        (
+          @rabbita.none,
+          { ..model, error: Some("MoonWiki packet_id is required.") },
+        )
+      } else {
+        let body : Json = {
+          "packet": packet,
+          "imported_at": model.operator.recorded_at.to_json(),
+        }
+        let cmd = @http.post("/api/v2/needs-intakes")
+          .with_json(body)
+          .expect_json(emit.map(fn(result) {
+            ActionCompleted("MoonWiki needs packet", result)
+          }))
+        (
+          cmd,
+          {
+            ..model,
+            busy: true,
+            selected_intake_id: packet_id,
+            error: None,
+            status: "Importing immutable MoonWiki evidence for deterministic completeness review…",
+          },
+        )
+      }
+    }
+    DecideNeedsIntake(decision) =>
+      match model.needs_intake {
+        Some(workspace) => {
+          let matches = workspace.intakes.filter(value => {
+            value.packet.packet_id == model.selected_intake_id
+          })
+          if matches.is_empty() {
+            (@rabbita.none, { ..model, error: Some("Select an imported intake.") })
+          } else if !model.operator.human_confirmed {
+            (
+              @rabbita.none,
+              { ..model, error: Some("Named-human confirmation is required.") },
+            )
+          } else {
+            let imported = matches[matches.length() - 1]
+            let body : Json = {
+              "packet_version": imported.packet.packet_version,
+              "expected_provenance_digest": imported.validation.provenance_digest,
+              "decision": decision,
+              "actor": model.operator.actor,
+              "actor_role": model.operator.role,
+              "note": model.operator.note,
+              "decided_at": model.operator.recorded_at,
+              "human_confirmed": model.operator.human_confirmed,
+            }
+            let cmd = @http.post(
+                "/api/v2/needs-intakes/" +
+                imported.packet.packet_id +
+                "/decisions",
+              )
+              .with_json(body)
+              .expect_json(emit.map(fn(result) {
+                ActionCompleted("Needs / Strategy decision", result)
+              }))
+            (
+              cmd,
+              {
+                ..model,
+                busy: true,
+                error: None,
+                status: "Recording an exact named-human intake decision…",
+              },
+            )
+          }
+        }
+        None => (@rabbita.none, { ..model, error: Some("Intake ledger is not loaded.") })
+      }
+    SeedProjectFromIntake =>
+      match model.needs_intake {
+        Some(workspace) => {
+          let matches = workspace.intakes.filter(value => {
+            value.packet.packet_id == model.selected_intake_id
+          })
+          if matches.is_empty() || model.intake_seed_project_id.trim().is_empty() {
+            (
+              @rabbita.none,
+              { ..model, error: Some("Select an intake and provide a project id.") },
+            )
+          } else {
+            let imported = matches[matches.length() - 1]
+            let body : Json = {
+              "packet_version": imported.packet.packet_version.to_json(),
+              "expected_provenance_digest": imported.validation.provenance_digest.to_json(),
+              "project_id": model.intake_seed_project_id.to_json(),
+              "recorded_at": model.operator.recorded_at.to_json(),
+            }
+            let cmd = @http.post(
+                "/api/v2/needs-intakes/" +
+                imported.packet.packet_id +
+                "/seed-project",
+              )
+              .with_json(body)
+              .expect_json(emit.map(fn(result) {
+                ActionCompleted("Intake-bound production project", result)
+              }))
+            (
+              cmd,
+              {
+                ..model,
+                busy: true,
+                selected_project_id: model.intake_seed_project_id,
+                error: None,
+                status: "Creating a project bound to approved MoonWiki evidence…",
+              },
+            )
+          }
+        }
+        None => (@rabbita.none, { ..model, error: Some("Intake ledger is not loaded.") })
+      }
     CreatedProject(Ok(project)) => {
       let index = @http.get("/api/v2/projects").expect_json(
         emit.map(fn(result) { LoadedProjects(result) }),
@@ -284,12 +819,34 @@ fn update(
                 emit.map(fn(result) { LoadedProject(result) }),
               ),
             )
+            commands.push(
+              @http.get(
+                "/api/v2/projects/" + model.selected_project_id + "/postprocess-jobs",
+              ).expect_json(emit.map(fn(result) { LoadedPostprocessWorkspace(result) })),
+            )
+            commands.push(
+              @http.get(
+                "/api/v2/projects/" + model.selected_project_id + "/animatic-workspace",
+              ).expect_json(emit.map(fn(result) { LoadedAnimaticWorkspace(result) })),
+            )
           }
           commands.push(
             @http.get("/api/commercial-intake").expect_json(
               emit.map(fn(result) { LoadedCommercial(result) }),
             ),
           )
+          commands.push(
+            @http.get("/api/v2/needs-intakes").expect_json(
+              emit.map(fn(result) { LoadedNeedsIntake(result) }),
+            ),
+          )
+          if model.selected_project_id != "" {
+            commands.push(
+              @http.get(
+                "/api/v2/projects/" + model.selected_project_id + "/asset-factory",
+              ).expect_json(emit.map(fn(result) { LoadedAssetFactory(result) })),
+            )
+          }
           (
             @rabbita.batch(commands),
             {

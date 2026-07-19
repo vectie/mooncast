@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/approved-reusable-asset.schema.json",
+  "title": "Mooncast immutable approved reusable asset",
+  "type": "object",
+  "required": ["contract", "reference", "plan", "variant_id", "provider_job_id", "provider_artifact_id", "output_digest", "modality", "intent", "rights_refs", "qc_finding_ids", "approval_actor", "approval_role", "approval_digest", "publication_authority", "immutable"],
+  "properties": {
+    "contract": {"const": "mooncast.approved-reusable-asset.v1"},
+    "reference": {"type": "object"},
+    "modality": {"enum": ["text", "image", "video", "voice", "music"]},
+    "rights_refs": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "qc_finding_ids": {"type": "array", "minItems": 5, "items": {"type": "string"}},
+    "approval_actor": {"type": "string", "minLength": 1},
+    "approval_role": {"type": "string", "minLength": 1},
+    "publication_authority": {"const": false},
+    "immutable": {"const": true}
+  },
+  "additionalProperties": true
+}

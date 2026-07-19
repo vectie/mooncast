@@ -3,6 +3,7 @@ import {
   "vectie/mooncast/production/creative",
   "vectie/mooncast/production/governance",
   "vectie/mooncast/production/project",
+  "vectie/mooncast/production/animatic",
 }
 
 supported_targets = "native"

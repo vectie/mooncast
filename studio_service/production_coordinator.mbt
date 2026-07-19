@@ -191,6 +191,17 @@ async fn StudioService::run_pending_shots_feature(
     )
   }
   validate_complete_execution_binding(initial.snapshot, routed.execution)
+  let approved_assets_by_shot = self.approved_asset_map(
+    project_id,
+    initial.snapshot.revision,
+  )
+  guard self.approved_rendered_animatic(project_id) is Some(animatic_approval) else {
+    raise Conflict(
+      code="workflow_animatic_stale",
+      message="shot execution requires the exact approved rendered animatic",
+    )
+  }
+  let approved_animatic_digest = animatic_approval.rendered.video_digest
 
   // Preflight every pending provider job before the first external action. This
   // rejects structurally partial batches without executing an early subset.
@@ -217,6 +228,18 @@ async fn StudioService::run_pending_shots_feature(
       let expected_source_assets = initial.snapshot.graph.assets.filter(asset => {
         shot.source_asset_ids.contains(asset.asset_id)
       })
+      match approved_assets_by_shot.get(binding.shot_id) {
+        Some(assets) =>
+          for asset in assets {
+            if !expected_source_assets.any(value => {
+                value.asset_id == asset.asset_id &&
+                value.version == asset.version
+              }) {
+              expected_source_assets.push(asset)
+            }
+          }
+        None => ()
+      }
       let request_id = routed.execution.execution_id + ":" + binding.shot_id
       let body = job.http_plan.body
       let body_digest = "sha256:" + sha256_text(body.stringify())
@@ -246,6 +269,8 @@ async fn StudioService::run_pending_shots_feature(
         json_member(body, "shot") == Some(shot.to_json()) &&
         json_member(body, "source_assets") ==
         Some(expected_source_assets.to_json()) &&
+        json_member(body, "approved_animatic_digest") ==
+        Some(approved_animatic_digest.to_json()) &&
         json_member(body, "route") == Some(route.to_json()) &&
         json_member(body, "publication_authority") == Some(false.to_json()) &&
         (

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/postprocess-import-binding.schema.json",
+  "type": "object",
+  "required": ["contract", "binding_id", "output", "destination_kind", "destination_id", "bound_at", "actor", "human_confirmed", "publication_authority", "immutable"],
+  "properties": {
+    "contract": {"const": "mooncast.postprocess-import-binding.v1"},
+    "destination_kind": {"enum": ["shot", "editor", "delivery"]},
+    "destination_id": {"type": "string", "minLength": 1},
+    "actor": {"type": "string", "minLength": 1},
+    "human_confirmed": {"const": true},
+    "publication_authority": {"const": false},
+    "immutable": {"const": true}
+  },
+  "additionalProperties": true
+}

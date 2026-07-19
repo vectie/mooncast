@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://moonwiki-needs-export/v1",
+  "type": "object",
+  "required": ["contract", "packet_id", "packet_version", "exported_at", "evidence_refs", "intent_refs", "client_need", "contract_boundary", "constraints", "creative_strategy", "unresolved_questions", "publication_authority", "provider_execution_authority"],
+  "properties": {
+    "contract": {"const": "moonwiki.mooncast-needs-export.v1"},
+    "packet_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{3,128}$"},
+    "packet_version": {"type": "integer", "minimum": 1},
+    "exported_at": {"type": "string", "minLength": 1},
+    "evidence_refs": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/evidence"}},
+    "intent_refs": {"type": "object", "required": ["brief", "bible", "script"], "properties": {"brief": {"$ref": "#/$defs/evidence"}, "bible": {"$ref": "#/$defs/evidence"}, "script": {"$ref": "#/$defs/evidence"}}, "additionalProperties": false},
+    "client_need": {"type": "object", "required": ["customer", "payable_problem", "audience", "channels", "acceptance_method", "repeat_purchase_hypothesis"], "properties": {"customer": {"type": "string", "minLength": 1}, "payable_problem": {"type": "string", "minLength": 1}, "audience": {"type": "string", "minLength": 1}, "channels": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}, "acceptance_method": {"type": "string", "minLength": 1}, "repeat_purchase_hypothesis": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+    "contract_boundary": {"type": "object", "required": ["contract_ref", "budget_ceiling_cny", "revision_limit", "target_duration_seconds", "deliverables", "payment_milestones"], "properties": {"contract_ref": {"type": "string", "minLength": 1}, "budget_ceiling_cny": {"type": "number", "exclusiveMinimum": 0}, "revision_limit": {"type": "integer", "minimum": 0, "maximum": 2}, "target_duration_seconds": {"type": "integer", "minimum": 180, "maximum": 480}, "deliverables": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}, "payment_milestones": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}}, "additionalProperties": false},
+    "constraints": {"type": "object", "required": ["rights_owner", "rights_confirmed", "rights_constraints", "confidentiality_class", "permitted_provider_ids", "prohibited_provider_ids", "permitted_data_class"], "properties": {"rights_owner": {"type": "string", "minLength": 1}, "rights_confirmed": {"const": true}, "rights_constraints": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}, "confidentiality_class": {"type": "string", "minLength": 1}, "permitted_provider_ids": {"type": "array", "items": {"type": "string"}}, "prohibited_provider_ids": {"type": "array", "items": {"type": "string"}}, "permitted_data_class": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+    "creative_strategy": {"type": "object", "required": ["project_title", "objective", "narrative_proposition", "tone", "claims", "success_metrics", "negative_constraints"], "properties": {"project_title": {"type": "string", "minLength": 1}, "objective": {"type": "string", "minLength": 1}, "narrative_proposition": {"type": "string", "minLength": 1}, "tone": {"type": "string", "minLength": 1}, "claims": {"type": "array", "items": {"type": "string"}}, "success_metrics": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}, "negative_constraints": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false},
+    "unresolved_questions": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "publication_authority": {"const": false},
+    "provider_execution_authority": {"const": false}
+  },
+  "$defs": {"evidence": {"type": "object", "required": ["source_id", "source_version", "source_digest", "provenance_ref"], "properties": {"source_id": {"type": "string", "minLength": 1}, "source_version": {"type": "string", "minLength": 1}, "source_digest": {"type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$"}, "provenance_ref": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+  "additionalProperties": false
+}

@@ -82,6 +82,7 @@ pub async fn prepare_export(
       video_codec,
       audio_codec,
       audio_required,
+      subtitle_required: true,
     },
     subtitle_sidecar: sidecar,
     publication_authority: false,

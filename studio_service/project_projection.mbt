@@ -99,10 +99,21 @@ pub async fn StudioService::seed_initial_creative_drafts(
   project_id : String,
   metadata : ProjectExperienceMetadata,
   recorded_at : String,
+  moonwiki_intake? : @intake.MoonWikiNeedsPacket,
 ) -> ProjectRecord {
   let initial = self.get_project(project_id)
   let existing = if initial.snapshot.qualification is None {
-    self.record_project_qualification(project_id, metadata, recorded_at).project
+    match moonwiki_intake {
+      Some(packet) =>
+        self.record_project_qualification(
+          project_id,
+          metadata,
+          recorded_at,
+          moonwiki_intake=packet,
+        ).project
+      None =>
+        self.record_project_qualification(project_id, metadata, recorded_at).project
+    }
   } else {
     initial
   }
@@ -110,6 +121,22 @@ pub async fn StudioService::seed_initial_creative_drafts(
     return existing
   }
   let graph = existing.snapshot.graph
+  let intake_validation = moonwiki_intake.map(@intake.validate_intake)
+  let intake_context = match (moonwiki_intake, intake_validation) {
+    (Some(packet), Some(validation)) =>
+      Json::object({
+        "contract": packet.contract.to_json(),
+        "packet_id": packet.packet_id.to_json(),
+        "packet_version": packet.packet_version.to_json(),
+        "provenance_digest": validation.provenance_digest.to_json(),
+        "evidence_refs": packet.evidence_refs.to_json(),
+        "client_need": packet.client_need.to_json(),
+        "contract_boundary": packet.contract_boundary.to_json(),
+        "constraints": packet.constraints.to_json(),
+        "creative_strategy": packet.creative_strategy.to_json(),
+      })
+    _ => Json::null()
+  }
   let brief = self.record_initial_draft(
     project_id,
     @creative.Brief,
@@ -118,6 +145,10 @@ pub async fn StudioService::seed_initial_creative_drafts(
       "objective": metadata.objective.to_json(),
       "audience": metadata.audience.to_json(),
       "channels": metadata.channels.to_json(),
+      "moonwiki_intent_ref": moonwiki_intake
+      .map(packet => packet.intent_refs.brief.to_json())
+      .unwrap_or(Json::null()),
+      "approved_needs_intake": intake_context,
       "acceptance": [
         "Approved 3-8 minute master", "Rights and provenance package", "Client milestone decision",
       ].to_json(),
@@ -168,6 +199,12 @@ pub async fn StudioService::seed_initial_creative_drafts(
       "negative_constraints": [
         "No unlicensed likeness, voice, music, font, or trademark",
       ].to_json(),
+      "moonwiki_intent_ref": moonwiki_intake
+      .map(packet => packet.intent_refs.bible.to_json())
+      .unwrap_or(Json::null()),
+      "intake_provenance_digest": intake_validation
+      .map(value => value.provenance_digest.to_json())
+      .unwrap_or(Json::null()),
     }),
     None,
     None,
@@ -203,6 +240,12 @@ pub async fn StudioService::seed_initial_creative_drafts(
     [bible.reference.digest],
     Json::object({
       "bible_digest": bible.reference.digest.to_json(),
+      "moonwiki_intent_ref": moonwiki_intake
+      .map(packet => packet.intent_refs.script.to_json())
+      .unwrap_or(Json::null()),
+      "intake_provenance_digest": intake_validation
+      .map(value => value.provenance_digest.to_json())
+      .unwrap_or(Json::null()),
       "text": metadata.objective.to_json(),
       "scenes": script_scenes.to_json(),
     }),

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/asset-generation-variant.schema.json",
+  "title": "Mooncast reusable asset generation variant",
+  "type": "object",
+  "required": ["contract", "variant_id", "plan", "asset_id", "asset_version", "variant", "provider_job_id", "modality", "cost_cny", "state", "evidence_refs", "network_effect_performed", "publication_authority", "immutable"],
+  "properties": {
+    "contract": {"const": "mooncast.asset-generation-variant.v1"},
+    "variant_id": {"type": "string", "minLength": 1},
+    "asset_id": {"type": "string", "minLength": 1},
+    "asset_version": {"type": "integer", "minimum": 1},
+    "variant": {"type": "integer", "minimum": 1, "maximum": 4},
+    "provider_job_id": {"type": "string", "minLength": 1},
+    "modality": {"enum": ["text", "image", "video", "voice", "music"]},
+    "cost_cny": {"type": "number", "minimum": 0},
+    "state": {"type": "string"},
+    "evidence_refs": {"type": "array", "minItems": 3, "items": {"type": "string"}},
+    "network_effect_performed": {"type": "boolean"},
+    "publication_authority": {"const": false},
+    "immutable": {"type": "boolean"}
+  },
+  "additionalProperties": true
+}

@@ -31,7 +31,10 @@ type Dispatch[A] = @rabbita.Emit[A]
 fn tab_label(tab : StudioTab) -> String {
   match tab {
     Overview => "Overview"
+    NeedsStrategy => "Needs / Strategy"
     Creative => "Creative"
+    AssetFactory => "Asset Factory"
+    StoryboardAnimatic => "Storyboard / Animatic"
     Routing => "Routing"
     ShotBoard => "Shot board"
     Delivery => "Delivery"
@@ -118,7 +121,10 @@ fn render_header(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
     ]),
     nav(class="studio-tabs", [
       tab_button(dispatch, model.tab, Overview),
+      tab_button(dispatch, model.tab, NeedsStrategy),
       tab_button(dispatch, model.tab, Creative),
+      tab_button(dispatch, model.tab, AssetFactory),
+      tab_button(dispatch, model.tab, StoryboardAnimatic),
       tab_button(dispatch, model.tab, Routing),
       tab_button(dispatch, model.tab, ShotBoard),
       tab_button(dispatch, model.tab, Delivery),
@@ -176,6 +182,234 @@ fn render_project_rail(
         "This studio records plans and named reviews. It never grants publication authority, sends payments, or calls a provider implicitly.",
       ),
     ]),
+  ])
+}
+
+///|
+fn selected_intake(model : Model) -> ImportedIntakeProjection? {
+  match model.needs_intake {
+    None => None
+    Some(workspace) => {
+      let matches = workspace.intakes.filter(value => {
+        value.packet.packet_id == model.selected_intake_id
+      })
+      if matches.is_empty() {
+        None
+      } else {
+        let mut latest = matches[0]
+        for candidate in matches {
+          if candidate.packet.packet_version > latest.packet.packet_version {
+            latest = candidate
+          }
+        }
+        Some(latest)
+      }
+    }
+  }
+}
+
+///|
+fn intake_approved(model : Model, intake : ImportedIntakeProjection) -> Bool {
+  match model.needs_intake {
+    None => false
+    Some(workspace) => {
+      let decisions = workspace.decisions.filter(value => {
+        value.packet_id == intake.packet.packet_id &&
+        value.packet_version == intake.packet.packet_version &&
+        value.provenance_digest == intake.validation.provenance_digest
+      })
+      if decisions.is_empty() {
+        false
+      } else {
+        let mut latest = decisions[0]
+        for candidate in decisions {
+          if candidate.decided_at > latest.decided_at ||
+            (candidate.decided_at == latest.decided_at &&
+            candidate.decision_digest > latest.decision_digest) {
+            latest = candidate
+          }
+        }
+        latest.decision == "approve"
+      }
+    }
+  }
+}
+
+///|
+fn evidence_card(value : MoonWikiEvidenceProjection) -> @rabbita.Html {
+  article(class="artifact-card", [
+    div(class="artifact-card-head", [
+      strong(value.source_id),
+      status_chip("v" + value.source_version),
+    ]),
+    code(value.source_digest),
+    small(value.provenance_ref),
+  ])
+}
+
+///|
+fn render_needs_strategy(
+  dispatch : Dispatch[Msg],
+  model : Model,
+) -> @rabbita.Html {
+  let imported = match model.needs_intake {
+    Some(value) => value.intakes
+    None => []
+  }
+  div(class="surface-stack", [
+    section(class="panel", [
+      div(class="panel-heading", [
+        div([
+          small("MOONWIKI EVIDENCE PORT"),
+          h2("Understand the whole need before production"),
+        ]),
+        p(
+          "Import a MoonWiki-owned evidence packet. Mooncast validates and binds exact source identities; it does not copy MoonWiki authority or run an agent.",
+        ),
+      ]),
+      text_field(
+        "MoonWiki export packet",
+        model.intake_packet_draft,
+        "Paste moonwiki.mooncast-needs-export.v1 JSON",
+        18,
+        fn(value) { dispatch(SetIntakePacketDraft(value)) },
+      ),
+      div(class="form-actions", [
+        button(
+          class="primary",
+          disabled=model.busy,
+          on_click=dispatch(ImportNeedsPacket),
+          "Import immutable packet",
+        ),
+        small(
+          "Import performs no provider, publication, payment, MoonFlow, or MoonBook effect.",
+        ),
+      ]),
+    ]),
+    section(class="panel", [
+      div(class="panel-heading", [
+        div([small("VERSIONED INTAKE LEDGER"), h2("Imported needs")]),
+        p("Each version has a deterministic provenance digest and independent human decision."),
+      ]),
+      div(
+        class="artifact-tabs",
+        if imported.is_empty() {
+          [p(class="empty", "No MoonWiki needs packet imported yet.")]
+        } else {
+          imported.map(value => {
+            button(
+              class=if value.packet.packet_id == model.selected_intake_id {
+                "artifact-tab active"
+              } else {
+                "artifact-tab"
+              },
+              on_click=dispatch(SelectIntake(value.packet.packet_id)),
+              value.packet.packet_id + " · v" + value.packet.packet_version.to_string(),
+            )
+          })
+        },
+      ),
+    ]),
+    match selected_intake(model) {
+      None => @html.nothing
+      Some(intake) => {
+        let packet = intake.packet
+        let approved = intake_approved(model, intake)
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([
+              small("EXACT PACKET " + packet.packet_id),
+              h2(packet.creative_strategy.project_title),
+            ]),
+            div(class="chips", [
+              status_chip(if intake.validation.complete { "complete" } else { "attention-required" }),
+              status_chip(if approved { "approved" } else { "pending" }),
+              status_chip("immutable"),
+            ]),
+          ]),
+          div(class="metrics", [
+            metric(
+              "Payable problem",
+              packet.client_need.customer,
+              packet.client_need.payable_problem,
+            ),
+            metric(
+              "Production boundary",
+              "\{packet.contract_boundary.target_duration_seconds / 60} min · CNY \{packet.contract_boundary.budget_ceiling_cny}",
+              "\{packet.contract_boundary.revision_limit} revision rounds · \{packet.contract_boundary.contract_ref}",
+            ),
+            metric(
+              "Audience / channel",
+              packet.client_need.audience,
+              packet.client_need.channels.join(" · "),
+            ),
+            metric(
+              "Rights / data",
+              packet.constraints.rights_owner,
+              packet.constraints.confidentiality_class + " · " + packet.constraints.permitted_data_class,
+            ),
+          ]),
+          article(class="artifact-card", [
+            strong("Creative proposition"),
+            p(packet.creative_strategy.narrative_proposition),
+            small(
+              packet.creative_strategy.tone +
+              " · metrics: " +
+              packet.creative_strategy.success_metrics.join("; "),
+            ),
+          ]),
+          div(class="artifact-grid", packet.evidence_refs.map(evidence_card)),
+          article(class="artifact-card", [
+            strong("Deterministic provenance"),
+            code(intake.validation.provenance_digest),
+            small("Exported " + packet.exported_at + " · imported " + intake.imported_at),
+          ]),
+          if intake.validation.errors.is_empty() &&
+            intake.validation.unresolved_questions.is_empty() {
+            p(class="callout good", "All required needs, rights, contract, strategy, evidence, and intent bindings are complete.")
+          } else {
+            div(class="callout bad", [
+              strong("Resolve before approval"),
+              ul([
+                ..intake.validation.errors.map(value => li(value)),
+                ..intake.validation.unresolved_questions.map(value => li("Open question: " + value)),
+              ]),
+            ])
+          },
+          div(class="form-actions", [
+            button(
+              class="primary",
+              disabled=model.busy ||
+                !model.operator.human_confirmed ||
+                !intake.validation.complete,
+              on_click=dispatch(DecideNeedsIntake("approve")),
+              "Approve exact needs / strategy",
+            ),
+            button(
+              class="danger",
+              disabled=model.busy || !model.operator.human_confirmed,
+              on_click=dispatch(DecideNeedsIntake("reject")),
+              "Reject packet",
+            ),
+          ]),
+          div(class="form-grid", [
+            form_field(
+              "Project id",
+              model.intake_seed_project_id,
+              "brand-episode-001",
+              fn(value) { dispatch(SetIntakeSeedProjectId(value)) },
+            ),
+            button(
+              class="primary",
+              disabled=model.busy || !approved,
+              on_click=dispatch(SeedProjectFromIntake),
+              "Create intake-bound project",
+            ),
+          ]),
+          p(class="boundary-note", "The created brief, bible, and script copy the three exact MoonWiki intent records. No synthetic moonwiki:* ref is created."),
+        ])
+      }
+    },
   ])
 }
 
@@ -524,6 +758,58 @@ fn render_creative(
               ])
           },
         ]),
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([small("After approved source assets"), h2("Lip-sync · translation · upscale")]),
+            p(
+              "Run first-class postprocess jobs with exact source versions, rights, prompt, provider/model, retry and cost evidence; import immutable outputs into a shot, the Cut Editor, or a delivery build.",
+            ),
+          ]),
+          div(class="metrics", [
+            metric(
+              "Tasks",
+              "\{model.postprocess_workspace.map(value => value.tasks.length()).unwrap_or(0)}",
+              "Versioned provider routes",
+            ),
+            metric(
+              "Outputs",
+              "\{model.postprocess_workspace.map(value => value.outputs.length()).unwrap_or(0)}",
+              "Immutable provenance",
+            ),
+            metric(
+              "Imports",
+              "\{model.postprocess_workspace.map(value => value.bindings.length()).unwrap_or(0)}",
+              "Shot · editor · delivery",
+            ),
+            metric(
+              "Actual cost",
+              "CNY \{model.postprocess_workspace.map(value => value.total_cost_cny).unwrap_or(0.0)}",
+              "Recorded provider spend",
+            ),
+          ]),
+          text_field(
+            "Postprocess task JSON",
+            model.postprocess_task_draft,
+            "Choose lip-sync, translation, or upscale and its exact bindings",
+            16,
+            fn(value) { dispatch(SetPostprocessTaskDraft(value)) },
+          ),
+          div(class="form-actions", [
+            button(
+              class="secondary",
+              disabled=model.busy || !model.operator.human_confirmed,
+              on_click=dispatch(RecordPostprocessTask),
+              "Record exact task",
+            ),
+            button(
+              class="primary",
+              disabled=model.busy || !model.operator.human_confirmed ||
+                model.postprocess_workspace.map(value => value.tasks.is_empty()).unwrap_or(true),
+              on_click=dispatch(RunPostprocessTask),
+              "Authorize / resume provider job",
+            ),
+          ]),
+        ]),
       ])
     }
   }
@@ -784,6 +1070,242 @@ fn render_routing(
 }
 
 ///|
+fn render_asset_factory(
+  dispatch : Dispatch[Msg],
+  model : Model,
+) -> @rabbita.Html {
+  match model.project {
+    None => render_create_project(dispatch, model)
+    Some(project) => {
+      let workspace = model.asset_factory
+      let plan_count = workspace.map(value => value.plans.length()).unwrap_or(0)
+      let variant_count = workspace.map(value => value.variants.length()).unwrap_or(0)
+      let approved_count = workspace.map(value => value.approved_assets.length()).unwrap_or(0)
+      let binding_count = workspace.map(value => value.shot_bindings.length()).unwrap_or(0)
+      div(class="surface-stack", [
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([
+              small("Reusable assets before dependent shots"),
+              h2("Multimodal Asset Factory"),
+            ]),
+            p(
+              "Create immutable character, location, prop, voice, music, text, image and motion references. Every attempt is provider-, cost-, evidence- and rights-bound; this surface grants no publication authority.",
+            ),
+          ]),
+          div(class="metrics", [
+            metric("Plans", "\{plan_count}", "Exact project revision"),
+            metric("Variants", "\{variant_count}", "Bounded attempts"),
+            metric("Approved", "\{approved_count}", "Immutable references"),
+            metric("Shot bindings", "\{binding_count}", "Exact versions"),
+          ]),
+          text_field(
+            "Asset factory plan JSON",
+            model.asset_plan_draft,
+            "MoonWiki-backed reusable asset specifications",
+            18,
+            fn(value) { dispatch(SetAssetPlanDraft(value)) },
+          ),
+          div(class="form-actions", [
+            button(
+              class="secondary",
+              disabled=model.busy || !model.operator.human_confirmed,
+              on_click=dispatch(RecordAssetPlan),
+              "Record exact plan",
+            ),
+            button(
+              class="secondary",
+              disabled=model.busy || !model.operator.human_confirmed || plan_count == 0,
+              on_click=dispatch(DecideAssetPlan("approve")),
+              "Approve plan",
+            ),
+            button(
+              class="primary",
+              disabled=model.busy || !model.operator.human_confirmed || plan_count == 0,
+              on_click=dispatch(RunAssetFactory),
+              "Authorize and run bounded variants",
+            ),
+            button(
+              class="secondary",
+              disabled=model.busy ||
+                !model.operator.human_confirmed ||
+                approved_count == 0,
+              on_click=dispatch(BindAssetFactoryShots),
+              "Bind approved versions to shots",
+            ),
+          ]),
+        ]),
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([small("Technical · identity · continuity · rights · safety"), h2("Variant QC and immutable approval")]),
+            p(
+              "A named reviewer records all five dimensions before selecting one reusable version. Validation fixtures are not commercial media.",
+            ),
+          ]),
+          match workspace {
+            None => p(class="empty", "Load an asset factory workspace.")
+            Some(value) if value.variants.is_empty() =>
+              p(class="empty", "Approve a plan and run bounded variants.")
+            Some(value) =>
+              div(
+                class="resource-list",
+                value.variants.map(variant => {
+                  let approved = value.approved_assets.any(asset => {
+                    asset.variant_id == variant.variant_id
+                  })
+                  article(class="resource-card", [
+                    div([
+                      strong(variant.asset_id + " · " + variant.modality),
+                      status_chip(if approved { "approved" } else { variant.state }),
+                    ]),
+                    code(variant.variant_id),
+                    small(
+                      "Version \{variant.asset_version} · variant \{variant.variant} · CNY \{variant.cost_cny}",
+                    ),
+                    div(class="form-actions", [
+                      button(
+                        class="secondary",
+                        disabled=model.busy ||
+                          !model.operator.human_confirmed ||
+                          variant.state != "completed",
+                        on_click=dispatch(RecordAssetVariantQc(variant.variant_id)),
+                        "Record five-dimension QC",
+                      ),
+                      button(
+                        class="primary",
+                        disabled=model.busy ||
+                          !model.operator.human_confirmed ||
+                          variant.state != "completed" ||
+                          approved,
+                        on_click=dispatch(ApproveAssetVariant(variant.variant_id)),
+                        if approved { "Approved immutable" } else { "Approve selected output" },
+                      ),
+                    ]),
+                  ])
+                }),
+              )
+          },
+        ]),
+      ])
+    }
+  }
+}
+
+///|
+fn render_storyboard_animatic(
+  dispatch : Dispatch[Msg],
+  model : Model,
+) -> @rabbita.Html {
+  match model.project {
+    None => render_create_project(dispatch, model)
+    Some(project) => {
+      let workspace = model.animatic_workspace
+      let attempts = workspace.map(value => value.attempts.length()).unwrap_or(0)
+      let renders = workspace.map(value => value.renders.length()).unwrap_or(0)
+      let approvals = workspace.map(value => value.approvals.length()).unwrap_or(0)
+      let latest : AnimaticRenderProjection? = match workspace {
+        Some(value) if !value.renders.is_empty() =>
+          Some(value.renders[value.renders.length() - 1])
+        _ => None
+      }
+      div(class="surface-stack", [
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([small("G3 real-media approval"), h2("Rendered storyboard and timed animatic")]),
+            p(
+              "Bind the approved bible, script, storyboard, exact reusable asset versions, temporary voice/music, captions, transitions, provider evidence and budget before expensive shot generation.",
+            ),
+          ]),
+          div(class="metrics", [
+            metric("Panels", "\{project.shots.length()}", "Exact shot timing"),
+            metric("Attempts", "\{attempts}", "Retry/resume ledger"),
+            metric("Renders", "\{renders}", "Immutable native media"),
+            metric("Approvals", "\{approvals}", "Named-human exact digest"),
+          ]),
+          text_field(
+            "Storyboard / animatic plan JSON",
+            model.animatic_plan_draft,
+            "Complete G3 animatic plan",
+            18,
+            fn(value) { dispatch(SetAnimaticPlanDraft(value)) },
+          ),
+          div(class="form-actions", [
+            button(
+              class="secondary",
+              disabled=model.busy || !model.operator.human_confirmed,
+              on_click=dispatch(RecordAnimaticPlan),
+              "Record exact plan",
+            ),
+            button(
+              class="primary",
+              disabled=model.busy || !model.operator.human_confirmed ||
+                workspace.map(value => value.plans.is_empty()).unwrap_or(true),
+              on_click=dispatch(RenderAnimatic),
+              if attempts > 0 && renders == 0 { "Resume / retry render" } else { "Render sheet + timed MP4" },
+            ),
+            button(
+              class="primary",
+              disabled=model.busy || !model.operator.human_confirmed || latest is None,
+              on_click=dispatch(ApproveRenderedAnimatic),
+              "Approve exact rendered version",
+            ),
+          ]),
+          p(
+            class="boundary-note",
+            "Local rendering is an explicit process effect only. It performs no provider network call and grants no publication authority.",
+          ),
+        ]),
+        match latest {
+          None =>
+            section(class="panel", [
+              h3("Render gaps"),
+              p(
+                if model.asset_factory.map(value => value.approved_assets.is_empty()).unwrap_or(true) {
+                  "Approve reusable visual, voice, and music assets first."
+                } else {
+                  "Record the exact plan, then render the production-length approval media."
+                },
+              ),
+            ])
+          Some(render) => {
+            let base = "/api/v2/projects/" + project.id + "/animatic-workspace/renders/" + render.reference.version.to_string()
+            section(class="panel", [
+              div(class="panel-heading", [
+                div([small("Immutable render v\{render.reference.version}"), h2("Review actual timing before G3")]),
+                status_chip(if approvals > 0 { "approved" } else { "review-required" }),
+              ]),
+              @html.img(
+                class="animatic-sheet",
+                src=base + "/sheet",
+                alt="Rendered storyboard contact sheet",
+                loading="lazy",
+              ),
+              @html.video(
+                class="animatic-player",
+                src=base + "/video",
+                controls=true,
+                preload="metadata",
+                @html.nothing,
+              ),
+              div(class="metrics", [
+                metric("Duration", "\{render.duration_seconds}s", "\{render.panel_count} timed panels"),
+                metric("Actual cost", "CNY \{render.budget.actual_cny}", "Ceiling CNY \{render.budget.planned_cny}"),
+                metric("Provider", render.provider, render.model),
+                metric("Provenance", "Immutable", render.video_digest),
+              ]),
+              div(class="form-actions", [
+                a(class="secondary", href=base + "/sheet", "Download storyboard sheet"),
+                a(class="secondary", href=base + "/video", "Download timed animatic"),
+              ]),
+            ])
+          }
+        },
+      ])
+    }
+  }
+}
+
+///|
 fn render_shot_board(
   dispatch : Dispatch[Msg],
   model : Model,
@@ -880,6 +1402,57 @@ fn render_qc_workbench(
           "v" + form.finding_version
         },
         form.finding_digest,
+      ),
+    ]),
+    div(class="qc-divider", ([] : Array[@rabbita.Html])),
+    div(class="panel-heading", [
+      div([small("Machine evidence, human decision"), h2("Automated analyzer jobs")]),
+      p(
+        "Run codec, duration, blank-frame, audio, subtitle, flicker, lip-sync, identity and continuity analyzers against the exact output. Receipts create evidence-bound findings but never approve them.",
+      ),
+    ]),
+    div(class="metrics", [
+      metric(
+        "Analyzer tasks",
+        "\{model.analyzer_workspace.map(value => value.tasks.length()).unwrap_or(0)}",
+        "Local technical or external semantic",
+      ),
+      metric(
+        "Receipts",
+        "\{model.analyzer_workspace.map(value => value.receipts.length()).unwrap_or(0)}",
+        "Immutable measurements",
+      ),
+      metric(
+        "Findings",
+        "\{model.analyzer_workspace.map(value => value.findings.length()).unwrap_or(0)}",
+        "Still require human decisions",
+      ),
+      metric(
+        "Human decisions",
+        "\{model.analyzer_workspace.map(value => value.human_decisions).unwrap_or(0)}",
+        "Never performed by analyzers",
+      ),
+    ]),
+    text_field(
+      "Analyzer task JSON",
+      model.analyzer_task_draft,
+      "Choose one exact technical or semantic analyzer",
+      16,
+      fn(value) { dispatch(SetAnalyzerTaskDraft(value)) },
+    ),
+    div(class="form-actions", [
+      button(
+        class="secondary",
+        disabled=model.busy || !model.operator.human_confirmed,
+        on_click=dispatch(RecordAnalyzerTask),
+        "Record analyzer task",
+      ),
+      button(
+        class="primary",
+        disabled=model.busy || !model.operator.human_confirmed ||
+          model.analyzer_workspace.map(value => value.tasks.is_empty()).unwrap_or(true),
+        on_click=dispatch(RunAnalyzerTask),
+        "Run / resume analyzer",
       ),
     ]),
     div(class="form-grid", [
@@ -2224,7 +2797,10 @@ fn render_status(model : Model) -> @rabbita.Html {
 fn render_surface(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
   match model.tab {
     Overview => render_overview(dispatch, model, model.project)
+    NeedsStrategy => render_needs_strategy(dispatch, model)
     Creative => render_creative(dispatch, model, model.project)
+    AssetFactory => render_asset_factory(dispatch, model)
+    StoryboardAnimatic => render_storyboard_animatic(dispatch, model)
     Routing => render_routing(dispatch, model, model.project)
     ShotBoard => render_shot_board(dispatch, model, model.project)
     Delivery => render_delivery(dispatch, model, model.project)

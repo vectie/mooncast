@@ -49,6 +49,31 @@ pub suberror RoutedApplicationError {
 } derive(@debug.Debug)
 
 // Types and methods
+pub(all) struct AssetProviderRequest {
+  contract : String
+  request_id : String
+  project_id : String
+  project_revision : Int
+  asset_id : String
+  asset_version : Int
+  variant : Int
+  kind : String
+  capability : String
+  intent_ref : String
+  prompt_digest : String
+  source_asset_refs : Array[String]
+  rights_refs : Array[String]
+  continuity_key : String
+  adapter_id : String
+  provider : String
+  model : String
+  permitted_data_class : String
+  cost_ceiling_cny : Double
+  retry_limit : Int
+  parameters : Json
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct CustomerDeliveryManifest {
   contract : String
   build_id : String
@@ -208,10 +233,11 @@ pub async fn ProviderExecutionService::artifact_bytes(Self, String) -> Bytes?
 pub async fn ProviderExecutionService::artifact_metadata(Self, String) -> @vectie/mooncast/execution.ProviderResultArtifact?
 pub async fn ProviderExecutionService::attempt_projection(Self, String) -> Array[@vectie/mooncast/execution.ProviderAttemptPhase]
 pub async fn ProviderExecutionService::authorize(Self, ProviderHttpPlan, ProviderAuthorityReceipt) -> ProviderJobRecord
+pub async fn ProviderExecutionService::authorize_asset_from_catalog(Self, AssetProviderRequest, String, Bool) -> ProviderJobRecord
 pub async fn ProviderExecutionService::cancel(Self, String, String) -> ProviderJobRecord
 pub fn ProviderExecutionService::capabilities(Self) -> ProviderExecutionCapabilities
 pub async fn ProviderExecutionService::create_routed_execution(Self, @project.ProjectGraph, @governance.ModelRoutingPlan, String, String, Array[ShotProviderAuthorization]) -> RoutedExecutionRecord
-pub async fn ProviderExecutionService::create_routed_from_catalog(Self, @project.ProjectGraph, @governance.ModelRoutingPlan, String, String, Bool) -> RoutedExecutionRecord
+pub async fn ProviderExecutionService::create_routed_from_catalog(Self, @project.ProjectGraph, @governance.ModelRoutingPlan, String, String, Bool, approved_assets_by_shot? : Map[String, Array[@project.Asset]], approved_animatic_digest? : String) -> RoutedExecutionRecord
 pub async fn ProviderExecutionService::execute(Self, String) -> ProviderJobRecord
 pub async fn ProviderExecutionService::list_jobs(Self) -> Array[@vectie/mooncast/execution.ProviderExecutionJob]
 pub async fn ProviderExecutionService::list_routed_executions(Self, String) -> Array[@vectie/mooncast/execution.RoutedExecution]

@@ -21,6 +21,7 @@ struct RoutedShotProviderInput {
   shot : @project.Shot
   source_assets : Array[@project.Asset]
   route : @governance.ModelRoute
+  approved_animatic_digest : String
   default_parameters : Json
   publication_authority : Bool
 } derive(ToJson, FromJson)
@@ -42,6 +43,7 @@ fn routed_key(execution_id : String) -> String {
 fn routed_identity(
   graph : @project.ProjectGraph,
   routing : @governance.ModelRoutingPlan,
+  binding_digest : String,
 ) -> String {
   let digest = sha256(
     @utf8.encode(
@@ -49,7 +51,9 @@ fn routed_identity(
       ":" +
       graph.revision.to_string() +
       ":" +
-      routing.reference.digest,
+      routing.reference.digest +
+      ":" +
+      binding_digest,
     ),
   )
   "routed-" + digest[7:31].to_owned()
@@ -93,8 +97,24 @@ fn route_for_shot(
 fn source_assets_for_shot(
   graph : @project.ProjectGraph,
   shot : @project.Shot,
+  approved_assets_by_shot : Map[String, Array[@project.Asset]],
 ) -> Array[@project.Asset] {
-  graph.assets.filter(asset => shot.source_asset_ids.contains(asset.asset_id))
+  let values = graph.assets.filter(asset => {
+    shot.source_asset_ids.contains(asset.asset_id)
+  })
+  match approved_assets_by_shot.get(shot.shot_id) {
+    Some(approved) => {
+      for asset in approved {
+        if !values.any(value => {
+            value.asset_id == asset.asset_id && value.version == asset.version
+          }) {
+          values.push(asset)
+        }
+      }
+      values
+    }
+    None => values
+  }
 }
 
 ///|
@@ -108,6 +128,8 @@ pub async fn ProviderExecutionService::create_routed_from_catalog(
   actor_id : String,
   binding_digest : String,
   network_authority : Bool,
+  approved_assets_by_shot? : Map[String, Array[@project.Asset]] = {},
+  approved_animatic_digest? : String = "",
 ) -> RoutedExecutionRecord {
   if !network_authority {
     raise AuthorityDenied("network authority must be explicitly granted")
@@ -117,7 +139,12 @@ pub async fn ProviderExecutionService::create_routed_from_catalog(
       "routing plan is not valid for the current project graph",
     )
   }
-  let execution_id = routed_identity(graph, routing)
+  guard approved_animatic_digest != "" else {
+    raise RoutedPlanInvalid(
+      "exact approved rendered animatic digest is required",
+    )
+  }
+  let execution_id = routed_identity(graph, routing, binding_digest)
   match self.load_routed_execution(execution_id) {
     Some(existing) => {
       if existing.execution.binding_digest != binding_digest ||
@@ -145,8 +172,11 @@ pub async fn ProviderExecutionService::create_routed_from_catalog(
       project_id: graph.project_id,
       project_revision: graph.revision,
       shot,
-      source_assets: source_assets_for_shot(graph, shot),
+      source_assets: source_assets_for_shot(
+        graph, shot, approved_assets_by_shot,
+      ),
       route,
+      approved_animatic_digest,
       default_parameters: config.default_parameters,
       publication_authority: false,
     }.to_json()
@@ -207,7 +237,7 @@ pub async fn ProviderExecutionService::create_routed_execution(
   if !self.catalog.authority_actors.any(actor => actor == actor_id) {
     raise AuthorityDenied("named actor is not authorized")
   }
-  let execution_id = routed_identity(graph, routing)
+  let execution_id = routed_identity(graph, routing, binding_digest)
   match self.load_routed_execution(execution_id) {
     Some(existing) => {
       if existing.execution.binding_digest != binding_digest ||

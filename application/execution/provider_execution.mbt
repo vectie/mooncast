@@ -100,7 +100,8 @@ async fn ProviderExecutionService::materialize_artifacts(
         "artifact modality differs from authorized capability",
       )
     }
-    let (bytes, media_type) = if artifact.modality == "text" {
+    let (bytes, media_type) = if artifact.modality == "text" ||
+      artifact.modality == "translation" {
       match artifact.text {
         Some(value) if value != "" =>
           (@utf8.encode(value), "text/plain; charset=utf-8")
@@ -176,6 +177,90 @@ async fn ProviderExecutionService::deterministic_fixture_result(
   record : ProviderJobRecord,
   attempt_id : String,
 ) -> ProviderWireResult raise ProviderApplicationError {
+  if record.http_plan.body
+    is { "contract": "mooncast.asset-provider-request.v1", .. } {
+    let input : AssetProviderRequest = @json.from_json(record.http_plan.body) catch {
+      _ => raise ProviderResponseInvalid("deterministic asset input is invalid")
+    }
+    let payload = if input.capability.has_prefix("qc-") {
+      let result : Json = {
+        "contract": "mooncast.qc-semantic-result.v1",
+        "score": 0.96,
+        "threshold": 0.80,
+        "status": "pass",
+        "note": "deterministic validation-only semantic analyzer receipt",
+      }
+      result.stringify()
+    } else {
+      "MOONCAST VALIDATION ASSET\n" +
+      input.kind +
+      "\n" +
+      input.asset_id +
+      "\nvariant=" +
+      input.variant.to_string() +
+      "\nprompt=" +
+      input.prompt_digest +
+      "\ncontinuity=" +
+      input.continuity_key
+    }
+    let mime = match input.capability {
+      "text" | "translation" => "text/plain; charset=utf-8"
+      "image" => "image/x-mooncast-validation"
+      "voice" | "music" => "audio/x-mooncast-validation"
+      "video" | "lip-sync" | "upscale" => "video/x-mooncast-validation"
+      capability if capability.has_prefix("qc-") => "application/json"
+      _ => "application/octet-stream"
+    }
+    let bytes = @utf8.encode(payload)
+    return {
+      contract: "mooncast.provider-json-result.v1",
+      artifacts: [
+        {
+          modality: input.capability,
+          text: if input.capability == "text" ||
+            input.capability == "translation" {
+            Some(payload)
+          } else {
+            None
+          },
+          content_base64: if input.capability == "text" ||
+            input.capability == "translation" {
+            None
+          } else {
+            Some(@base64.encode(bytes))
+          },
+          mime_type: if input.capability == "text" ||
+            input.capability == "translation" {
+            None
+          } else {
+            Some(mime)
+          },
+          duration_seconds: None,
+          source_refs: [
+            input.intent_ref,
+            input.prompt_digest,
+            ..input.source_asset_refs,
+            ..input.rights_refs,
+          ],
+        },
+      ],
+      usage: {
+        "provider": "mooncast-local-deterministic-fixture",
+        "validation_only": true,
+        "capability": input.capability,
+        "variant": input.variant,
+      },
+      cost: { currency: "CNY", amount: 0.0 },
+      provider_receipt: {
+        "contract": "mooncast.deterministic-provider-receipt.v1",
+        "attempt_id": attempt_id,
+        "plan_digest": record.job.plan_digest,
+        "output_sha256": sha256(bytes),
+        "network_effect_performed": false,
+        "commercial_provider_acceptance": false,
+      },
+    }
+  }
   let input : RoutedShotProviderInput = @json.from_json(record.http_plan.body) catch {
     _ => raise ProviderResponseInvalid("deterministic shot input is invalid")
   }
@@ -190,7 +275,7 @@ async fn ProviderExecutionService::deterministic_fixture_result(
     _ => raise HostNotReady("deterministic fixture store is unavailable")
   }
   let render = @host_process.run_capture({
-    executable: "ffmpeg",
+    executable: ".tools/ffmpeg/darwin_arm64/ffmpeg",
     arguments: [
       "-hide_banner",
       "-loglevel",

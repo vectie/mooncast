@@ -96,13 +96,13 @@ pub fn gate_readiness(
         "rights_approval_required",
         reasons,
       )
+    }
+    G2 => {
       reason_if(
         !exact_creative_approval(snapshot, IpBible),
         "ip_bible_approval_required",
         reasons,
       )
-    }
-    G2 => {
       reason_if(
         !exact_creative_approval(snapshot, Script),
         "script_approval_required",
@@ -114,6 +114,13 @@ pub fn gate_readiness(
         reasons,
       )
       reason_if(
+        !all_creative_bindings_current(snapshot),
+        "creative_dependency_binding_stale",
+        reasons,
+      )
+    }
+    G3 => {
+      reason_if(
         !exact_creative_approval(snapshot, Storyboard),
         "storyboard_approval_required",
         reasons,
@@ -121,11 +128,6 @@ pub fn gate_readiness(
       reason_if(
         !exact_creative_approval(snapshot, Animatic),
         "animatic_approval_required",
-        reasons,
-      )
-      reason_if(
-        !all_creative_bindings_current(snapshot),
-        "creative_dependency_binding_stale",
         reasons,
       )
       let storyboard = artifact(snapshot, Storyboard)
@@ -152,8 +154,17 @@ pub fn gate_readiness(
         "animatic_cost_outside_budget",
         reasons,
       )
-    }
-    G3 =>
+      reason_if(
+        @animatic.exact_approved_render(
+          animatic,
+          snapshot.creative_decisions,
+          snapshot.creative_artifacts,
+          snapshot.graph,
+        )
+        is None,
+        "exact_rendered_animatic_approval_required",
+        reasons,
+      )
       reason_if(
         !@governance.routing_exact_approved(
           snapshot.routing_plan,
@@ -163,6 +174,7 @@ pub fn gate_readiness(
         "producer_and_finance_route_approval_required",
         reasons,
       )
+    }
     G4 =>
       reason_if(
         !all_shots_pass(snapshot),

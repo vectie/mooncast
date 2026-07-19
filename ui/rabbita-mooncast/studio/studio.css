@@ -164,6 +164,8 @@ button.confirmation.confirmed { border-style: solid; border-color: #5b802e; back
 .portal-card, .billing-card { display: grid; gap: 10px; padding: 14px; border: 1px solid #2e343d; border-radius: 10px; background: #15181e; }
 .portal-card > p, .billing-card > p { margin: 0; color: #9299a5; }
 .billing-card > strong { font-size: 20px; }
+.animatic-sheet { width: 100%; max-height: 460px; object-fit: contain; border: 1px solid #303641; border-radius: 10px; background: #0c0e12; }
+.animatic-player { width: 100%; max-height: 560px; margin-top: 12px; border: 1px solid #303641; border-radius: 10px; background: #08090c; }
 
 @media (max-width: 1180px) {
   .studio-header { grid-template-columns: 1fr auto; }

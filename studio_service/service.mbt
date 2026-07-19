@@ -12,6 +12,11 @@ pub struct StudioService {
   delivery_application : @execution_app.DeliveryFactoryService
   commerce_application : @commerce_app.CommercialApplicationService
   handoff_outbox : @handoff_app.OutboundHandoffService
+  needs_intake : @intake_app.NeedsIntakeService
+  asset_factory : @asset_factory_app.AssetFactoryService
+  animatic : @animatic_app.AnimaticService
+  postprocess : @postprocess_app.PostprocessService
+  automated_qc : @automated_qc_app.AnalyzerService
   route_extensions : Array[RouteExtension]
 }
 
@@ -52,7 +57,7 @@ pub fn StudioService::new(
     delivery_application: @execution_app.DeliveryFactoryService::new(
       root + "/application/delivery/state",
       root + "/application/delivery/outputs",
-      "ffmpeg",
+      bundled_ffmpeg,
     ),
     commerce_application: @commerce_app.CommercialApplicationService::new(
       root + "/application/commerce",
@@ -60,10 +65,36 @@ pub fn StudioService::new(
     handoff_outbox: @handoff_app.OutboundHandoffService::new(
       root + "/application/handoff-outbox",
     ),
+    needs_intake: @intake_app.NeedsIntakeService::new(
+      root + "/application/needs-intake",
+    ),
+    asset_factory: @asset_factory_app.AssetFactoryService::new(
+      root + "/application/asset-factory",
+      execution_application,
+    ),
+    animatic: @animatic_app.AnimaticService::new(
+      root + "/application/animatic/state",
+      root + "/application/animatic/media",
+    ),
+    postprocess: @postprocess_app.PostprocessService::new(
+      root + "/application/postprocess",
+      execution_application,
+    ),
+    automated_qc: @automated_qc_app.AnalyzerService::new(
+      root + "/application/automated-qc",
+      execution_application,
+      bundled_ffmpeg,
+      bundled_ffprobe,
+    ),
     route_extensions: [],
   }
   service.register_standard_application_routes()
   service.register_production_coordinator_routes()
+  service.register_needs_intake_routes()
+  service.register_asset_factory_routes()
+  service.register_animatic_routes()
+  service.register_postprocess_routes()
+  service.register_automated_qc_routes()
   service
 }
 
