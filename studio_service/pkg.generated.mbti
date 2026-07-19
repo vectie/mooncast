@@ -5,9 +5,13 @@ import {
   "moonbitlang/async/semaphore",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
+  "vectie/mooncast/application/animatic",
+  "vectie/mooncast/application/asset_factory",
+  "vectie/mooncast/application/automated_qc",
   "vectie/mooncast/application/commerce",
   "vectie/mooncast/application/handoff",
   "vectie/mooncast/application/pipeline",
+  "vectie/mooncast/application/postprocess",
   "vectie/mooncast/application/production",
   "vectie/mooncast/editor/domain",
   "vectie/mooncast/editor/integration",
@@ -36,9 +40,17 @@ pub fn StudioError::message(Self) -> String
 pub fn StudioError::status(Self) -> Int
 
 // Types and methods
+type AnalyzerTaskRequest derive(@json.FromJson)
+
+type AnimaticPlanRecordRequest derive(@json.FromJson)
+
 type ApiErrorDetail derive(ToJson)
 
 type ApiErrorResponse derive(ToJson)
+
+type AssetBindingRequest derive(@json.FromJson)
+
+type AssetPlanRecordRequest derive(@json.FromJson)
 
 type BillingCreateInput derive(@json.FromJson)
 
@@ -364,6 +376,8 @@ pub(all) struct MediaRecord {
   source_digest : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+type MoonWikiImportRequest derive(@json.FromJson)
+
 type OutcomeHandoffPrepareInput derive(@json.FromJson)
 
 type OutcomeHandoffPrepareProjection derive(ToJson)
@@ -375,6 +389,8 @@ type PerformanceMetricsInput derive(ToJson, @json.FromJson)
 type PerformanceReviewInput derive(@json.FromJson)
 
 type PortalsProjection derive(ToJson)
+
+type PostprocessTaskRequest derive(@json.FromJson)
 
 type ProductionBatchQcInput derive(@json.FromJson)
 
@@ -539,6 +555,8 @@ type RoutingDecisionInput derive(@json.FromJson)
 
 type RoutingPlanRecordInput derive(@json.FromJson)
 
+type SeedIntakeProjectRequest derive(@json.FromJson)
+
 pub struct StudioService {
   root : String
   store : @vectie/mooncast/native_host/store.AtomicStore
@@ -552,6 +570,11 @@ pub struct StudioService {
   delivery_application : @vectie/mooncast/application/execution.DeliveryFactoryService
   commerce_application : @commerce.CommercialApplicationService
   handoff_outbox : @handoff.OutboundHandoffService
+  needs_intake : @vectie/mooncast/application/intake.NeedsIntakeService
+  asset_factory : @asset_factory.AssetFactoryService
+  animatic : @animatic.AnimaticService
+  postprocess : @postprocess.PostprocessService
+  automated_qc : @automated_qc.AnalyzerService
   route_extensions : Array[RouteExtension]
 }
 pub async fn StudioService::adopt_pipeline_result(Self, String, @pipeline.RoutedIngestResult) -> ProjectRecord
@@ -605,8 +628,13 @@ pub async fn StudioService::qualify_commercial_lead(Self, String, HumanDecisionI
 pub async fn StudioService::record_creative_artifact(Self, String, CreativeArtifactRequest) -> ProjectCommandResponse
 pub async fn StudioService::record_creative_decision(Self, String, CreativeDecisionRequest) -> ProjectCommandResponse
 pub async fn StudioService::record_editor_review_comment(Self, String, EditorReviewCommentRequest) -> @integration.ReviewComment
-pub async fn StudioService::record_project_qualification(Self, String, ProjectExperienceMetadata, String) -> ProjectCommandResponse
+pub async fn StudioService::record_project_qualification(Self, String, ProjectExperienceMetadata, String, moonwiki_intake? : @vectie/mooncast/production/intake.MoonWikiNeedsPacket) -> ProjectCommandResponse
+pub fn StudioService::register_animatic_routes(Self) -> Unit
+pub fn StudioService::register_asset_factory_routes(Self) -> Unit
+pub fn StudioService::register_automated_qc_routes(Self) -> Unit
 pub async fn StudioService::register_media(Self, MediaRecord, Bytes) -> MediaRecord
+pub fn StudioService::register_needs_intake_routes(Self) -> Unit
+pub fn StudioService::register_postprocess_routes(Self) -> Unit
 pub fn StudioService::register_production_coordinator_routes(Self) -> Unit
 pub fn StudioService::register_route_extension(Self, RouteExtension) -> Unit
 pub fn StudioService::register_standard_application_routes(Self) -> Unit
@@ -616,7 +644,7 @@ pub async fn StudioService::resolve_editor_media(Self, String, Bool) -> (@media.
 pub async fn StudioService::resolve_media(Self, String) -> ResolvedMedia
 pub async fn StudioService::retry_editor_job(Self, String, String) -> EditorJobView
 pub async fn StudioService::save_project_experience(Self, String, ProjectExperienceMetadata) -> Unit
-pub async fn StudioService::seed_initial_creative_drafts(Self, String, ProjectExperienceMetadata, String) -> ProjectRecord
+pub async fn StudioService::seed_initial_creative_drafts(Self, String, ProjectExperienceMetadata, String, moonwiki_intake? : @vectie/mooncast/production/intake.MoonWikiNeedsPacket) -> ProjectRecord
 pub async fn StudioService::studio_project_projection(Self, ProjectRecord) -> Json
 
 // Type aliases

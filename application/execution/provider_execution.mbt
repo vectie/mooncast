@@ -217,17 +217,20 @@ async fn ProviderExecutionService::deterministic_fixture_result(
       artifacts: [
         {
           modality: input.capability,
-          text: if input.capability == "text" || input.capability == "translation" {
+          text: if input.capability == "text" ||
+            input.capability == "translation" {
             Some(payload)
           } else {
             None
           },
-          content_base64: if input.capability == "text" || input.capability == "translation" {
+          content_base64: if input.capability == "text" ||
+            input.capability == "translation" {
             None
           } else {
             Some(@base64.encode(bytes))
           },
-          mime_type: if input.capability == "text" || input.capability == "translation" {
+          mime_type: if input.capability == "text" ||
+            input.capability == "translation" {
             None
           } else {
             Some(mime)
@@ -272,7 +275,7 @@ async fn ProviderExecutionService::deterministic_fixture_result(
     _ => raise HostNotReady("deterministic fixture store is unavailable")
   }
   let render = @host_process.run_capture({
-    executable: "ffmpeg",
+    executable: ".tools/ffmpeg/darwin_arm64/ffmpeg",
     arguments: [
       "-hide_banner",
       "-loglevel",

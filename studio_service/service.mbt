@@ -57,7 +57,7 @@ pub fn StudioService::new(
     delivery_application: @execution_app.DeliveryFactoryService::new(
       root + "/application/delivery/state",
       root + "/application/delivery/outputs",
-      "ffmpeg",
+      bundled_ffmpeg,
     ),
     commerce_application: @commerce_app.CommercialApplicationService::new(
       root + "/application/commerce",
@@ -83,8 +83,8 @@ pub fn StudioService::new(
     automated_qc: @automated_qc_app.AnalyzerService::new(
       root + "/application/automated-qc",
       execution_application,
-      "ffmpeg",
-      "ffprobe",
+      bundled_ffmpeg,
+      bundled_ffprobe,
     ),
     route_extensions: [],
   }

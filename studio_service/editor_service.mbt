@@ -1503,7 +1503,7 @@ pub async fn StudioService::analyze_editor_media(
   let analysis_id = @runtime.new_id(prefix="analysis")
   let analysis_digest = "sha256:" + sha256_text(canonical + ":ffprobe-json-v1")
   let base = @editor_media.probe(
-    "ffprobe",
+    bundled_ffprobe,
     source_path,
     canonical,
     media.size,
@@ -1512,7 +1512,7 @@ pub async fn StudioService::analyze_editor_media(
     analysis_digest,
   )
   let waveform_process = @process.run_capture({
-    executable: "ffmpeg",
+    executable: bundled_ffmpeg,
     arguments: [
       "-hide_banner", "-nostdin", "-v", "error", "-i", source_path, "-vn", "-ac",
       "1", "-ar", "100", "-f", "s16le", "pipe:1",
@@ -1528,7 +1528,7 @@ pub async fn StudioService::analyze_editor_media(
     []
   }
   let thumbnail_process = @process.run_capture({
-    executable: "ffmpeg",
+    executable: bundled_ffmpeg,
     arguments: if base.video.state == "available" {
       [
         "-hide_banner", "-nostdin", "-v", "error", "-ss", "0", "-i", source_path,
@@ -1570,7 +1570,7 @@ pub async fn StudioService::analyze_editor_media(
   ignore(self.editor_render_files.put_blob(proxy_key, b""))
   let proxy_path = self.editor_render_files.owned_path(proxy_key)
   let invocation = @editor_render.compile_proxy(
-    "ffmpeg",
+    bundled_ffmpeg,
     canonical,
     source_path,
     proxy_path,
@@ -1832,7 +1832,7 @@ async fn verified_editor_output(
   spec : @editor_integration.ExportSpec,
 ) -> @editor_render.OutputInspection? {
   try
-    @editor_render.inspect_render_output("ffprobe", path, digest, size, {
+    @editor_render.inspect_render_output(bundled_ffprobe, path, digest, size, {
       project_id: plan.project_id,
       plan_digest: plan.plan_digest,
       duration_seconds: plan.range.duration_ticks.to_double() /
@@ -1844,6 +1844,7 @@ async fn verified_editor_output(
       video_codec: spec.video_codec,
       audio_codec: spec.audio_codec,
       audio_required: true,
+      subtitle_required: true,
     })
   catch {
     _ => None
@@ -1951,7 +1952,7 @@ async fn StudioService::run_editor_job(
     let invocation = match export_request {
       Some(request) =>
         @editor_render.compile_with_encoding(
-          "ffmpeg",
+          bundled_ffmpeg,
           plan,
           media,
           output_path,
@@ -1961,7 +1962,7 @@ async fn StudioService::run_editor_job(
             request.spec.audio_codec,
           ),
         )
-      None => @editor_render.compile("ffmpeg", plan, media, output_path)
+      None => @editor_render.compile(bundled_ffmpeg, plan, media, output_path)
     }
     let receipt = @editor_render.execute(invocation)
     let output_blob = if receipt.succeeded {

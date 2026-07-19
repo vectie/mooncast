@@ -67,6 +67,7 @@ pub(all) struct OutputExpectation {
   video_codec : String
   audio_codec : String
   audio_required : Bool
+  subtitle_required : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct OutputInspection {
@@ -82,6 +83,7 @@ pub(all) struct OutputInspection {
   format_name : String
   video_codec : String
   audio_codec : String
+  subtitle_codec : String
   passed : Bool
   checks : Array[String]
   publication_authority : Bool

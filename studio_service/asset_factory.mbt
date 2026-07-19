@@ -20,10 +20,21 @@ async fn StudioService::approved_asset_map(
   match self.asset_factory.current_plan(project_id) {
     None => result
     Some(plan) => {
-      guard plan.project_revision == project_revision else {
+      let canonical = self.get_project(project_id)
+      let current_shot_ids = @project.flattened_shots(canonical.snapshot.graph).map(shot => {
+          shot.shot_id
+        },
+      )
+      guard plan.project_revision <= project_revision &&
+        canonical.snapshot.revision == project_revision &&
+        plan.specs.all(spec => {
+          spec.dependent_shot_ids.all(shot_id => {
+            current_shot_ids.contains(shot_id)
+          })
+        }) else {
         raise Conflict(
           code="asset_factory_plan_stale",
-          message="the reusable asset plan does not bind the current project revision",
+          message="the reusable asset plan does not bind the current project graph",
         )
       }
       let workspace = self.asset_factory.workspace(project_id)
@@ -58,7 +69,9 @@ async fn StudioService::approved_asset_map(
       }
       for shot_id in dependent_shots {
         guard self.asset_factory.shot_assets(
-            project_id, project_revision, shot_id,
+            project_id,
+            plan.project_revision,
+            shot_id,
           )
           is Some(assets) else {
           raise Conflict(

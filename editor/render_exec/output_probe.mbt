@@ -32,6 +32,7 @@ pub(all) struct OutputExpectation {
   video_codec : String
   audio_codec : String
   audio_required : Bool
+  subtitle_required : Bool
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -48,6 +49,7 @@ pub(all) struct OutputInspection {
   format_name : String
   video_codec : String
   audio_codec : String
+  subtitle_codec : String
   passed : Bool
   checks : Array[String]
   publication_authority : Bool
@@ -95,6 +97,7 @@ pub async fn inspect_render_output(
   )
   let mut video_codec = ""
   let mut audio_codec = ""
+  let mut subtitle_codec = ""
   let mut width = 0
   let mut height = 0
   let mut frame_rate = ""
@@ -113,6 +116,9 @@ pub async fn inspect_render_output(
     }
     if stream.codec_type == "audio" {
       audio_codec = stream.codec_name
+    }
+    if stream.codec_type == "subtitle" {
+      subtitle_codec = stream.codec_name
     }
   }
   let duration = @string.parse_double(document.format.duration) catch {
@@ -142,6 +148,19 @@ pub async fn inspect_render_output(
     }
     checks.push("audio-codec")
   }
+  if expected.subtitle_required {
+    let expected_subtitle_codec = if expected.container == "mp4" {
+      "mov_text"
+    } else if expected.container == "webm" {
+      "webvtt"
+    } else {
+      "subrip"
+    }
+    guard subtitle_codec == expected_subtitle_codec else {
+      fail("render output subtitle codec mismatch")
+    }
+    checks.push("subtitle-codec")
+  }
   guard reported_size == output_size else {
     fail("render output size receipt mismatch")
   }
@@ -169,6 +188,7 @@ pub async fn inspect_render_output(
     format_name: document.format.format_name,
     video_codec,
     audio_codec,
+    subtitle_codec,
     passed: true,
     checks,
     publication_authority: false,
