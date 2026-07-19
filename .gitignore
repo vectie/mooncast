@@ -1,8 +1,11 @@
 /_build/
 /.mooncakes/
 /.moon-cache/
+/.moonsuite/
 .DS_Store
 /.tools/
 /var/
-__pycache__/
-*.pyc
+/ui/rabbita-mooncast/.mooncakes/
+/ui/rabbita-mooncast/_build/
+/ui/rabbita-mooncast/dist/
+/ui/rabbita-mooncast/node_modules/

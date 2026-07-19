@@ -1,0 +1,51 @@
+name: Mooncast pack boundary
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repository-local-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out Mooncast
+        uses: actions/checkout@v4
+
+      - name: Set up MoonBit
+        uses: hustcer/setup-moonbit@v1.22
+
+      - name: Report MoonBit toolchain
+        run: moon version --all
+
+      - name: Scan pack ownership boundary with MoonBit
+        run: moon run cmd/pack_boundary
+
+      - name: Emit compiled pack manifest
+        run: moon run cmd/manifest
+
+      - name: Check MoonBit declarations
+        run: moon check --target native --warn-list +73
+
+      - name: Test MoonBit contracts
+        run: moon test --target native
+
+      - name: Build native studio host
+        run: moon build --target native cmd/studio
+
+      - name: Set up Node for Rabbita surfaces
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Rabbita build dependencies
+        working-directory: ui/rabbita-mooncast
+        run: npm install --no-audit --no-fund
+
+      - name: Build Rabbita studio, editor, and client surfaces
+        working-directory: ui/rabbita-mooncast
+        run: npm run build

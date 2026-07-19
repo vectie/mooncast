@@ -1,0 +1,14 @@
+import {
+  "moonbitlang/async/fs",
+  "moonbitlang/async/io",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "vectie/mooncast",
+  "vectie/moonlib/pack",
+}
+
+import {
+  "moonbitlang/async",
+} for "wbtest"
+
+supported_targets = "native"
