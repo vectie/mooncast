@@ -1,0 +1,115 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/application/commerce"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/execution",
+  "vectie/mooncast/native_host/store",
+}
+
+// Values
+
+// Errors
+pub suberror CommercialApplicationError {
+  CommercialStateCorrupt
+  CommercialCommandRejected(String)
+  ClientPortalNotFound
+  ClientPortalUnavailable
+  ClientPortalStale
+  ClientProjectionDenied
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct ClientPortalAccess {
+  contract : String
+  portal_id : String
+  token_digest : String
+  created_at : String
+  raw_token_persisted : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ClientPortalCreation {
+  contract : String
+  portal : @vectie/mooncast/commerce.ClientPortal
+  raw_token : String
+  client_path : String
+  raw_token_returned_once : Bool
+  external_effect_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ClientPortalObservation {
+  contract : String
+  observation_id : String
+  project_id : String
+  portal_id : String
+  action : String
+  master_sha256 : String
+  build_digest : String
+  evidence_digest : String
+  observed_at : String
+  response_effect_observed : Bool
+  payment_effect_performed : Bool
+  publication_effect_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ClientSafeProjection {
+  contract : String
+  portal_id : String
+  project_id : String
+  client_name : String
+  brand : @vectie/mooncast/commerce.ClientBrand
+  expires_at : String
+  scopes : Array[String]
+  master_sha256 : String
+  delivery_digest : String
+  build_id : String
+  build_digest : String
+  annotations : Array[@vectie/mooncast/commerce.ClientAnnotation]
+  decisions : Array[@vectie/mooncast/commerce.ClientDecisionReceipt]
+  accepted_download_available : Bool
+  provider_data_included : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct CommercialApplicationService {
+  store : @store.AtomicStore
+}
+pub async fn CommercialApplicationService::annotate(Self, String, String, @vectie/mooncast/commerce.ClientAnnotation, Double, String) -> @vectie/mooncast/commerce.ClientAnnotation
+pub async fn CommercialApplicationService::billing_for_project(Self, String) -> Array[@vectie/mooncast/commerce.MilestoneBillingEntry]
+pub async fn CommercialApplicationService::capacity_board(Self, quote_id? : String) -> @vectie/mooncast/commerce.CapacityBoard?
+pub async fn CommercialApplicationService::client_observations(Self, String) -> Array[ClientPortalObservation]
+pub async fn CommercialApplicationService::client_portal_for_token(Self, String, String) -> @vectie/mooncast/commerce.ClientPortal
+pub async fn CommercialApplicationService::client_projection(Self, String, String, String, String, @execution.DeliveryBuild) -> ClientSafeProjection
+pub async fn CommercialApplicationService::control_portal(Self, String, Int, String, String, String, String) -> @vectie/mooncast/commerce.ClientPortal
+pub async fn CommercialApplicationService::create_client_portal(Self, @vectie/mooncast/commerce.CommercialCommand) -> ClientPortalCreation
+pub async fn CommercialApplicationService::dashboard_json(Self) -> String
+pub async fn CommercialApplicationService::lead(Self, String) -> @vectie/mooncast/commerce.QualifiedLead?
+pub async fn CommercialApplicationService::load(Self) -> @vectie/mooncast/commerce.CommercialSnapshot
+pub fn CommercialApplicationService::new(String) -> Self
+pub async fn CommercialApplicationService::portals_for_project(Self, String) -> Array[@vectie/mooncast/commerce.ClientPortal]
+pub async fn CommercialApplicationService::quote(Self, String) -> @vectie/mooncast/commerce.ScopedQuote?
+pub async fn CommercialApplicationService::record_client_decision(Self, String, String, @vectie/mooncast/commerce.ClientDecisionReceipt, String) -> @vectie/mooncast/commerce.ClientDecisionReceipt
+pub async fn CommercialApplicationService::record_client_observation(Self, @vectie/mooncast/commerce.ClientPortal, String, String, String) -> ClientPortalObservation
+pub async fn CommercialApplicationService::repeat_orders(Self, String) -> Array[@vectie/mooncast/commerce.RepeatOrderProposal]
+pub async fn CommercialApplicationService::reschedule_reservation(Self, @vectie/mooncast/commerce.CapacityReservation, @vectie/mooncast/commerce.CapacityReservation) -> @vectie/mooncast/commerce.CapacityReservation
+pub async fn CommercialApplicationService::submit(Self, @vectie/mooncast/commerce.CommercialCommand) -> @vectie/mooncast/commerce.CommercialResult
+pub async fn CommercialApplicationService::transition_billing(Self, String, Int, String, String, String, String, String, String) -> @vectie/mooncast/commerce.MilestoneBillingEntry
+
+pub(all) struct CommercialAuditReceipt {
+  contract : String
+  receipt_id : String
+  revision : Int
+  action : String
+  command_id : String
+  evidence_digest : String
+  recorded_at : String
+  external_effect_performed : Bool
+  payment_effect_performed : Bool
+  publication_effect_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

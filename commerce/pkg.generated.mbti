@@ -1,0 +1,357 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/commerce"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/execution",
+  "vectie/mooncast/production/project",
+}
+
+// Values
+pub fn append_annotation(ClientPortal, ClientAnnotation, Double, String, String) -> ClientPortal?
+
+pub fn append_client_decision(ClientPortal, ClientDecisionReceipt, String, String) -> ClientPortal?
+
+pub fn apply_commercial_event(CommercialSnapshot, CommercialEvent) -> CommercialSnapshot
+
+pub fn calculate_capacity(ScopedQuote, Array[CapacityResource], Array[CapacityReservation], String, String) -> CapacityBoard
+
+pub fn commercial_command_json(StringView) -> String raise
+
+pub fn commercial_snapshot_from_json(StringView) -> CommercialSnapshot raise
+
+pub fn commercial_snapshot_json(CommercialSnapshot) -> String
+
+pub fn empty_commercial_snapshot() -> CommercialSnapshot
+
+pub fn lead_is_qualified(QualifiedLead, Array[LeadQualificationDecision]) -> Bool
+
+pub fn portal_current(ClientPortal, String, String, @execution.DeliveryBuild) -> Bool
+
+pub fn quote_is_client_accepted(ScopedQuote, Array[QuoteDecision]) -> Bool
+
+pub fn quote_is_internally_approved(ScopedQuote, Array[QuoteDecision]) -> Bool
+
+pub fn quote_terms_valid(ScopedQuote) -> Bool
+
+pub fn reduce_commercial_command(CommercialCommand) -> CommercialResult
+
+pub fn repeat_order_safe(RepeatOrderProposal) -> Bool
+
+pub fn replay_commercial(CommercialSnapshot, Array[CommercialEvent]) -> CommercialSnapshot
+
+pub fn transition_billing(MilestoneBillingEntry, String, String, String, String, String, String) -> MilestoneBillingEntry?
+
+// Errors
+
+// Types and methods
+pub(all) struct BillingHistoryEntry {
+  state : String
+  actor : String
+  actor_role : String
+  reference : String
+  recorded_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CapacityBoard {
+  contract : String
+  quote : @project.VersionRef
+  reservation_ids : Array[String]
+  conflicts : Array[CapacityConflict]
+  ready : Bool
+  calculated_at : String
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CapacityConflict {
+  kind : String
+  resource_id : String
+  reservation_id : String
+  conflicting_reservation_id : String?
+  detail : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CapacityReservation {
+  contract : String
+  reservation : @project.VersionRef
+  quote : @project.VersionRef
+  resource : @project.VersionRef
+  role : String
+  skills : Array[String]
+  start_date : String
+  end_date : String
+  hours : Double
+  depends_on : Array[String]
+  status : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CapacityResource {
+  contract : String
+  resource : @project.VersionRef
+  name : String
+  role : String
+  skills : Array[String]
+  weekly_hours : Double
+  available_from : String
+  available_to : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ClientAnnotation {
+  contract : String
+  annotation_id : String
+  portal_id : String
+  master_sha256 : String
+  build_digest : String
+  timecode_seconds : Double
+  body : String
+  author : String
+  created_at : String
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ClientBrand {
+  name : String
+  accent : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ClientDecisionReceipt {
+  contract : String
+  portal_id : String
+  decision : String
+  master_sha256 : String
+  build_digest : String
+  governance_receipt_digest : String
+  project_revision : Int
+  decided_at : String
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ClientPortal {
+  contract : String
+  portal_id : String
+  project_id : String
+  master_sha256 : String
+  delivery_digest : String
+  build_id : String
+  build_digest : String
+  client_name : String
+  brand : ClientBrand
+  scopes : Array[String]
+  expires_at : String
+  status : String
+  revision : Int
+  annotations : Array[ClientAnnotation]
+  decisions : Array[ClientDecisionReceipt]
+  created_by : String
+  created_by_role : String
+  created_at : String
+  updated_at : String
+  record_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CommercialCommand {
+  contract : String
+  command_id : String
+  action : String
+  recorded_at : String
+  evidence_digest : String
+  expected_revision : Int
+  snapshot : CommercialSnapshot
+  lead : QualifiedLead?
+  lead_decision : LeadQualificationDecision?
+  quote : ScopedQuote?
+  quote_decision : QuoteDecision?
+  resource : CapacityResource?
+  reservation : CapacityReservation?
+  capacity_board : CapacityBoard?
+  conversion : QuoteConversion?
+  portal : ClientPortal?
+  billing : MilestoneBillingEntry?
+  repeat_order : RepeatOrderProposal?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CommercialEvent {
+  contract : String
+  event_id : String
+  kind : String
+  recorded_at : String
+  evidence_digest : String
+  lead : QualifiedLead?
+  lead_decision : LeadQualificationDecision?
+  quote : ScopedQuote?
+  quote_decision : QuoteDecision?
+  resource : CapacityResource?
+  reservation : CapacityReservation?
+  capacity_board : CapacityBoard?
+  conversion : QuoteConversion?
+  portal : ClientPortal?
+  billing : MilestoneBillingEntry?
+  repeat_order : RepeatOrderProposal?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CommercialResult {
+  contract : String
+  command_id : String
+  ok : Bool
+  error_code : String?
+  snapshot : CommercialSnapshot
+  events : Array[CommercialEvent]
+  external_effect_performed : Bool
+  payment_effect_performed : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CommercialSnapshot {
+  contract : String
+  revision : Int
+  leads : Array[QualifiedLead]
+  lead_decisions : Array[LeadQualificationDecision]
+  quotes : Array[ScopedQuote]
+  quote_decisions : Array[QuoteDecision]
+  resources : Array[CapacityResource]
+  reservations : Array[CapacityReservation]
+  capacity_boards : Array[CapacityBoard]
+  conversions : Array[QuoteConversion]
+  portals : Array[ClientPortal]
+  billing : Array[MilestoneBillingEntry]
+  repeat_orders : Array[RepeatOrderProposal]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct LeadQualificationDecision {
+  contract : String
+  lead : @project.VersionRef
+  decision : String
+  actor : String
+  actor_role : String
+  note : String
+  decided_at : String
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MarginForecast {
+  contract : String
+  quoted_revenue_cny : Double
+  provider_cost_cny : Double
+  labor_cost_cny : Double
+  other_cost_cny : Double
+  direct_cost_cny : Double
+  contingency_cny : Double
+  contribution_margin_cny : Double
+  contribution_margin_rate : Double
+  founder_hours : Double
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MilestoneBillingEntry {
+  contract : String
+  billing_id : String
+  project_id : String
+  kind : String
+  currency : String
+  amount : Double
+  reference : String
+  state : String
+  quoted_at : String
+  due_at : String?
+  paid_at : String?
+  waived_at : String?
+  history : Array[BillingHistoryEntry]
+  revision : Int
+  record_digest : String
+  payment_effect_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct QualifiedLead {
+  contract : String
+  lead : @project.VersionRef
+  customer : String
+  customer_contact_ref : String
+  payable_problem : String
+  baseline_cost_cny : Double
+  baseline_time_hours : Double
+  channels : Array[String]
+  measurable_acceptance : Array[String]
+  repeat_hypothesis : String
+  status : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct QuoteConversion {
+  contract : String
+  quote : @project.VersionRef
+  capacity_digest : String
+  project_id : String
+  actor : String
+  actor_role : String
+  converted_at : String
+  digest : String
+  payment_effect_performed : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct QuoteDecision {
+  contract : String
+  quote : @project.VersionRef
+  authority : String
+  decision : String
+  actor : String
+  actor_role : String
+  note : String
+  decided_at : String
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct QuoteMilestone {
+  kind : String
+  amount_cny : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct QuotedProject {
+  project_id : String
+  title : String
+  objective : String
+  audience : String
+  rights_owner : String
+  target_duration_seconds : Int
+  production_budget_cny : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RepeatOrderProposal {
+  contract : String
+  proposal_id : String
+  source_project_id : String
+  source_bible_digest : String
+  source_build_digest : String
+  new_project_id : String
+  reusable_bible_digest : String
+  reusable_asset_digests : Array[String]
+  actor : String
+  actor_role : String
+  client_approval_carried : Bool
+  publication_authority_carried : Bool
+  created_at : String
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ScopedQuote {
+  contract : String
+  quote : @project.VersionRef
+  source_lead : @project.VersionRef
+  project : QuotedProject
+  deliverables : Array[String]
+  revision_rounds : Int
+  provider_overage_policy : String
+  milestones : Array[QuoteMilestone]
+  rights_restrictions : Array[String]
+  model_restrictions : Array[String]
+  data_restrictions : Array[String]
+  start_date : String
+  delivery_date : String
+  forecast : MarginForecast
+  status : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+
