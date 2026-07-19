@@ -279,7 +279,13 @@ fn update(
       )
     LoadedAssetFactory(Ok(value)) => {
       let draft = match model.project {
-        Some(project) if model.animatic_plan_draft == "" =>
+        Some(project) if model.animatic_plan_draft == "" ||
+          model.animatic_plan_draft == "{}" ||
+          model.asset_factory
+          .map(previous => {
+            previous.approved_assets.length() != value.approved_assets.length()
+          })
+          .unwrap_or(false) =>
           starter_animatic_plan(project, value, 1)
         _ => model.animatic_plan_draft
       }
@@ -1039,6 +1045,7 @@ fn update(
             "G0" => project.brief.map(item => item.digest)
             "G1" => project.bible.map(item => item.digest)
             "G2" => project.animatic.map(item => item.digest)
+            "G3" => project.model_routing_plan.map(item => item.digest)
             _ => None
           }
           match evidence {

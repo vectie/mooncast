@@ -84,7 +84,11 @@ pub fn routing_plan_valid(
       route.retry_limit > 5 {
       return false
     }
-    ceiling = ceiling + route.cost_ceiling_cny
+    // A route ceiling is applied to every shot it covers. Reserve the full
+    // expanded exposure here so an apparently bounded route cannot multiply
+    // beyond the approved aggregate budget during execution.
+    ceiling = ceiling +
+      route.cost_ceiling_cny * route.shot_ids.length().to_double()
     for shot_id in route.shot_ids {
       if covered.any(id => id == shot_id) ||
         !shots.any(shot => shot.shot_id == shot_id) {

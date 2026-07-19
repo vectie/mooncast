@@ -1057,6 +1057,18 @@ pub async fn StudioService::dispatch_http(
       )
     Conflict(code~, message~) => api_error(409, code, message)
     Invalid(code~, message~) => api_error(422, code, message)
+    @execution_app.AdapterUnavailable(adapter) =>
+      api_error(
+        409,
+        "provider_adapter_unavailable",
+        "configured provider adapter is unavailable: " + adapter,
+      )
+    @execution_app.AuthorityDenied(message) =>
+      api_error(403, "provider_authority_denied", message)
+    @execution_app.InvalidPlan(message) =>
+      api_error(409, "provider_plan_invalid", message)
+    @execution_app.RoutedPlanInvalid(message) =>
+      api_error(409, "routed_plan_invalid", message)
     _ =>
       api_error(
         400, "request_invalid", "request body or route parameters are invalid",

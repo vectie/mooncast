@@ -1476,7 +1476,7 @@ fn initial_model() -> Model {
       model: "configured-video-model",
       model_version: "pinned-version",
       permitted_data_class: "contract-cleared-production-assets",
-      cost_ceiling_cny: "6000",
+      cost_ceiling_cny: "300",
       total_cost_ceiling_cny: "6000",
       retry_limit: "2",
       fallback_route_ids: "",

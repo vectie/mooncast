@@ -457,7 +457,15 @@ fn gate_sequence() -> Array[String] {
 
 ///|
 fn gate_controlled_here(gate : String) -> Bool {
-  gate == "G0" || gate == "G1" || gate == "G2"
+  gate == "G0" || gate == "G1" || gate == "G2" || gate == "G3"
+}
+
+///|
+fn gate_passed(project : ProjectProjection, gate : String) -> Bool {
+  match project.gates.get(gate) {
+    Some(value) => value.status == "passed"
+    None => false
+  }
 }
 
 ///|
@@ -958,7 +966,7 @@ fn render_routing(
               fn(value) { dispatch(SetRoutingField("data_class", value)) },
             ),
             form_field(
-              "Route cost ceiling CNY",
+              "Per-shot route cost ceiling CNY",
               model.routing_form.cost_ceiling_cny,
               "6000",
               fn(value) { dispatch(SetRoutingField("cost", value)) },
@@ -1017,6 +1025,7 @@ fn render_routing(
               class="primary",
               disabled=model.busy ||
                 project.model_routing_plan is None ||
+                !gate_passed(project, "G3") ||
                 !model.operator.human_confirmed,
               on_click=dispatch(CreateRoutedExecution),
               "Create bounded multi-shot run",
@@ -1032,6 +1041,11 @@ fn render_routing(
               ])
             Some(plan) =>
               div([
+                if gate_passed(project, "G3") {
+                  p(class="boundary-note", "G3 production authorization is recorded for this exact routing plan.")
+                } else {
+                  p(class="boundary-note", "Before execution, approve the exact rendered animatic and both routing decisions, then record G3 from the evidence-gate rail.")
+                },
                 div(class="metrics", [
                   metric("Plan version", "\{plan.version}", plan.digest),
                   metric(
