@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://creative-artifact/v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["contract", "artifact_id", "artifact_type", "version", "digest", "status", "content", "created_at"],
+  "properties": {
+    "contract": {"const": "mooncast.creative-artifact.v1"},
+    "artifact_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "artifact_type": {"enum": ["brief", "rights-ledger", "ip-bible", "script", "claims-ledger", "storyboard", "animatic"]},
+    "version": {"type": "integer", "minimum": 1},
+    "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "status": {"enum": ["draft", "approved", "rejected", "revision-requested"]},
+    "content": {"type": "object"},
+    "supersedes_digest": {"type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$"},
+    "latest_decision": {"type": ["object", "null"]},
+    "created_at": {"type": "string", "format": "date-time"}
+  }
+}

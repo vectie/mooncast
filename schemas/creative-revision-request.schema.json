@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://creative-revision-request/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["expected_project_revision", "expected_artifact_version", "expected_artifact_digest", "actor", "content"],
+  "properties": {
+    "expected_project_revision": {"type": "integer", "minimum": 1},
+    "expected_artifact_version": {"type": "integer", "minimum": 1},
+    "expected_artifact_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "actor": {"type": "string", "minLength": 1, "maxLength": 100},
+    "content": {"type": "object"}
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://shot-record/v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "episode_id", "scene_id", "order", "duration_seconds", "prompt", "status", "qc"],
+  "properties": {
+    "id": {"type": "string"}, "episode_id": {"type": "string"}, "scene_id": {"type": "string"},
+    "order": {"type": "integer", "minimum": 1}, "duration_seconds": {"type": "integer", "minimum": 1, "maximum": 12},
+    "start_seconds": {"type": "integer", "minimum": 0}, "prompt": {"type": "string", "minLength": 1},
+    "subtitle": {"type": "string"}, "characters": {"type": "array", "items": {"type": "string"}},
+    "props": {"type": "array", "items": {"type": "string"}}, "location": {"type": "string"},
+    "framing": {"type": "string"}, "transition": {"type": "string"},
+    "audio_cues": {"type": "array", "items": {"type": "string"}}, "source_artifacts": {"type": "object"},
+    "status": {"enum": ["planned", "generated-pending-qc", "generation-failed", "generated"]}, "asset_id": {"type": ["string", "null"]},
+    "provider_attempt_id": {"type": ["string", "null"]}, "qc": {"type": "object"}
+  }
+}

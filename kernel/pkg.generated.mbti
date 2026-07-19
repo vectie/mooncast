@@ -1,0 +1,154 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/kernel"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/production/creative",
+  "vectie/mooncast/production/governance",
+  "vectie/mooncast/production/project",
+}
+
+// Values
+pub fn apply_event(ProjectSnapshot, ProjectEvent) -> ProjectSnapshot
+
+pub fn empty_snapshot(@project.ProjectGraph) -> ProjectSnapshot
+
+pub fn evaluate_json(StringView) -> String raise
+
+pub fn event_from_json(StringView) -> ProjectEvent raise
+
+pub fn event_to_json(ProjectEvent) -> String
+
+pub fn gate_readiness(ProjectSnapshot, @governance.Gate) -> GateReadiness
+
+pub fn handle(ProjectCommand) -> CommandResult
+
+pub fn invalidate_from_gate(ProjectSnapshot, String) -> ProjectSnapshot
+
+pub fn next_gate(ProjectSnapshot) -> @governance.Gate?
+
+pub let production_kernel_version : String
+
+pub fn projection(ProjectSnapshot) -> ProductionProjection
+
+pub fn replay(ProjectSnapshot, Array[ProjectEvent]) -> ProjectSnapshot
+
+pub fn snapshot_from_json(StringView) -> ProjectSnapshot raise
+
+pub fn snapshot_to_json(ProjectSnapshot) -> String
+
+// Errors
+
+// Types and methods
+pub(all) struct CommandResult {
+  schema_version : String
+  kernel_version : String
+  command_id : String
+  ok : Bool
+  error : KernelError?
+  snapshot : ProjectSnapshot
+  emitted_events : Array[ProjectEvent]
+  readiness : GateReadiness?
+  projection : ProductionProjection
+  authority : @governance.AuthorityBoundary
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GateReadiness {
+  gate : String
+  ready : Bool
+  reasons : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct KernelError {
+  code : String
+  message : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionProjection {
+  current_gate : String?
+  next_gate : String?
+  stage : String
+  complete : Bool
+  graph_validation : @project.GraphValidation
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProjectCommand {
+  schema_version : String
+  kernel_version : String
+  command_id : String
+  command : String
+  recorded_at : String
+  evidence_digest : String
+  snapshot : ProjectSnapshot
+  gate : String?
+  actor : String?
+  role : String?
+  qualification : @governance.ClientQualification?
+  creative_artifact : @creative.CreativeArtifact?
+  creative_decision : @creative.CreativeDecision?
+  routing_plan : @governance.ModelRoutingPlan?
+  routing_decision : @governance.RoutingDecision?
+  generation_attempt : @governance.GenerationAttempt?
+  qc_finding : @governance.QcFinding?
+  qc_decision : @governance.QcDecision?
+  master : @governance.Master?
+  master_decision : @governance.MasterDecision?
+  delivery_package : @governance.DeliveryPackage?
+  delivery_acceptance : @governance.DeliveryAcceptance?
+  publication_authorization : @governance.PublicationAuthorization?
+  publication_observation : @governance.PublicationObservation?
+  performance_review : @governance.PerformanceReview?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProjectEvent {
+  schema_version : String
+  event_id : String
+  event_kind : String
+  recorded_at : String
+  source_digest : String
+  invalidates_from_gate : String?
+  qualification : @governance.ClientQualification?
+  creative_artifact : @creative.CreativeArtifact?
+  creative_decision : @creative.CreativeDecision?
+  routing_plan : @governance.ModelRoutingPlan?
+  routing_decision : @governance.RoutingDecision?
+  generation_attempt : @governance.GenerationAttempt?
+  qc_finding : @governance.QcFinding?
+  qc_decision : @governance.QcDecision?
+  master : @governance.Master?
+  master_decision : @governance.MasterDecision?
+  delivery_package : @governance.DeliveryPackage?
+  delivery_acceptance : @governance.DeliveryAcceptance?
+  publication_authorization : @governance.PublicationAuthorization?
+  publication_observation : @governance.PublicationObservation?
+  performance_review : @governance.PerformanceReview?
+  gate_receipt : @governance.GateReceipt?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProjectSnapshot {
+  schema_version : String
+  revision : Int
+  graph : @project.ProjectGraph
+  qualification : @governance.ClientQualification?
+  creative_artifacts : Array[@creative.CreativeArtifact]
+  creative_decisions : Array[@creative.CreativeDecision]
+  routing_plan : @governance.ModelRoutingPlan?
+  routing_decisions : Array[@governance.RoutingDecision]
+  generation_attempts : Array[@governance.GenerationAttempt]
+  qc_findings : Array[@governance.QcFinding]
+  qc_decisions : Array[@governance.QcDecision]
+  master : @governance.Master?
+  master_decisions : Array[@governance.MasterDecision]
+  delivery_package : @governance.DeliveryPackage?
+  delivery_acceptances : Array[@governance.DeliveryAcceptance]
+  publication_authorizations : Array[@governance.PublicationAuthorization]
+  publication_observations : Array[@governance.PublicationObservation]
+  performance_reviews : Array[@governance.PerformanceReview]
+  gate_receipts : Array[@governance.GateReceipt]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

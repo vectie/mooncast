@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/contracts/provider-result-artifact.v1.schema.json",
+  "title": "Normalized provider result artifact",
+  "type": "object",
+  "required": ["contract", "artifact_id", "modality", "mime_type", "size_bytes", "content_digest", "provider", "model", "request_id", "plan_digest", "config_digest", "authority_receipt_digest", "attempt_id", "source_refs", "created_at", "publication_authority", "artifact_digest"],
+  "properties": {
+    "contract": {"const": "mooncast.provider-result-artifact.v1"},
+    "artifact_id": {"type": "string"},
+    "modality": {"enum": ["text", "image", "video", "voice", "music"]},
+    "mime_type": {"type": "string"},
+    "size_bytes": {"type": "integer", "minimum": 1},
+    "duration_seconds": {"type": ["number", "null"], "minimum": 0},
+    "content_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "provider": {"type": "string"},
+    "model": {"type": "string"},
+    "request_id": {"type": "string"},
+    "plan_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "config_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "authority_receipt_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "attempt_id": {"type": "string"},
+    "source_refs": {"type": "array", "items": {"type": "string"}},
+    "text": {"type": "string"},
+    "registry_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "registry_locator": {"type": "string"},
+    "created_at": {"type": "string"},
+    "publication_authority": {"const": false},
+    "artifact_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/contracts/provider-request-plan.v1.schema.json",
+  "title": "Inert host-authorized provider request plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "request_id", "adapter_id", "capability", "provider", "endpoint", "method", "model", "api_style", "secret_refs", "timeout_seconds", "body", "cost_ceiling", "network_authority", "publication_authority", "plan_digest"],
+  "properties": {
+    "contract": {"const": "mooncast.provider-request-plan.v1"},
+    "request_id": {"type": "string"},
+    "adapter_id": {"type": "string"},
+    "capability": {"enum": ["text", "image", "video", "voice", "music"]},
+    "provider": {"type": "string"},
+    "endpoint": {"type": "string", "pattern": "^https://"},
+    "method": {"const": "POST"},
+    "model": {"type": "string"},
+    "api_style": {"enum": ["openai-compatible", "json"]},
+    "secret_refs": {"type": "object"},
+    "timeout_seconds": {"type": "integer"},
+    "body": {"type": "object"},
+    "cost_ceiling": {"type": "string"},
+    "network_authority": {"const": false},
+    "publication_authority": {"const": false},
+    "plan_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

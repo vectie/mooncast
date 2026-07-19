@@ -1,0 +1,405 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/application/production"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/kernel",
+  "vectie/mooncast/native_host/store",
+  "vectie/mooncast/production/creative",
+  "vectie/mooncast/production/governance",
+  "vectie/mooncast/production/project",
+}
+
+// Values
+pub fn canonical_json_digest(Json) -> String
+
+pub fn creative_decision_request_from_json(StringView) -> CreativeDecisionRequest raise
+
+pub fn creative_revision_request_from_json(StringView) -> CreativeRevisionRequest raise
+
+pub fn derive_production_breakdown(@kernel.ProjectSnapshot) -> ProductionBreakdown
+
+pub fn deterministic_preview_cost(Double) -> Double?
+
+pub fn episode_production_graph(String, String, Int, Double) -> @project.ProjectGraph
+
+pub fn master_assembly_request_from_json(StringView) -> MasterAssemblyRequest raise
+
+pub fn master_domain_record(@kernel.ProjectSnapshot, MasterProvenance) -> @governance.Master
+
+pub fn master_provenance_to_json(MasterProvenance) -> String
+
+pub fn new_production_request_from_json(StringView) -> NewProductionRequest raise
+
+pub fn new_production_snapshot(NewProductionRequest) -> @kernel.ProjectSnapshot?
+
+pub fn normalize_preview_brief(PreviewBrief) -> PreviewBrief raise PreviewApplicationError
+
+pub fn preview_asset_to_json(PreviewAsset) -> String
+
+pub fn preview_brief_from_json(StringView) -> PreviewBrief raise
+
+pub fn production_recorded_at() -> String
+
+// Errors
+pub suberror LongformApplicationError {
+  LongformGateRequired(String)
+  LongformRequestInvalid(String)
+  LongformShotMissing(String)
+  LongformSourceMissing(String)
+  LongformCompositionFailed(String)
+  LongformProbeFailed(String)
+  LongformDeliveryNotReady(String)
+} derive(@debug.Debug)
+
+pub suberror PreviewApplicationError {
+  PreviewBriefInvalid(String)
+  PreviewSafetyRejected
+  PreviewRuntimeUnavailable(String)
+  PreviewRenderFailed(String)
+  PreviewProbeFailed(String)
+  PreviewAssetNotFound(String)
+  PreviewReviewInvalid(String)
+} derive(@debug.Debug)
+
+pub suberror ProductionWorkflowError {
+  ProductionProjectNotFound(String)
+  ProductionRevisionConflict(String)
+  CreativeArtifactConflict(String)
+  CreativeDecisionInvalid(String)
+} derive(@debug.Debug)
+
+pub suberror ProjectRepositoryError {
+  ProjectExists(String)
+  ProjectNotFound(String)
+  ProjectCorrupt(String)
+  ProjectRevisionConflict(String)
+  ProjectCommandRejected(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct AnalyticsObservation {
+  contract : String
+  observation_id : String
+  project_id : String
+  source : String
+  views : Int
+  completion_rate : Double
+  accepted_minutes : Double
+  recorded_at : String
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CreativeDecisionRequest {
+  context : ProjectActionContext
+  kind : @creative.ArtifactKind
+  expected_artifact : @project.VersionRef
+  decision : String
+  note : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CreativeRevisionRequest {
+  context : ProjectActionContext
+  kind : @creative.ArtifactKind
+  expected_artifact : @project.VersionRef
+  content : String
+  dependency_digests : Array[String]
+  duration_seconds : Int?
+  expected_cost_cny : Double?
+  rights_cleared : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EconomicsProjection {
+  contract : String
+  project_id : String
+  provider_cost_cny : Double
+  recognized_revenue_cny : Double
+  labor_cost_cny : Double
+  other_cost_cny : Double
+  gross_margin_cny : Double
+  cost_per_accepted_minute_cny : Double
+  founder_hours : Double
+  refreshed_at : String
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GateAdvanceRequest {
+  context : ProjectActionContext
+  gate : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct LegacyPreviewService {
+  state : @store.AtomicStore
+  media : @store.AtomicStore
+  media_root : String
+  ffmpeg_executable : String
+  ffprobe_executable : String
+  font_path : String
+}
+pub async fn LegacyPreviewService::get_asset(Self, String) -> PreviewAsset?
+pub async fn LegacyPreviewService::get_projection(Self, String) -> PreviewAssetProjection?
+pub async fn LegacyPreviewService::list_assets(Self) -> Array[PreviewAsset]
+pub async fn LegacyPreviewService::list_projections(Self) -> Array[PreviewAssetProjection]
+pub async fn LegacyPreviewService::media_blob(Self, String) -> @store.StoredBlob?
+pub fn LegacyPreviewService::new(String, String, String, String, String) -> Self
+pub async fn LegacyPreviewService::render(Self, PreviewBrief) -> PreviewRenderResult
+pub async fn LegacyPreviewService::review(Self, String, String, String, String) -> PreviewReview
+pub async fn LegacyPreviewService::reviews(Self, String) -> Array[PreviewReview]
+pub fn LegacyPreviewService::runtime_readiness(Self) -> ProductionRuntimeReadiness
+
+pub struct LongformProductionService {
+  source : @store.AtomicStore
+  masters : @store.AtomicStore
+  deliveries : @store.AtomicStore
+  master_root : String
+  ffmpeg_executable : String
+  ffprobe_executable : String
+}
+pub async fn LongformProductionService::assemble_master(Self, @kernel.ProjectSnapshot, MasterAssemblyRequest) -> MasterProvenance
+pub async fn LongformProductionService::master_blob(Self, String) -> @store.StoredBlob?
+pub fn LongformProductionService::new(String, String, String, String, String) -> Self
+pub async fn LongformProductionService::prepare_delivery(Self, @kernel.ProjectSnapshot) -> PreparedDeliveryRecord
+pub async fn LongformProductionService::provenance(Self, String) -> MasterProvenance?
+pub async fn LongformProductionService::provenance_for_project(Self, String) -> MasterProvenance?
+
+pub(all) struct MasterAssemblyRequest {
+  contract : String
+  expected_project_revision : Int
+  evidence_digest : String
+  shot_media : Array[ShotMediaBinding]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterMedia {
+  duration_seconds : Double
+  format_name : String
+  video_codec : String
+  width : Int?
+  height : Int?
+  has_audio : Bool
+  has_subtitles : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterProvenance {
+  contract : String
+  master_id : String
+  project_id : String
+  project_revision : Int
+  master_key : String
+  subtitle_key : String
+  provenance_key : String
+  sha256 : String
+  timeline_digest : String
+  timeline : Array[MasterTimelineEntry]
+  media : MasterMedia
+  explicit_ai_label : String
+  qc_checks : Array[String]
+  created_at : String
+  process_effect_performed : Bool
+  publication_effect_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MasterTimelineEntry {
+  order : Int
+  shot_id : String
+  source_key : String
+  source_sha256 : String
+  duration_ms : Int
+  subtitle : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct NewProductionRequest {
+  project_id : String
+  title : String
+  objective : String
+  audience : String
+  rights_owner : String
+  rights_confirmed : Bool
+  target_duration_seconds : Int
+  maximum_budget_cny : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreparedDeliveryRecord {
+  contract : String
+  project_id : String
+  project_revision : Int
+  delivery_package : @governance.DeliveryPackage
+  delivery_key : String
+  package_digest : String
+  prepared_at : String
+  external_effect_performed : Bool
+  publication_effect_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreviewAsset {
+  contract : String
+  asset_id : String
+  created_at : String
+  video_key : String
+  metadata_key : String
+  sha256 : String
+  request_sha256 : String
+  provider : String
+  model : String
+  creative_brief : PreviewBrief
+  cost : PreviewCost
+  media : PreviewMedia
+  rights_scope : String
+  safety_status : String
+  explicit_ai_label : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreviewAssetProjection {
+  asset : PreviewAsset
+  human_review : PreviewReview?
+  review_required : Bool
+  publication_status : String
+  publication_eligible : Bool
+  publication_adapter_invoked : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreviewBrief {
+  prompt : String
+  duration_seconds : Double
+  rights_owner : String
+  rights_confirmed : Bool
+  brand_name : String
+  audience : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreviewCost {
+  currency : String
+  amount : Double
+  maximum : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreviewMedia {
+  format_name : String
+  duration_seconds : Double
+  video_codec : String
+  width : Int?
+  height : Int?
+  has_audio : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreviewRenderResult {
+  asset : PreviewAsset
+  created : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreviewReview {
+  contract : String
+  review_id : String
+  asset_id : String
+  decision : String
+  actor : String
+  note : String
+  target_sha256 : String
+  reviewed_at : String
+  external_effect_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProbeDocument {
+  streams : Array[ProbeStream]
+  format : ProbeFormat
+} derive(@debug.Debug, @json.FromJson)
+
+pub(all) struct ProbeFormat {
+  format_name : String?
+  duration : String?
+} derive(@debug.Debug, @json.FromJson)
+
+pub(all) struct ProbeStream {
+  codec_type : String
+  codec_name : String?
+  width : Int?
+  height : Int?
+} derive(@debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionBreakdown {
+  project_id : String
+  episode_count : Int
+  scene_count : Int
+  shot_count : Int
+  duration_seconds : Int
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionRuntimeReadiness {
+  contract : String
+  moonbit_native : Bool
+  ffmpeg_configured : Bool
+  ffprobe_configured : Bool
+  font_configured : Bool
+  automatic_download_performed : Bool
+  ready : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProjectActionContext {
+  command_id : String
+  expected_revision : Int
+  recorded_at : String
+  evidence_digest : String
+  actor : String?
+  role : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct ProjectRepository {
+  store : @store.AtomicStore
+}
+pub async fn ProjectRepository::advance_gate(Self, String, GateAdvanceRequest) -> @kernel.CommandResult
+pub async fn ProjectRepository::analytics(Self, String) -> Array[AnalyticsObservation]
+pub async fn ProjectRepository::append_generation_attempt(Self, String, ProjectActionContext, @governance.GenerationAttempt) -> @kernel.CommandResult
+pub async fn ProjectRepository::authorize_publication(Self, String, ProjectActionContext, @governance.PublicationAuthorization) -> @kernel.CommandResult
+pub async fn ProjectRepository::create(Self, @kernel.ProjectSnapshot) -> @kernel.ProjectSnapshot
+pub async fn ProjectRepository::decide_creative_artifact(Self, String, CreativeDecisionRequest) -> @kernel.CommandResult
+pub async fn ProjectRepository::decide_delivery_milestone(Self, String, ProjectActionContext, @governance.DeliveryAcceptance) -> @kernel.CommandResult
+pub async fn ProjectRepository::decide_master(Self, String, ProjectActionContext, @governance.MasterDecision) -> @kernel.CommandResult
+pub async fn ProjectRepository::decide_model_routing_plan(Self, String, ProjectActionContext, @governance.RoutingDecision) -> @kernel.CommandResult
+pub async fn ProjectRepository::decide_shot_qc(Self, String, ProjectActionContext, @governance.QcDecision) -> @kernel.CommandResult
+pub async fn ProjectRepository::economics(Self, String) -> EconomicsProjection?
+pub async fn ProjectRepository::events(Self, String) -> Array[ProjectRepositoryEvent]
+pub async fn ProjectRepository::get(Self, String) -> @kernel.ProjectSnapshot?
+pub async fn ProjectRepository::handle(Self, @kernel.ProjectCommand) -> @kernel.CommandResult
+pub async fn ProjectRepository::list(Self) -> Array[@kernel.ProjectSnapshot]
+pub fn ProjectRepository::new(String) -> Self
+pub async fn ProjectRepository::observe_publication_receipt(Self, String, ProjectActionContext, @governance.PublicationObservation) -> @kernel.CommandResult
+pub async fn ProjectRepository::readiness(Self, String, GateAdvanceRequest) -> @kernel.CommandResult
+pub async fn ProjectRepository::record_analytics(Self, String, Int, String, Int, Double, String) -> AnalyticsObservation
+pub async fn ProjectRepository::record_performance_review(Self, String, ProjectActionContext, @governance.PerformanceReview) -> @kernel.CommandResult
+pub async fn ProjectRepository::record_qualification(Self, String, ProjectActionContext, @governance.ClientQualification) -> @kernel.CommandResult
+pub async fn ProjectRepository::record_repository_event(Self, String, String, String, String) -> ProjectRepositoryEvent
+pub async fn ProjectRepository::record_shot_qc_finding(Self, String, ProjectActionContext, @governance.QcFinding) -> @kernel.CommandResult
+pub async fn ProjectRepository::recover_temporary_files(Self) -> Int
+pub async fn ProjectRepository::refresh_economics(Self, String, Double, Double, Double, Double, String) -> EconomicsProjection
+pub async fn ProjectRepository::register_master(Self, String, ProjectActionContext, @governance.Master) -> @kernel.CommandResult
+pub async fn ProjectRepository::replace(Self, @kernel.ProjectSnapshot, Int, String, String) -> @kernel.ProjectSnapshot
+pub async fn ProjectRepository::revise_creative_artifact(Self, String, CreativeRevisionRequest) -> @kernel.CommandResult
+pub async fn ProjectRepository::revise_delivery_package(Self, String, ProjectActionContext, @governance.DeliveryPackage) -> @kernel.CommandResult
+pub async fn ProjectRepository::revise_model_routing_plan(Self, String, ProjectActionContext, @governance.ModelRoutingPlan) -> @kernel.CommandResult
+pub async fn ProjectRepository::synchronize_canonical(Self, @kernel.ProjectSnapshot, String, String) -> @kernel.ProjectSnapshot
+
+pub(all) struct ProjectRepositoryEvent {
+  contract : String
+  project_id : String
+  revision : Int
+  kind : String
+  evidence_digest : String
+  recorded_at : String
+  domain_events : Array[@kernel.ProjectEvent]
+  external_effect_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ShotMediaBinding {
+  shot_id : String
+  source_key : String
+  source_sha256 : String
+  duration_ms : Int
+  subtitle : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+
