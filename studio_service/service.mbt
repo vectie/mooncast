@@ -12,6 +12,7 @@ pub struct StudioService {
   delivery_application : @execution_app.DeliveryFactoryService
   commerce_application : @commerce_app.CommercialApplicationService
   handoff_outbox : @handoff_app.OutboundHandoffService
+  needs_intake : @intake_app.NeedsIntakeService
   route_extensions : Array[RouteExtension]
 }
 
@@ -60,10 +61,14 @@ pub fn StudioService::new(
     handoff_outbox: @handoff_app.OutboundHandoffService::new(
       root + "/application/handoff-outbox",
     ),
+    needs_intake: @intake_app.NeedsIntakeService::new(
+      root + "/application/needs-intake",
+    ),
     route_extensions: [],
   }
   service.register_standard_application_routes()
   service.register_production_coordinator_routes()
+  service.register_needs_intake_routes()
   service
 }
 

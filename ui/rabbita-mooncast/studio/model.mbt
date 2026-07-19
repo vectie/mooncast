@@ -3,12 +3,137 @@
 /// remains in the native Mooncast service and is replaced after every command.
 enum StudioTab {
   Overview
+  NeedsStrategy
   Creative
   Routing
   ShotBoard
   Delivery
   Commercial
 } derive(Eq)
+
+///|
+struct MoonWikiEvidenceProjection {
+  source_id : String
+  source_version : String
+  source_digest : String
+  provenance_ref : String
+} derive(FromJson)
+
+///|
+struct IntakeIntentProjection {
+  brief : MoonWikiEvidenceProjection
+  bible : MoonWikiEvidenceProjection
+  script : MoonWikiEvidenceProjection
+} derive(FromJson)
+
+///|
+struct IntakeClientNeedProjection {
+  customer : String
+  payable_problem : String
+  audience : String
+  channels : Array[String]
+  acceptance_method : String
+  repeat_purchase_hypothesis : String
+} derive(FromJson)
+
+///|
+struct IntakeContractProjection {
+  contract_ref : String
+  budget_ceiling_cny : Double
+  revision_limit : Int
+  target_duration_seconds : Int
+  deliverables : Array[String]
+  payment_milestones : Array[String]
+} derive(FromJson)
+
+///|
+struct IntakeConstraintsProjection {
+  rights_owner : String
+  rights_confirmed : Bool
+  rights_constraints : Array[String]
+  confidentiality_class : String
+  permitted_provider_ids : Array[String]
+  prohibited_provider_ids : Array[String]
+  permitted_data_class : String
+} derive(FromJson)
+
+///|
+struct IntakeStrategyProjection {
+  project_title : String
+  objective : String
+  narrative_proposition : String
+  tone : String
+  claims : Array[String]
+  success_metrics : Array[String]
+  negative_constraints : Array[String]
+} derive(FromJson)
+
+///|
+struct NeedsPacketProjection {
+  contract : String
+  packet_id : String
+  packet_version : Int
+  exported_at : String
+  evidence_refs : Array[MoonWikiEvidenceProjection]
+  intent_refs : IntakeIntentProjection
+  client_need : IntakeClientNeedProjection
+  contract_boundary : IntakeContractProjection
+  constraints : IntakeConstraintsProjection
+  creative_strategy : IntakeStrategyProjection
+  unresolved_questions : Array[String]
+  publication_authority : Bool
+  provider_execution_authority : Bool
+} derive(FromJson)
+
+///|
+struct IntakeValidationProjection {
+  complete : Bool
+  errors : Array[String]
+  unresolved_questions : Array[String]
+  provenance_digest : String
+} derive(FromJson)
+
+///|
+struct ImportedIntakeProjection {
+  packet : NeedsPacketProjection
+  validation : IntakeValidationProjection
+  imported_at : String
+  immutable : Bool
+} derive(FromJson)
+
+///|
+struct IntakeDecisionProjection {
+  packet_id : String
+  packet_version : Int
+  provenance_digest : String
+  decision : String
+  actor : String
+  actor_role : String
+  note : String
+  decided_at : String
+  human_confirmed : Bool
+  decision_digest : String
+} derive(FromJson)
+
+///|
+struct IntakeBindingProjection {
+  binding_id : String
+  project_id : String
+  project_revision : Int
+  intake_id : String
+  intake_version : Int
+  intake_provenance_digest : String
+  approval_digest : String
+} derive(FromJson)
+
+///|
+struct NeedsIntakeWorkspaceProjection {
+  intakes : Array[ImportedIntakeProjection]
+  decisions : Array[IntakeDecisionProjection]
+  bindings : Array[IntakeBindingProjection]
+  publication_authority : Bool
+  provider_execution_authority : Bool
+} derive(FromJson)
 
 ///|
 #warnings("-unused_field")
@@ -702,6 +827,10 @@ struct Model {
   latest_client_url : String?
   commercial : CommercialDashboardProjection?
   capacity_board : CapacityBoardProjection?
+  needs_intake : NeedsIntakeWorkspaceProjection?
+  selected_intake_id : String
+  intake_packet_draft : String
+  intake_seed_project_id : String
   selected_lead_id : String
   selected_quote_id : String
   selected_artifact_kind : String
@@ -735,6 +864,13 @@ enum Msg {
   CreatedClientPortal(Result[ClientPortalCreatedProjection, Error])
   LoadedCommercial(Result[CommercialDashboardProjection, Error])
   LoadedCapacity(Result[CapacityBoardProjection, Error])
+  LoadedNeedsIntake(Result[NeedsIntakeWorkspaceProjection, Error])
+  SelectIntake(String)
+  SetIntakePacketDraft(String)
+  SetIntakeSeedProjectId(String)
+  ImportNeedsPacket
+  DecideNeedsIntake(String)
+  SeedProjectFromIntake
   ActionCompleted(String, Result[Json, Error])
   CreatedProject(Result[ProjectProjection, Error])
   SetCreateField(String, String)
@@ -793,6 +929,35 @@ enum Msg {
 }
 
 ///|
+fn starter_moonwiki_packet() -> String {
+  let value =
+    #|{
+  #|  "contract": "moonwiki.mooncast-needs-export.v1",
+  #|  "packet_id": "brand-episode-needs-001",
+  #|  "packet_version": 1,
+  #|  "exported_at": "2026-07-19T00:00:00+08:00",
+  #|  "evidence_refs": [
+  #|    {"source_id":"wiki-brief-001","source_version":"1","source_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","provenance_ref":"moonwiki://projects/brand/brief"},
+  #|    {"source_id":"wiki-bible-001","source_version":"1","source_digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222","provenance_ref":"moonwiki://projects/brand/bible"},
+  #|    {"source_id":"wiki-script-001","source_version":"1","source_digest":"sha256:3333333333333333333333333333333333333333333333333333333333333333","provenance_ref":"moonwiki://projects/brand/script"}
+  #|  ],
+  #|  "intent_refs": {
+  #|    "brief":{"source_id":"wiki-brief-001","source_version":"1","source_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","provenance_ref":"moonwiki://projects/brand/brief"},
+  #|    "bible":{"source_id":"wiki-bible-001","source_version":"1","source_digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222","provenance_ref":"moonwiki://projects/brand/bible"},
+  #|    "script":{"source_id":"wiki-script-001","source_version":"1","source_digest":"sha256:3333333333333333333333333333333333333333333333333333333333333333","provenance_ref":"moonwiki://projects/brand/script"}
+  #|  },
+  #|  "client_need":{"customer":"Named design partner","payable_problem":"Produce a repeatable branded narrative episode faster than the current agency workflow","audience":"Customer-defined audience","channels":["review-only"],"acceptance_method":"Named client accepts the exact 3–8 minute master and provenance package","repeat_purchase_hypothesis":"Quarterly episode retainer"},
+  #|  "contract_boundary":{"contract_ref":"contract:pending-signature","budget_ceiling_cny":20000,"revision_limit":2,"target_duration_seconds":240,"deliverables":["horizontal master","vertical master","subtitles","cover","provenance manifest"],"payment_milestones":["deposit","approved animatic","accepted master"]},
+  #|  "constraints":{"rights_owner":"Named contract party","rights_confirmed":true,"rights_constraints":["licensed source assets only","named-human final review"],"confidentiality_class":"contract-confidential","permitted_provider_ids":["approved-provider"],"prohibited_provider_ids":[],"permitted_data_class":"rights-cleared-confidential"},
+  #|  "creative_strategy":{"project_title":"Governed brand episode","objective":"Tell one complete branded story with measurable audience retention","narrative_proposition":"A character-led story demonstrates the product promise","tone":"confident, human, cinematic","claims":[],"success_metrics":["client acceptance","completion rate","repeat order"],"negative_constraints":["no invented product claims","no unlicensed identity"]},
+  #|  "unresolved_questions":[],
+  #|  "publication_authority":false,
+  #|  "provider_execution_authority":false
+    #|}
+  value
+}
+
+///|
 fn initial_model() -> Model {
   {
     tab: Overview,
@@ -808,6 +973,10 @@ fn initial_model() -> Model {
     latest_client_url: None,
     commercial: None,
     capacity_board: None,
+    needs_intake: None,
+    selected_intake_id: "",
+    intake_packet_draft: starter_moonwiki_packet(),
+    intake_seed_project_id: "brand-episode-001",
     selected_lead_id: "",
     selected_quote_id: "",
     selected_artifact_kind: "brief",

@@ -119,7 +119,10 @@
     {"id":"production-outcome-evidence","version":"1.0.0","path":"schemas/production-outcome-evidence.schema.json"},
     {"id":"external-handoff-request","version":"1.0.0","path":"schemas/external-handoff-request.schema.json"},
     {"id":"bookkeeper-ingress-bundle","version":"1.0.0","path":"schemas/bookkeeper-ingress-bundle.schema.json"},
-    {"id":"external-handoff-receipt-reference","version":"1.0.0","path":"schemas/external-handoff-receipt-reference.schema.json"}
+    {"id":"external-handoff-receipt-reference","version":"1.0.0","path":"schemas/external-handoff-receipt-reference.schema.json"},
+    {"id":"moonwiki-needs-export","version":"1.0.0","path":"schemas/moonwiki-needs-export.schema.json"},
+    {"id":"needs-intake-decision","version":"1.0.0","path":"schemas/needs-intake-decision.schema.json"},
+    {"id":"project-needs-intake-binding","version":"1.0.0","path":"schemas/project-needs-intake-binding.schema.json"}
   ],
   "tools": [
     {"id":"brief.validate","owner_product":"mooncast","input_schema_id":"creative-brief","output_schema_id":"creative-brief","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["records/briefs"],"review_required":false},

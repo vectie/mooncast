@@ -43,8 +43,11 @@ fn update(
       let commercial = @http.get("/api/commercial-intake").expect_json(
         emit.map(fn(result) { LoadedCommercial(result) }),
       )
+      let needs = @http.get("/api/v2/needs-intakes").expect_json(
+        emit.map(fn(result) { LoadedNeedsIntake(result) }),
+      )
       (
-        @rabbita.batch([projects, commercial]),
+        @rabbita.batch([projects, commercial, needs]),
         {
           ..model,
           loading: true,
@@ -236,6 +239,165 @@ fn update(
           error: Some("Capacity board: \{error}"),
         },
       )
+    LoadedNeedsIntake(Ok(value)) => {
+      let selected = if model.selected_intake_id == "" &&
+        !value.intakes.is_empty() {
+        value.intakes[value.intakes.length() - 1].packet.packet_id
+      } else {
+        model.selected_intake_id
+      }
+      (
+        @rabbita.none,
+        {
+          ..model,
+          needs_intake: Some(value),
+          selected_intake_id: selected,
+        },
+      )
+    }
+    LoadedNeedsIntake(Err(error)) =>
+      (
+        @rabbita.none,
+        { ..model, error: Some("Needs / Strategy intake: \{error}") },
+      )
+    SelectIntake(value) =>
+      (@rabbita.none, { ..model, selected_intake_id: value })
+    SetIntakePacketDraft(value) =>
+      (@rabbita.none, { ..model, intake_packet_draft: value })
+    SetIntakeSeedProjectId(value) =>
+      (@rabbita.none, { ..model, intake_seed_project_id: value })
+    ImportNeedsPacket => {
+      let packet = @json.parse(model.intake_packet_draft) catch {
+        _ =>
+          return (
+            @rabbita.none,
+            { ..model, error: Some("MoonWiki export packet must be valid JSON.") },
+          )
+      }
+      let packet_id = match packet {
+        Object(fields) =>
+          match fields.get("packet_id") {
+            Some(String(value)) => value
+            _ => ""
+          }
+        _ => ""
+      }
+      if packet_id.trim().is_empty() {
+        (
+          @rabbita.none,
+          { ..model, error: Some("MoonWiki packet_id is required.") },
+        )
+      } else {
+        let body : Json = {
+          "packet": packet,
+          "imported_at": model.operator.recorded_at.to_json(),
+        }
+        let cmd = @http.post("/api/v2/needs-intakes")
+          .with_json(body)
+          .expect_json(emit.map(fn(result) {
+            ActionCompleted("MoonWiki needs packet", result)
+          }))
+        (
+          cmd,
+          {
+            ..model,
+            busy: true,
+            selected_intake_id: packet_id,
+            error: None,
+            status: "Importing immutable MoonWiki evidence for deterministic completeness review…",
+          },
+        )
+      }
+    }
+    DecideNeedsIntake(decision) =>
+      match model.needs_intake {
+        Some(workspace) => {
+          let matches = workspace.intakes.filter(value => {
+            value.packet.packet_id == model.selected_intake_id
+          })
+          if matches.is_empty() {
+            (@rabbita.none, { ..model, error: Some("Select an imported intake.") })
+          } else if !model.operator.human_confirmed {
+            (
+              @rabbita.none,
+              { ..model, error: Some("Named-human confirmation is required.") },
+            )
+          } else {
+            let imported = matches[matches.length() - 1]
+            let body : Json = {
+              "packet_version": imported.packet.packet_version,
+              "expected_provenance_digest": imported.validation.provenance_digest,
+              "decision": decision,
+              "actor": model.operator.actor,
+              "actor_role": model.operator.role,
+              "note": model.operator.note,
+              "decided_at": model.operator.recorded_at,
+              "human_confirmed": model.operator.human_confirmed,
+            }
+            let cmd = @http.post(
+                "/api/v2/needs-intakes/" +
+                imported.packet.packet_id +
+                "/decisions",
+              )
+              .with_json(body)
+              .expect_json(emit.map(fn(result) {
+                ActionCompleted("Needs / Strategy decision", result)
+              }))
+            (
+              cmd,
+              {
+                ..model,
+                busy: true,
+                error: None,
+                status: "Recording an exact named-human intake decision…",
+              },
+            )
+          }
+        }
+        None => (@rabbita.none, { ..model, error: Some("Intake ledger is not loaded.") })
+      }
+    SeedProjectFromIntake =>
+      match model.needs_intake {
+        Some(workspace) => {
+          let matches = workspace.intakes.filter(value => {
+            value.packet.packet_id == model.selected_intake_id
+          })
+          if matches.is_empty() || model.intake_seed_project_id.trim().is_empty() {
+            (
+              @rabbita.none,
+              { ..model, error: Some("Select an intake and provide a project id.") },
+            )
+          } else {
+            let imported = matches[matches.length() - 1]
+            let body : Json = {
+              "packet_version": imported.packet.packet_version.to_json(),
+              "expected_provenance_digest": imported.validation.provenance_digest.to_json(),
+              "project_id": model.intake_seed_project_id.to_json(),
+              "recorded_at": model.operator.recorded_at.to_json(),
+            }
+            let cmd = @http.post(
+                "/api/v2/needs-intakes/" +
+                imported.packet.packet_id +
+                "/seed-project",
+              )
+              .with_json(body)
+              .expect_json(emit.map(fn(result) {
+                ActionCompleted("Intake-bound production project", result)
+              }))
+            (
+              cmd,
+              {
+                ..model,
+                busy: true,
+                selected_project_id: model.intake_seed_project_id,
+                error: None,
+                status: "Creating a project bound to approved MoonWiki evidence…",
+              },
+            )
+          }
+        }
+        None => (@rabbita.none, { ..model, error: Some("Intake ledger is not loaded.") })
+      }
     CreatedProject(Ok(project)) => {
       let index = @http.get("/api/v2/projects").expect_json(
         emit.map(fn(result) { LoadedProjects(result) }),
@@ -288,6 +450,11 @@ fn update(
           commands.push(
             @http.get("/api/commercial-intake").expect_json(
               emit.map(fn(result) { LoadedCommercial(result) }),
+            ),
+          )
+          commands.push(
+            @http.get("/api/v2/needs-intakes").expect_json(
+              emit.map(fn(result) { LoadedNeedsIntake(result) }),
             ),
           )
           (

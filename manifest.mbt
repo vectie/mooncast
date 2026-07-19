@@ -154,6 +154,9 @@ pub fn manifest() -> @pack.MoonPackManifest {
       schema("external-handoff-request"),
       schema("bookkeeper-ingress-bundle"),
       schema("external-handoff-receipt-reference"),
+      schema("moonwiki-needs-export"),
+      schema("needs-intake-decision"),
+      schema("project-needs-intake-binding"),
     ],
     tools: [
       tool(

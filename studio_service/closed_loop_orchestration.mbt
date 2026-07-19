@@ -4,26 +4,43 @@ pub async fn StudioService::record_project_qualification(
   project_id : String,
   metadata : ProjectExperienceMetadata,
   recorded_at : String,
+  moonwiki_intake? : @intake.MoonWikiNeedsPacket,
 ) -> ProjectCommandResponse {
   let record = self.get_project(project_id)
   let channel = metadata.channels.get(0).unwrap_or("review-only")
-  let customer_id = if metadata.rights_owner.trim() == "" {
-    "studio-project:" + project_id
-  } else {
-    metadata.rights_owner
-  }
+  let customer_id = moonwiki_intake
+    .map(packet => packet.client_need.customer)
+    .unwrap_or_else(() => {
+      if metadata.rights_owner.trim() == "" {
+        "studio-project:" + project_id
+      } else {
+        metadata.rights_owner
+      }
+    })
+  let payable_problem = moonwiki_intake
+    .map(packet => packet.client_need.payable_problem)
+    .unwrap_or(metadata.objective)
+  let acceptance_method = moonwiki_intake
+    .map(packet => packet.client_need.acceptance_method)
+    .unwrap_or("Named client accepts the exact 3-8 minute review master")
+  let payment_path = moonwiki_intake
+    .map(packet => packet.contract_boundary.payment_milestones.join(" | "))
+    .unwrap_or("contract-milestones")
+  let repeat_hypothesis = moonwiki_intake
+    .map(packet => packet.client_need.repeat_purchase_hypothesis)
+    .unwrap_or("Repeat episode or quarterly content operation")
   let digest = "sha256:" +
     sha256_text(
-      project_id + ":" + customer_id + ":" + metadata.objective + ":" + channel,
+      project_id + ":" + customer_id + ":" + payable_problem + ":" + channel,
     )
   let qualification : @governance.ClientQualification = {
     reference: { id: project_id + "-qualification", version: 1, digest },
     customer_id,
-    payable_problem: metadata.objective,
-    acceptance_method: "Named client accepts the exact 3-8 minute review master",
+    payable_problem,
+    acceptance_method,
     distribution_channel: channel,
-    payment_path: "contract-milestones",
-    repeat_purchase_hypothesis: "Repeat episode or quarterly content operation",
+    payment_path,
+    repeat_purchase_hypothesis: repeat_hypothesis,
     accepted: metadata.rights_confirmed,
   }
   let command = {

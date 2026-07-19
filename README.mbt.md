@@ -2,6 +2,11 @@
 
 Paid productions now enter through a pack-local commercial intake: qualified lead, immutable 3–8 minute quote, named commercial/production/client decisions, finite studio capacity, margin and founder-hour forecast, then exact quote-to-draft-project conversion. See [Contract, quote, capacity, and project intake](docs/contract-quote-capacity-intake.md). No CRM, email, payment, calendar, creative, delivery, or publication authority is inferred by this flow.
 
+Studio also accepts a versioned MoonWiki needs/creative-strategy export. Exact
+source identities are validated, approved by a named human, and bound to the
+project brief, bible, and script without synthetic intent references. See
+[MoonWiki needs and creative-strategy intake](docs/moonwiki-needs-intake.md).
+
 Mooncast is an isolated MoonSuite domain pack for rights-aware AIGC production.
 It turns a creative brief into generated assets, provenance,
 review decisions, delivery packages, and optional reviewed publication.

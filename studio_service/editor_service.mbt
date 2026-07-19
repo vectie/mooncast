@@ -504,6 +504,31 @@ fn editor_from_production_graph(
 }
 
 ///|
+/// Replace the legacy opaque project placeholder only when this project was
+/// created from an approved MoonWiki packet. These values are copied directly
+/// from MoonWiki's exported provenance references; no fallback is synthesized.
+async fn StudioService::bind_editor_moonwiki_intents(
+  self : StudioService,
+  project : @editor_domain.EditorProject,
+) -> @editor_domain.EditorProject {
+  let matches = self.needs_intake
+    .list_bindings()
+    .filter(value => value.project_id == project.project_id)
+  if matches.is_empty() {
+    return project
+  }
+  let binding = matches[0]
+  {
+    ..project,
+    intent_refs: [
+      { intent_ref: binding.brief_intent_ref.provenance_ref },
+      { intent_ref: binding.bible_intent_ref.provenance_ref },
+      { intent_ref: binding.script_intent_ref.provenance_ref },
+    ],
+  }
+}
+
+///|
 fn latest_successful_attempt(
   snapshot : @kernel.ProjectSnapshot,
   shot_id : String,
@@ -1123,7 +1148,9 @@ pub async fn StudioService::import_editor_from_canonical_project(
       }
       None => {
         let canonical = self.get_project(project_id)
-        let base = editor_from_production_graph(canonical.snapshot.graph)
+        let base = self.bind_editor_moonwiki_intents(
+          editor_from_production_graph(canonical.snapshot.graph),
+        )
         let editor = self.hydrate_generated_editor_project(
           canonical.snapshot,
           base,

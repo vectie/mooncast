@@ -31,6 +31,7 @@ type Dispatch[A] = @rabbita.Emit[A]
 fn tab_label(tab : StudioTab) -> String {
   match tab {
     Overview => "Overview"
+    NeedsStrategy => "Needs / Strategy"
     Creative => "Creative"
     Routing => "Routing"
     ShotBoard => "Shot board"
@@ -118,6 +119,7 @@ fn render_header(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
     ]),
     nav(class="studio-tabs", [
       tab_button(dispatch, model.tab, Overview),
+      tab_button(dispatch, model.tab, NeedsStrategy),
       tab_button(dispatch, model.tab, Creative),
       tab_button(dispatch, model.tab, Routing),
       tab_button(dispatch, model.tab, ShotBoard),
@@ -176,6 +178,234 @@ fn render_project_rail(
         "This studio records plans and named reviews. It never grants publication authority, sends payments, or calls a provider implicitly.",
       ),
     ]),
+  ])
+}
+
+///|
+fn selected_intake(model : Model) -> ImportedIntakeProjection? {
+  match model.needs_intake {
+    None => None
+    Some(workspace) => {
+      let matches = workspace.intakes.filter(value => {
+        value.packet.packet_id == model.selected_intake_id
+      })
+      if matches.is_empty() {
+        None
+      } else {
+        let mut latest = matches[0]
+        for candidate in matches {
+          if candidate.packet.packet_version > latest.packet.packet_version {
+            latest = candidate
+          }
+        }
+        Some(latest)
+      }
+    }
+  }
+}
+
+///|
+fn intake_approved(model : Model, intake : ImportedIntakeProjection) -> Bool {
+  match model.needs_intake {
+    None => false
+    Some(workspace) => {
+      let decisions = workspace.decisions.filter(value => {
+        value.packet_id == intake.packet.packet_id &&
+        value.packet_version == intake.packet.packet_version &&
+        value.provenance_digest == intake.validation.provenance_digest
+      })
+      if decisions.is_empty() {
+        false
+      } else {
+        let mut latest = decisions[0]
+        for candidate in decisions {
+          if candidate.decided_at > latest.decided_at ||
+            (candidate.decided_at == latest.decided_at &&
+            candidate.decision_digest > latest.decision_digest) {
+            latest = candidate
+          }
+        }
+        latest.decision == "approve"
+      }
+    }
+  }
+}
+
+///|
+fn evidence_card(value : MoonWikiEvidenceProjection) -> @rabbita.Html {
+  article(class="artifact-card", [
+    div(class="artifact-card-head", [
+      strong(value.source_id),
+      status_chip("v" + value.source_version),
+    ]),
+    code(value.source_digest),
+    small(value.provenance_ref),
+  ])
+}
+
+///|
+fn render_needs_strategy(
+  dispatch : Dispatch[Msg],
+  model : Model,
+) -> @rabbita.Html {
+  let imported = match model.needs_intake {
+    Some(value) => value.intakes
+    None => []
+  }
+  div(class="surface-stack", [
+    section(class="panel", [
+      div(class="panel-heading", [
+        div([
+          small("MOONWIKI EVIDENCE PORT"),
+          h2("Understand the whole need before production"),
+        ]),
+        p(
+          "Import a MoonWiki-owned evidence packet. Mooncast validates and binds exact source identities; it does not copy MoonWiki authority or run an agent.",
+        ),
+      ]),
+      text_field(
+        "MoonWiki export packet",
+        model.intake_packet_draft,
+        "Paste moonwiki.mooncast-needs-export.v1 JSON",
+        18,
+        fn(value) { dispatch(SetIntakePacketDraft(value)) },
+      ),
+      div(class="form-actions", [
+        button(
+          class="primary",
+          disabled=model.busy,
+          on_click=dispatch(ImportNeedsPacket),
+          "Import immutable packet",
+        ),
+        small(
+          "Import performs no provider, publication, payment, MoonFlow, or MoonBook effect.",
+        ),
+      ]),
+    ]),
+    section(class="panel", [
+      div(class="panel-heading", [
+        div([small("VERSIONED INTAKE LEDGER"), h2("Imported needs")]),
+        p("Each version has a deterministic provenance digest and independent human decision."),
+      ]),
+      div(
+        class="artifact-tabs",
+        if imported.is_empty() {
+          [p(class="empty", "No MoonWiki needs packet imported yet.")]
+        } else {
+          imported.map(value => {
+            button(
+              class=if value.packet.packet_id == model.selected_intake_id {
+                "artifact-tab active"
+              } else {
+                "artifact-tab"
+              },
+              on_click=dispatch(SelectIntake(value.packet.packet_id)),
+              value.packet.packet_id + " · v" + value.packet.packet_version.to_string(),
+            )
+          })
+        },
+      ),
+    ]),
+    match selected_intake(model) {
+      None => @html.nothing
+      Some(intake) => {
+        let packet = intake.packet
+        let approved = intake_approved(model, intake)
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([
+              small("EXACT PACKET " + packet.packet_id),
+              h2(packet.creative_strategy.project_title),
+            ]),
+            div(class="chips", [
+              status_chip(if intake.validation.complete { "complete" } else { "attention-required" }),
+              status_chip(if approved { "approved" } else { "pending" }),
+              status_chip("immutable"),
+            ]),
+          ]),
+          div(class="metrics", [
+            metric(
+              "Payable problem",
+              packet.client_need.customer,
+              packet.client_need.payable_problem,
+            ),
+            metric(
+              "Production boundary",
+              "\{packet.contract_boundary.target_duration_seconds / 60} min · CNY \{packet.contract_boundary.budget_ceiling_cny}",
+              "\{packet.contract_boundary.revision_limit} revision rounds · \{packet.contract_boundary.contract_ref}",
+            ),
+            metric(
+              "Audience / channel",
+              packet.client_need.audience,
+              packet.client_need.channels.join(" · "),
+            ),
+            metric(
+              "Rights / data",
+              packet.constraints.rights_owner,
+              packet.constraints.confidentiality_class + " · " + packet.constraints.permitted_data_class,
+            ),
+          ]),
+          article(class="artifact-card", [
+            strong("Creative proposition"),
+            p(packet.creative_strategy.narrative_proposition),
+            small(
+              packet.creative_strategy.tone +
+              " · metrics: " +
+              packet.creative_strategy.success_metrics.join("; "),
+            ),
+          ]),
+          div(class="artifact-grid", packet.evidence_refs.map(evidence_card)),
+          article(class="artifact-card", [
+            strong("Deterministic provenance"),
+            code(intake.validation.provenance_digest),
+            small("Exported " + packet.exported_at + " · imported " + intake.imported_at),
+          ]),
+          if intake.validation.errors.is_empty() &&
+            intake.validation.unresolved_questions.is_empty() {
+            p(class="callout good", "All required needs, rights, contract, strategy, evidence, and intent bindings are complete.")
+          } else {
+            div(class="callout bad", [
+              strong("Resolve before approval"),
+              ul([
+                ..intake.validation.errors.map(value => li(value)),
+                ..intake.validation.unresolved_questions.map(value => li("Open question: " + value)),
+              ]),
+            ])
+          },
+          div(class="form-actions", [
+            button(
+              class="primary",
+              disabled=model.busy ||
+                !model.operator.human_confirmed ||
+                !intake.validation.complete,
+              on_click=dispatch(DecideNeedsIntake("approve")),
+              "Approve exact needs / strategy",
+            ),
+            button(
+              class="danger",
+              disabled=model.busy || !model.operator.human_confirmed,
+              on_click=dispatch(DecideNeedsIntake("reject")),
+              "Reject packet",
+            ),
+          ]),
+          div(class="form-grid", [
+            form_field(
+              "Project id",
+              model.intake_seed_project_id,
+              "brand-episode-001",
+              fn(value) { dispatch(SetIntakeSeedProjectId(value)) },
+            ),
+            button(
+              class="primary",
+              disabled=model.busy || !approved,
+              on_click=dispatch(SeedProjectFromIntake),
+              "Create intake-bound project",
+            ),
+          ]),
+          p(class="boundary-note", "The created brief, bible, and script copy the three exact MoonWiki intent records. No synthetic moonwiki:* ref is created."),
+        ])
+      }
+    },
   ])
 }
 
@@ -2224,6 +2454,7 @@ fn render_status(model : Model) -> @rabbita.Html {
 fn render_surface(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
   match model.tab {
     Overview => render_overview(dispatch, model, model.project)
+    NeedsStrategy => render_needs_strategy(dispatch, model)
     Creative => render_creative(dispatch, model, model.project)
     Routing => render_routing(dispatch, model, model.project)
     ShotBoard => render_shot_board(dispatch, model, model.project)

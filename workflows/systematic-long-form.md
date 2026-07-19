@@ -9,6 +9,11 @@ Conversion is not G0 approval. It creates the draft `project → episode → sce
 Mooncast v2 owns the complete project → episode → scene → shot → asset → master
 → delivery lifecycle. Every transition writes immutable evidence.
 
+0. **MoonWiki needs / strategy intake:** import exact versioned source evidence,
+   inspect deterministic completeness and unresolved questions, and obtain a
+   named-human approval before it can seed a project. The created brief, bible,
+   and script retain the exact MoonWiki intent identities; Mooncast never
+   fabricates missing references or gains provider/publication authority.
 1. **G0 Brief:** accept objective, audience, channels, 3–8 minute target, and
    acceptance baseline.
 2. **G1 Rights + bible:** clear source/derivative rights and lock the world,
