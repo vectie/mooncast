@@ -1,0 +1,307 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/application/execution"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/native_host/store",
+  "vectie/mooncast/production/governance",
+  "vectie/mooncast/production/project",
+}
+
+// Values
+pub fn delivery_build_request_from_json(StringView) -> DeliveryBuildRequest raise
+
+pub fn provider_authority_from_json(StringView) -> ProviderAuthorityReceipt raise
+
+pub fn provider_authority_receipt_digest(ProviderAuthorityReceipt) -> String
+
+pub fn provider_catalog_from_json(StringView) -> ProviderCatalog raise
+
+pub fn provider_plan_digest(ProviderHttpPlan) -> String
+
+pub fn provider_plan_from_json(StringView) -> ProviderHttpPlan raise
+
+// Errors
+pub suberror DeliveryApplicationError {
+  DeliveryRequestInvalid(String)
+  DeliveryBuildNotFound(String)
+  DeliveryBuildConflict(String)
+  DeliveryProcessFailed(String)
+  DeliveryArtifactMissing(String)
+} derive(@debug.Debug)
+
+pub suberror ProviderApplicationError {
+  InvalidPlan(String)
+  AuthorityDenied(String)
+  AdapterUnavailable(String)
+  JobNotFound(String)
+  JobCorrupt(String)
+  HostNotReady(String)
+  ProviderResponseInvalid(String)
+} derive(@debug.Debug)
+
+pub suberror RoutedApplicationError {
+  RoutedPlanInvalid(String)
+  RoutedExecutionNotFound(String)
+  RoutedRevisionConflict(String)
+  RoutedShotNotFound(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct CustomerDeliveryManifest {
+  contract : String
+  build_id : String
+  build_digest : String
+  project_id : String
+  project_revision : Int
+  master_sha256 : String
+  master_promotion_digest : String
+  delivery_digest : String
+  profile_digest : String
+  ai_label : String
+  artifacts : Array[@vectie/mooncast/execution.DeliveryBuildArtifact]
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryAcceptanceRecord {
+  contract : String
+  acceptance : @vectie/mooncast/execution.DeliveryBuildAcceptance
+  publication_authority : Bool
+  external_effect_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryArtifactManifest {
+  contract : String
+  build_id : String
+  build_digest : String
+  master_sha256 : String
+  master_promotion_digest : String
+  delivery_digest : String
+  profile_digest : String
+  artifacts : Array[@vectie/mooncast/execution.DeliveryBuildArtifact]
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryBuildRequest {
+  contract : String
+  project_id : String
+  expected_project_revision : Int
+  master_path : String
+  master_sha256 : String
+  master_promotion_digest : String
+  master_duration_seconds : Double
+  delivery_version : Int
+  delivery_digest : String
+  profile : @vectie/mooncast/execution.DeliveryBuildProfile
+  subtitle_path : String?
+  project_metadata : Json?
+  provenance_manifest : Json?
+  rights_ledger : Json?
+  acceptance_receipt : Json?
+  ai_label : String?
+  g5_accepted : Bool
+  client_accepted : Bool
+  evidence_digest : String
+  created_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryFactoryRecord {
+  contract : String
+  build : @vectie/mooncast/execution.DeliveryBuild
+  request : DeliveryBuildRequest
+  manifest_key : String?
+  updated_at : String
+  process_effect_performed : Bool
+  publication_effect_performed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct DeliveryFactoryService {
+  state : @store.AtomicStore
+  outputs : @store.AtomicStore
+  output_root : String
+  ffmpeg_executable : String
+  zip_executable : String
+}
+pub async fn DeliveryFactoryService::acceptance(Self, String) -> DeliveryAcceptanceRecord?
+pub async fn DeliveryFactoryService::accepted_archive(Self, String) -> @store.StoredBlob?
+pub async fn DeliveryFactoryService::accepted_build(Self, String) -> @vectie/mooncast/execution.DeliveryBuild?
+pub async fn DeliveryFactoryService::build(Self, String, Int, String, String) -> DeliveryFactoryRecord
+pub async fn DeliveryFactoryService::cancel(Self, String, Int, String) -> DeliveryFactoryRecord
+pub async fn DeliveryFactoryService::create(Self, DeliveryBuildRequest) -> DeliveryFactoryRecord
+pub async fn DeliveryFactoryService::invalidate_if_stale(Self, String, Int, String, Int, String) -> DeliveryFactoryRecord
+pub async fn DeliveryFactoryService::list(Self, String) -> Array[@vectie/mooncast/execution.DeliveryBuild]
+pub async fn DeliveryFactoryService::load(Self, String) -> DeliveryFactoryRecord?
+pub fn DeliveryFactoryService::new(String, String, String, zip_executable? : String) -> Self
+pub async fn DeliveryFactoryService::publication_authority_request(Self, String, String, String, String) -> @vectie/mooncast/execution.PublicationAuthorityRequest?
+pub async fn DeliveryFactoryService::record_acceptance(Self, String, @vectie/mooncast/execution.DeliveryBuildAcceptance) -> DeliveryAcceptanceRecord
+pub async fn DeliveryFactoryService::recover_interrupted(Self) -> Int
+pub async fn DeliveryFactoryService::retry(Self, String, Int, String, String) -> DeliveryFactoryRecord
+
+pub(all) struct ProviderAdapterConfig {
+  adapter_id : String
+  capability : String
+  provider : String
+  endpoint : String
+  model : String
+  api_style : String
+  secret_refs : Map[String, String]
+  timeout_seconds : Int
+  max_response_bytes : Int
+  default_parameters : Json
+  commercial_use : String
+  network_authority : Bool
+} derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn ProviderAdapterConfig::public_readiness(Self) -> ProviderAdapterReadiness
+pub fn ProviderAdapterConfig::request_plan(Self, String, Json, Double) -> ProviderHttpPlan?
+
+pub(all) struct ProviderAdapterReadiness {
+  adapter_id : String
+  configured : Bool
+  endpoint_https : Bool
+  secret_reference_count : Int
+  secrets_available : Bool
+  commercial_use_recorded : Bool
+  ready : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderAuthorityReceipt {
+  contract : String
+  receipt_id : String
+  actor_id : String
+  decision : String
+  plan_digest : String
+  config_digest : String
+  cost_ceiling_cny : Double
+  max_attempts : Int
+  network_authority : Bool
+  publication_authority : Bool
+  granted_at : String
+  receipt_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderCatalog {
+  contract : String
+  adapters : Array[ProviderAdapterConfig]
+  authority_actors : Array[String]
+} derive(ToJson, @debug.Debug, @json.FromJson)
+pub fn ProviderCatalog::find(Self, String, String) -> ProviderAdapterConfig?
+pub fn ProviderCatalog::readiness(Self) -> Array[ProviderAdapterReadiness]
+pub fn ProviderCatalog::resolve(Self, String, capability? : String) -> ProviderAdapterConfig?
+
+pub(all) struct ProviderExecutionCapabilities {
+  contract : String
+  adapters : Array[ProviderAdapterReadiness]
+  authority_actor_count : Int
+  secret_resolver_connected : Bool
+  json_post_transport_connected : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct ProviderExecutionService {
+  store : @store.AtomicStore
+  artifact_store : @store.AtomicStore
+  catalog : ProviderCatalog
+}
+pub async fn ProviderExecutionService::artifact_bytes(Self, String) -> Bytes?
+pub async fn ProviderExecutionService::artifact_metadata(Self, String) -> @vectie/mooncast/execution.ProviderResultArtifact?
+pub async fn ProviderExecutionService::attempt_projection(Self, String) -> Array[@vectie/mooncast/execution.ProviderAttemptPhase]
+pub async fn ProviderExecutionService::authorize(Self, ProviderHttpPlan, ProviderAuthorityReceipt) -> ProviderJobRecord
+pub async fn ProviderExecutionService::cancel(Self, String, String) -> ProviderJobRecord
+pub fn ProviderExecutionService::capabilities(Self) -> ProviderExecutionCapabilities
+pub async fn ProviderExecutionService::create_routed_execution(Self, @project.ProjectGraph, @governance.ModelRoutingPlan, String, String, Array[ShotProviderAuthorization]) -> RoutedExecutionRecord
+pub async fn ProviderExecutionService::create_routed_from_catalog(Self, @project.ProjectGraph, @governance.ModelRoutingPlan, String, String, Bool) -> RoutedExecutionRecord
+pub async fn ProviderExecutionService::execute(Self, String) -> ProviderJobRecord
+pub async fn ProviderExecutionService::list_jobs(Self) -> Array[@vectie/mooncast/execution.ProviderExecutionJob]
+pub async fn ProviderExecutionService::list_routed_executions(Self, String) -> Array[@vectie/mooncast/execution.RoutedExecution]
+pub async fn ProviderExecutionService::load_job(Self, String) -> ProviderJobRecord?
+pub async fn ProviderExecutionService::load_routed_execution(Self, String) -> RoutedExecutionRecord?
+pub fn ProviderExecutionService::new(String, String, ProviderCatalog) -> Self
+pub async fn ProviderExecutionService::record_project_ingest(Self, String, String) -> ProviderJobRecord
+pub async fn ProviderExecutionService::recover_interrupted(Self) -> Int
+pub async fn ProviderExecutionService::resume_job(Self, String) -> ProviderJobRecord
+pub async fn ProviderExecutionService::routed_action(Self, String, String, String, Int, String) -> RoutedExecutionRecord
+
+pub(all) struct ProviderHostEffectReceipt {
+  contract : String
+  request_id : String
+  attempt_id : String
+  endpoint_origin_digest : String
+  response_digest : String?
+  state : String
+  performed_at : String
+  network_effect_performed : Bool
+  publication_effect_performed : Bool
+  secret_values_persisted : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderHttpPlan {
+  contract : String
+  request_id : String
+  adapter_id : String
+  capability : String
+  provider : String
+  endpoint : String
+  request_method : String
+  model : String
+  api_style : String
+  secret_refs : Map[String, String]
+  timeout_seconds : Int
+  body : Json
+  cost_ceiling_cny : Double
+  network_authority : Bool
+  publication_authority : Bool
+  plan_digest : String
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderJobRecord {
+  contract : String
+  job : @vectie/mooncast/execution.ProviderExecutionJob
+  http_plan : ProviderHttpPlan
+  response_digest : String?
+  host_effect_receipts : Array[ProviderHostEffectReceipt]
+  updated_at : String
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderWireArtifact {
+  modality : String
+  text : String?
+  content_base64 : String?
+  mime_type : String?
+  duration_seconds : Double?
+  source_refs : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderWireCost {
+  currency : String
+  amount : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProviderWireResult {
+  contract : String
+  artifacts : Array[ProviderWireArtifact]
+  usage : Json
+  cost : ProviderWireCost
+  provider_receipt : Json
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RoutedExecutionRecord {
+  contract : String
+  execution : @vectie/mooncast/execution.RoutedExecution
+  job_ids : Array[String]
+  updated_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type RoutedShotProviderInput derive(ToJson, @json.FromJson)
+
+pub(all) struct ShotProviderAuthorization {
+  shot_id : String
+  http_plan : ProviderHttpPlan
+  authority : ProviderAuthorityReceipt
+} derive(ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+
