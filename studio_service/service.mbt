@@ -14,6 +14,7 @@ pub struct StudioService {
   handoff_outbox : @handoff_app.OutboundHandoffService
   needs_intake : @intake_app.NeedsIntakeService
   asset_factory : @asset_factory_app.AssetFactoryService
+  animatic : @animatic_app.AnimaticService
   route_extensions : Array[RouteExtension]
 }
 
@@ -66,7 +67,12 @@ pub fn StudioService::new(
       root + "/application/needs-intake",
     ),
     asset_factory: @asset_factory_app.AssetFactoryService::new(
-      root + "/application/asset-factory", execution_application,
+      root + "/application/asset-factory",
+      execution_application,
+    ),
+    animatic: @animatic_app.AnimaticService::new(
+      root + "/application/animatic/state",
+      root + "/application/animatic/media",
     ),
     route_extensions: [],
   }
@@ -74,6 +80,7 @@ pub fn StudioService::new(
   service.register_production_coordinator_routes()
   service.register_needs_intake_routes()
   service.register_asset_factory_routes()
+  service.register_animatic_routes()
   service
 }
 

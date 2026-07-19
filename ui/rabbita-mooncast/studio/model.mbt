@@ -6,6 +6,7 @@ enum StudioTab {
   NeedsStrategy
   Creative
   AssetFactory
+  StoryboardAnimatic
   Routing
   ShotBoard
   Delivery
@@ -194,10 +195,67 @@ struct AssetFactoryVariantProjection {
 ///|
 #warnings("-unused_field")
 struct AssetFactoryApprovedProjection {
+  reference : Json
   variant_id : String
   modality : String
   approval_actor : String
   approval_digest : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct AnimaticRenderRefProjection {
+  id : String
+  version : Int
+  digest : String
+} derive(FromJson)
+
+///|
+struct AnimaticBudgetProjection {
+  planned_cny : Double
+  actual_cny : Double
+  within_ceiling : Bool
+  evidence_digest : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct AnimaticRenderProjection {
+  reference : AnimaticRenderRefProjection
+  panel_count : Int
+  duration_seconds : Int
+  storyboard_sheet_digest : String
+  video_digest : String
+  budget : AnimaticBudgetProjection
+  provider : String
+  model : String
+  immutable : Bool
+} derive(FromJson)
+
+///|
+struct AnimaticAttemptProjection {
+  attempt_id : String
+  attempt : Int
+  state : String
+  failure : String?
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct AnimaticApprovalProjection {
+  rendered : AnimaticRenderProjection
+  actor : String
+  actor_role : String
+  approval_digest : String
+} derive(FromJson)
+
+///|
+struct AnimaticWorkspaceProjection {
+  plans : Array[Json]
+  attempts : Array[AnimaticAttemptProjection]
+  renders : Array[AnimaticRenderProjection]
+  approvals : Array[AnimaticApprovalProjection]
+  publication_authority : Bool
 } derive(FromJson)
 
 ///|
@@ -917,6 +975,8 @@ struct Model {
   needs_intake : NeedsIntakeWorkspaceProjection?
   asset_factory : AssetFactoryWorkspaceProjection?
   asset_plan_draft : String
+  animatic_workspace : AnimaticWorkspaceProjection?
+  animatic_plan_draft : String
   selected_intake_id : String
   intake_packet_draft : String
   intake_seed_project_id : String
@@ -962,6 +1022,11 @@ enum Msg {
   RecordAssetVariantQc(String)
   ApproveAssetVariant(String)
   BindAssetFactoryShots
+  LoadedAnimaticWorkspace(Result[AnimaticWorkspaceProjection, Error])
+  SetAnimaticPlanDraft(String)
+  RecordAnimaticPlan
+  RenderAnimatic
+  ApproveRenderedAnimatic
   SelectIntake(String)
   SetIntakePacketDraft(String)
   SetIntakeSeedProjectId(String)
@@ -1110,6 +1175,71 @@ fn starter_asset_factory_plan(project : ProjectProjection) -> String {
 }
 
 ///|
+fn starter_animatic_plan(
+  project : ProjectProjection,
+  factory : AssetFactoryWorkspaceProjection,
+  current_version : Int,
+) -> String {
+  guard project.bible is Some(bible) && project.script is Some(script) &&
+    project.storyboard is Some(storyboard) && !factory.approved_assets.is_empty() else {
+    return "{}"
+  }
+  let assets = factory.approved_assets.map(value => value.reference)
+  let visual_ids : Array[String] = []
+  let voice_ids : Array[String] = []
+  let music_ids : Array[String] = []
+  for approved in factory.approved_assets {
+    match approved.reference {
+      Object(fields) => {
+        let id = match fields.get("asset_id") { Some(String(value)) => value; _ => "" }
+        let kind = match fields.get("kind") { Some(String(value)) => value; _ => "" }
+        if ["character", "location", "prop", "image", "motion"].contains(kind) {
+          visual_ids.push(id)
+        }
+        if kind == "voice" { voice_ids.push(id) }
+        if kind == "music" { music_ids.push(id) }
+      }
+      _ => ()
+    }
+  }
+  let panels : Array[Json] = []
+  for shot in project.shots {
+    panels.push({
+      "panel_id": "panel-" + shot.id,
+      "scene_id": shot.scene_id,
+      "shot_id": shot.id,
+      "order": shot.order,
+      "duration_ms": (shot.duration_seconds * 1000.0).to_int(),
+      "caption": if shot.subtitle.trim() == "" { shot.prompt } else { shot.subtitle },
+      "visual_asset_ids": visual_ids,
+      "transition": "cut",
+    })
+  }
+  let value : Json = {
+    "contract": "mooncast.animatic-plan.v1",
+    "reference": { "id": project.id + "-animatic-render-plan", "version": current_version, "digest": "" },
+    "project_id": project.id,
+    "project_revision": project.revision,
+    "bible": { "id": bible.artifact_id, "version": bible.version, "digest": bible.digest },
+    "script": { "id": script.artifact_id, "version": script.version, "digest": script.digest },
+    "storyboard": { "id": storyboard.artifact_id, "version": storyboard.version, "digest": storyboard.digest },
+    "panels": panels,
+    "approved_assets": assets,
+    "temporary_voice_asset_ids": voice_ids,
+    "temporary_music_asset_ids": music_ids,
+    "caption_language": "zh-CN",
+    "provider": "mooncast-native-storyboard",
+    "model": "deterministic-animatic-v1",
+    "cost_ceiling_cny": 1000,
+    "retry_limit": 3,
+    "created_at": "2026-07-19T00:00:00+08:00",
+    "process_authority": false,
+    "publication_authority": false,
+  }
+  value.stringify(indent=2)
+}
+
+///|
 fn initial_model() -> Model {
   {
     tab: Overview,
@@ -1128,6 +1258,8 @@ fn initial_model() -> Model {
     needs_intake: None,
     asset_factory: None,
     asset_plan_draft: "",
+    animatic_workspace: None,
+    animatic_plan_draft: "",
     selected_intake_id: "",
     intake_packet_draft: starter_moonwiki_packet(),
     intake_seed_project_id: "brand-episode-001",

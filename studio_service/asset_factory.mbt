@@ -109,7 +109,9 @@ async fn StudioService::dispatch_asset_factory_http(
         json_value_response(
           201,
           self.asset_factory.record_plan(
-            exact, canonical.snapshot.graph, canonical.snapshot.revision,
+            exact,
+            canonical.snapshot.graph,
+            canonical.snapshot.revision,
           ),
         ),
       )
@@ -121,50 +123,43 @@ async fn StudioService::dispatch_asset_factory_http(
       let input : @asset_factory_app.PlanDecisionRequest = decode_body(request)
       Some(
         json_value_response(
-          201, self.asset_factory.decide_plan(project_id, input),
+          201,
+          self.asset_factory.decide_plan(project_id, input),
         ),
       )
     }
-    (
-      Post,
-      ["api", "v2", "projects", project_id, "asset-factory", "authorize"],
-    ) => {
-      let input : @asset_factory_app.FactoryExecutionRequest = decode_body(request)
+    (Post, ["api", "v2", "projects", project_id, "asset-factory", "authorize"]) => {
+      let input : @asset_factory_app.FactoryExecutionRequest = decode_body(
+        request,
+      )
       Some(
         json_value_response(
-          201, self.asset_factory.authorize_variants(project_id, input),
+          201,
+          self.asset_factory.authorize_variants(project_id, input),
         ),
       )
     }
-    (
-      Post,
-      ["api", "v2", "projects", project_id, "asset-factory", "run-pending"],
+    (Post, ["api", "v2", "projects", project_id, "asset-factory", "run-pending"]
     ) => {
-      let input : @asset_factory_app.FactoryExecutionRequest = decode_body(request)
+      let input : @asset_factory_app.FactoryExecutionRequest = decode_body(
+        request,
+      )
       Some(
         json_value_response(
-          200, self.asset_factory.run_pending(project_id, input),
+          200,
+          self.asset_factory.run_pending(project_id, input),
         ),
       )
     }
-    (
-      Post,
-      ["api", "v2", "projects", _project_id, "asset-factory", "findings"],
-    ) => {
+    (Post, ["api", "v2", "projects", _project_id, "asset-factory", "findings"]) => {
       let input : @asset_factory_app.FindingRequest = decode_body(request)
       Some(json_value_response(201, self.asset_factory.record_finding(input)))
     }
-    (
-      Post,
-      ["api", "v2", "projects", _project_id, "asset-factory", "approvals"],
-    ) => {
+    (Post, ["api", "v2", "projects", _project_id, "asset-factory", "approvals"]) => {
       let input : @asset_factory_app.AssetApprovalRequest = decode_body(request)
       Some(json_value_response(201, self.asset_factory.approve_asset(input)))
     }
-    (
-      Post,
-      ["api", "v2", "projects", project_id, "asset-factory", "bind-shots"],
-    ) => {
+    (Post, ["api", "v2", "projects", project_id, "asset-factory", "bind-shots"]) => {
       let input : AssetBindingRequest = decode_body(request)
       let canonical = self.get_project(project_id)
       guard input.human_confirmed &&

@@ -34,6 +34,7 @@ fn tab_label(tab : StudioTab) -> String {
     NeedsStrategy => "Needs / Strategy"
     Creative => "Creative"
     AssetFactory => "Asset Factory"
+    StoryboardAnimatic => "Storyboard / Animatic"
     Routing => "Routing"
     ShotBoard => "Shot board"
     Delivery => "Delivery"
@@ -123,6 +124,7 @@ fn render_header(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
       tab_button(dispatch, model.tab, NeedsStrategy),
       tab_button(dispatch, model.tab, Creative),
       tab_button(dispatch, model.tab, AssetFactory),
+      tab_button(dispatch, model.tab, StoryboardAnimatic),
       tab_button(dispatch, model.tab, Routing),
       tab_button(dispatch, model.tab, ShotBoard),
       tab_button(dispatch, model.tab, Delivery),
@@ -1132,6 +1134,120 @@ fn render_asset_factory(
               )
           },
         ]),
+      ])
+    }
+  }
+}
+
+///|
+fn render_storyboard_animatic(
+  dispatch : Dispatch[Msg],
+  model : Model,
+) -> @rabbita.Html {
+  match model.project {
+    None => render_create_project(dispatch, model)
+    Some(project) => {
+      let workspace = model.animatic_workspace
+      let attempts = workspace.map(value => value.attempts.length()).unwrap_or(0)
+      let renders = workspace.map(value => value.renders.length()).unwrap_or(0)
+      let approvals = workspace.map(value => value.approvals.length()).unwrap_or(0)
+      let latest : AnimaticRenderProjection? = match workspace {
+        Some(value) if !value.renders.is_empty() =>
+          Some(value.renders[value.renders.length() - 1])
+        _ => None
+      }
+      div(class="surface-stack", [
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([small("G3 real-media approval"), h2("Rendered storyboard and timed animatic")]),
+            p(
+              "Bind the approved bible, script, storyboard, exact reusable asset versions, temporary voice/music, captions, transitions, provider evidence and budget before expensive shot generation.",
+            ),
+          ]),
+          div(class="metrics", [
+            metric("Panels", "\{project.shots.length()}", "Exact shot timing"),
+            metric("Attempts", "\{attempts}", "Retry/resume ledger"),
+            metric("Renders", "\{renders}", "Immutable native media"),
+            metric("Approvals", "\{approvals}", "Named-human exact digest"),
+          ]),
+          text_field(
+            "Storyboard / animatic plan JSON",
+            model.animatic_plan_draft,
+            "Complete G3 animatic plan",
+            18,
+            fn(value) { dispatch(SetAnimaticPlanDraft(value)) },
+          ),
+          div(class="form-actions", [
+            button(
+              class="secondary",
+              disabled=model.busy || !model.operator.human_confirmed,
+              on_click=dispatch(RecordAnimaticPlan),
+              "Record exact plan",
+            ),
+            button(
+              class="primary",
+              disabled=model.busy || !model.operator.human_confirmed ||
+                workspace.map(value => value.plans.is_empty()).unwrap_or(true),
+              on_click=dispatch(RenderAnimatic),
+              if attempts > 0 && renders == 0 { "Resume / retry render" } else { "Render sheet + timed MP4" },
+            ),
+            button(
+              class="primary",
+              disabled=model.busy || !model.operator.human_confirmed || latest is None,
+              on_click=dispatch(ApproveRenderedAnimatic),
+              "Approve exact rendered version",
+            ),
+          ]),
+          p(
+            class="boundary-note",
+            "Local rendering is an explicit process effect only. It performs no provider network call and grants no publication authority.",
+          ),
+        ]),
+        match latest {
+          None =>
+            section(class="panel", [
+              h3("Render gaps"),
+              p(
+                if model.asset_factory.map(value => value.approved_assets.is_empty()).unwrap_or(true) {
+                  "Approve reusable visual, voice, and music assets first."
+                } else {
+                  "Record the exact plan, then render the production-length approval media."
+                },
+              ),
+            ])
+          Some(render) => {
+            let base = "/api/v2/projects/" + project.id + "/animatic-workspace/renders/" + render.reference.version.to_string()
+            section(class="panel", [
+              div(class="panel-heading", [
+                div([small("Immutable render v\{render.reference.version}"), h2("Review actual timing before G3")]),
+                status_chip(if approvals > 0 { "approved" } else { "review-required" }),
+              ]),
+              @html.img(
+                class="animatic-sheet",
+                src=base + "/sheet",
+                alt="Rendered storyboard contact sheet",
+                loading="lazy",
+              ),
+              @html.video(
+                class="animatic-player",
+                src=base + "/video",
+                controls=true,
+                preload="metadata",
+                @html.nothing,
+              ),
+              div(class="metrics", [
+                metric("Duration", "\{render.duration_seconds}s", "\{render.panel_count} timed panels"),
+                metric("Actual cost", "CNY \{render.budget.actual_cny}", "Ceiling CNY \{render.budget.planned_cny}"),
+                metric("Provider", render.provider, render.model),
+                metric("Provenance", "Immutable", render.video_digest),
+              ]),
+              div(class="form-actions", [
+                a(class="secondary", href=base + "/sheet", "Download storyboard sheet"),
+                a(class="secondary", href=base + "/video", "Download timed animatic"),
+              ]),
+            ])
+          }
+        },
       ])
     }
   }
@@ -2581,6 +2697,7 @@ fn render_surface(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
     NeedsStrategy => render_needs_strategy(dispatch, model)
     Creative => render_creative(dispatch, model, model.project)
     AssetFactory => render_asset_factory(dispatch, model)
+    StoryboardAnimatic => render_storyboard_animatic(dispatch, model)
     Routing => render_routing(dispatch, model, model.project)
     ShotBoard => render_shot_board(dispatch, model, model.project)
     Delivery => render_delivery(dispatch, model, model.project)

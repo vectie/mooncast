@@ -176,10 +176,8 @@ async fn ProviderExecutionService::deterministic_fixture_result(
   record : ProviderJobRecord,
   attempt_id : String,
 ) -> ProviderWireResult raise ProviderApplicationError {
-  if record.http_plan.body is {
-    "contract": "mooncast.asset-provider-request.v1",
-    ..
-  } {
+  if record.http_plan.body
+    is { "contract": "mooncast.asset-provider-request.v1", .. } {
     let input : AssetProviderRequest = @json.from_json(record.http_plan.body) catch {
       _ => raise ProviderResponseInvalid("deterministic asset input is invalid")
     }
@@ -206,16 +204,27 @@ async fn ProviderExecutionService::deterministic_fixture_result(
       artifacts: [
         {
           modality: input.capability,
-          text: if input.capability == "text" { Some(payload) } else { None },
+          text: if input.capability == "text" {
+            Some(payload)
+          } else {
+            None
+          },
           content_base64: if input.capability == "text" {
             None
           } else {
             Some(@base64.encode(bytes))
           },
-          mime_type: if input.capability == "text" { None } else { Some(mime) },
+          mime_type: if input.capability == "text" {
+            None
+          } else {
+            Some(mime)
+          },
           duration_seconds: None,
           source_refs: [
-            input.intent_ref, input.prompt_digest, ..input.source_asset_refs, ..input.rights_refs,
+            input.intent_ref,
+            input.prompt_digest,
+            ..input.source_asset_refs,
+            ..input.rights_refs,
           ],
         },
       ],

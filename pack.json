@@ -127,7 +127,11 @@
     {"id":"asset-generation-variant","version":"1.0.0","path":"schemas/asset-generation-variant.schema.json"},
     {"id":"asset-qc-finding","version":"1.0.0","path":"schemas/asset-qc-finding.schema.json"},
     {"id":"approved-reusable-asset","version":"1.0.0","path":"schemas/approved-reusable-asset.schema.json"},
-    {"id":"shot-asset-binding","version":"1.0.0","path":"schemas/shot-asset-binding.schema.json"}
+    {"id":"shot-asset-binding","version":"1.0.0","path":"schemas/shot-asset-binding.schema.json"},
+    {"id":"animatic-plan","version":"1.0.0","path":"schemas/animatic-plan.schema.json"},
+    {"id":"animatic-render-attempt","version":"1.0.0","path":"schemas/animatic-render-attempt.schema.json"},
+    {"id":"rendered-animatic","version":"1.0.0","path":"schemas/rendered-animatic.schema.json"},
+    {"id":"rendered-animatic-approval","version":"1.0.0","path":"schemas/rendered-animatic-approval.schema.json"}
   ],
   "tools": [
     {"id":"brief.validate","owner_product":"mooncast","input_schema_id":"creative-brief","output_schema_id":"creative-brief","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["records/briefs"],"review_required":false},
@@ -165,6 +169,9 @@
     {"id":"asset-factory.generate","owner_product":"mooncast","input_schema_id":"asset-factory-plan","output_schema_id":"asset-generation-variant","authority":"ExternalEffect","idempotent":false,"evidence_outputs":["asset-factory/variants","provider-executions"],"review_required":true},
     {"id":"asset-factory.review","owner_product":"mooncast","input_schema_id":"asset-qc-finding","output_schema_id":"approved-reusable-asset","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["asset-factory/findings","asset-factory/approved-assets"],"review_required":true},
     {"id":"asset-factory.bind-shots","owner_product":"mooncast","input_schema_id":"approved-reusable-asset","output_schema_id":"shot-asset-binding","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["asset-factory/shot-bindings"],"review_required":true},
+    {"id":"animatic.plan.record","owner_product":"mooncast","input_schema_id":"animatic-plan","output_schema_id":"animatic-plan","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["animatic/plans"],"review_required":true},
+    {"id":"animatic.render","owner_product":"mooncast","input_schema_id":"animatic-plan","output_schema_id":"rendered-animatic","authority":"SandboxExecution","idempotent":false,"evidence_outputs":["animatic/attempts","animatic/media","animatic/renders"],"review_required":true},
+    {"id":"animatic.approve","owner_product":"mooncast","input_schema_id":"rendered-animatic","output_schema_id":"rendered-animatic-approval","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["animatic/approvals","projects","project-events"],"review_required":true},
     {"id":"routed-execution.execute","owner_product":"mooncast","input_schema_id":"routed-execution-action","output_schema_id":"provider-execution-job","authority":"ExternalEffect","idempotent":false,"evidence_outputs":["provider-executions","projects","project-events"],"review_required":true},
     {"id":"routed-execution.control","owner_product":"mooncast","input_schema_id":"routed-execution-action","output_schema_id":"routed-execution","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["provider-executions/routed","provider-executions/jobs","project-events"],"review_required":true},
     {"id":"production-coordinator.run-pending","owner_product":"mooncast","input_schema_id":"production-coordinator-run-request","output_schema_id":"production-coordinator-run-result","authority":"ExternalEffect","idempotent":false,"evidence_outputs":["provider-executions","projects","project-events"],"review_required":true},

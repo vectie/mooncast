@@ -135,8 +135,11 @@ fn update(
       let assets = @http.get(
         "/api/v2/projects/" + project.id + "/asset-factory",
       ).expect_json(emit.map(fn(result) { LoadedAssetFactory(result) }))
+      let animatic = @http.get(
+        "/api/v2/projects/" + project.id + "/animatic-workspace",
+      ).expect_json(emit.map(fn(result) { LoadedAnimaticWorkspace(result) }))
       (
-        @rabbita.batch([routed, deliveries, portals, billing, assets]),
+        @rabbita.batch([routed, deliveries, portals, billing, assets, animatic]),
         {
           ..model,
           project: Some(project),
@@ -268,8 +271,14 @@ fn update(
         @rabbita.none,
         { ..model, error: Some("Needs / Strategy intake: \{error}") },
       )
-    LoadedAssetFactory(Ok(value)) =>
-      (@rabbita.none, { ..model, asset_factory: Some(value) })
+    LoadedAssetFactory(Ok(value)) => {
+      let draft = match model.project {
+        Some(project) if model.animatic_plan_draft == "" =>
+          starter_animatic_plan(project, value, 1)
+        _ => model.animatic_plan_draft
+      }
+      (@rabbita.none, { ..model, asset_factory: Some(value), animatic_plan_draft: draft })
+    }
     LoadedAssetFactory(Err(error)) =>
       (
         @rabbita.none,
@@ -434,6 +443,92 @@ fn update(
             }))
           (cmd, { ..model, busy: true, error: None })
         }
+      }
+    LoadedAnimaticWorkspace(Ok(value)) => {
+      let draft = match (model.project, model.asset_factory) {
+        (Some(project), Some(factory)) if model.animatic_plan_draft == "" ||
+          model.animatic_plan_draft == "{}" =>
+          starter_animatic_plan(project, factory, value.plans.length() + 1)
+        _ => model.animatic_plan_draft
+      }
+      (@rabbita.none, { ..model, animatic_workspace: Some(value), animatic_plan_draft: draft })
+    }
+    LoadedAnimaticWorkspace(Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Storyboard / Animatic: \{error}") })
+    SetAnimaticPlanDraft(value) =>
+      (@rabbita.none, { ..model, animatic_plan_draft: value })
+    RecordAnimaticPlan =>
+      match model.project {
+        None => (@rabbita.none, model)
+        Some(project) => {
+          let plan = @json.parse(model.animatic_plan_draft) catch {
+            _ => return (@rabbita.none, { ..model, error: Some("Animatic plan must be valid JSON.") })
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/animatic-workspace/plans",
+            )
+            .with_json({ "plan": plan })
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Exact storyboard / animatic plan", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+      }
+    RenderAnimatic =>
+      match (model.project, model.animatic_workspace) {
+        (Some(project), Some(workspace)) if !workspace.plans.is_empty() => {
+          let plan = workspace.plans[workspace.plans.length() - 1]
+          let reference = match plan {
+            Object(fields) => fields.get("reference")
+            _ => None
+          }
+          guard reference is Some(Object(fields)) &&
+            fields.get("version") is Some(Number(version)) &&
+            fields.get("digest") is Some(String(plan_digest)) else {
+            return (@rabbita.none, { ..model, error: Some("Current animatic plan is malformed.") })
+          }
+          let body : Json = {
+            "expected_plan_version": version.to_int(),
+            "expected_plan_digest": plan_digest,
+            "actor": model.operator.actor,
+            "rendered_at": model.operator.recorded_at,
+            "human_confirmed": model.operator.human_confirmed,
+            "process_authority": model.operator.human_confirmed,
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/animatic-workspace/render",
+            )
+            .with_json(body)
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Rendered storyboard sheet and timed animatic", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+        _ => (@rabbita.none, { ..model, error: Some("Record an animatic plan first.") })
+      }
+    ApproveRenderedAnimatic =>
+      match (model.project, model.animatic_workspace) {
+        (Some(project), Some(workspace)) if !workspace.renders.is_empty() => {
+          let render = workspace.renders[workspace.renders.length() - 1]
+          let body : Json = {
+            "expected_render_version": render.reference.version,
+            "expected_render_digest": render.reference.digest,
+            "actor": model.operator.actor,
+            "actor_role": model.operator.role,
+            "note": model.operator.note,
+            "approved_at": model.operator.recorded_at,
+            "human_confirmed": model.operator.human_confirmed,
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/animatic-workspace/approve",
+            )
+            .with_json(body)
+            .expect_json(emit.map(fn(result) {
+              ActionCompleted("Exact rendered animatic approval", result)
+            }))
+          (cmd, { ..model, busy: true, error: None })
+        }
+        _ => (@rabbita.none, { ..model, error: Some("Render an animatic first.") })
       }
     SelectIntake(value) =>
       (@rabbita.none, { ..model, selected_intake_id: value })
@@ -620,6 +715,11 @@ fn update(
               @http.get("/api/v2/projects/" + model.selected_project_id).expect_json(
                 emit.map(fn(result) { LoadedProject(result) }),
               ),
+            )
+            commands.push(
+              @http.get(
+                "/api/v2/projects/" + model.selected_project_id + "/animatic-workspace",
+              ).expect_json(emit.map(fn(result) { LoadedAnimaticWorkspace(result) })),
             )
           }
           commands.push(

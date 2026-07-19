@@ -162,6 +162,10 @@ pub fn manifest() -> @pack.MoonPackManifest {
       schema("asset-qc-finding"),
       schema("approved-reusable-asset"),
       schema("shot-asset-binding"),
+      schema("animatic-plan"),
+      schema("animatic-render-attempt"),
+      schema("rendered-animatic"),
+      schema("rendered-animatic-approval"),
     ],
     tools: [
       tool(
@@ -439,6 +443,31 @@ pub fn manifest() -> @pack.MoonPackManifest {
         "shot-asset-binding",
         WorkspaceMutation,
         ["asset-factory/shot-bindings"],
+        review_required=true,
+      ),
+      tool(
+        "animatic.plan.record",
+        "animatic-plan",
+        "animatic-plan",
+        WorkspaceMutation,
+        ["animatic/plans"],
+        review_required=true,
+      ),
+      tool(
+        "animatic.render",
+        "animatic-plan",
+        "rendered-animatic",
+        SandboxExecution,
+        ["animatic/attempts", "animatic/media", "animatic/renders"],
+        idempotent=false,
+        review_required=true,
+      ),
+      tool(
+        "animatic.approve",
+        "rendered-animatic",
+        "rendered-animatic-approval",
+        WorkspaceMutation,
+        ["animatic/approvals", "projects", "project-events"],
         review_required=true,
       ),
       tool(

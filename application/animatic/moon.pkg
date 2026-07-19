@@ -1,0 +1,16 @@
+import {
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+  "vectie/mooncast/native_host/process" @host_process,
+  "vectie/mooncast/native_host/store",
+  "vectie/mooncast/production/animatic" @animatic_domain,
+  "vectie/mooncast/production/creative",
+  "vectie/mooncast/production/project",
+}
+
+supported_targets = "native"
+
+import {
+  "moonbitlang/async",
+} for "wbtest"
