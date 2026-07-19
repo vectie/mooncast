@@ -1,0 +1,111 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/workspace"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/domain",
+  "vectie/mooncast/editor/download",
+  "vectie/mooncast/editor/integration",
+  "vectie/mooncast/editor/jobs",
+  "vectie/mooncast/editor/media",
+  "vectie/mooncast/editor/observation",
+  "vectie/mooncast/editor/render_plan",
+  "vectie/mooncast/editor/store",
+}
+
+// Values
+pub async fn cancel_job(@store.EditorRepository, String, String, String) -> @jobs.EditorJob
+
+pub async fn complete_local_media_intake(@store.EditorRepository, @media.MediaRegistry, String, String, Bytes, String, String) -> WorkspaceIntake
+
+pub async fn import_production(@store.EditorRepository, @media.MediaRegistry, @integration.ProductionProjectBinding, Array[@integration.GeneratedTake], @integration.ProductionIntent, Array[@integration.TakePayload], String) -> @integration.ProductionImportResult
+
+pub async fn list_projects(@store.EditorRepository) -> Array[ProjectSummary]
+
+pub async fn list_review_comments(@store.EditorRepository, String) -> Array[WorkspaceReviewComment]
+
+pub async fn local_media_bindings(@store.EditorRepository, String) -> Array[@domain.LocalMediaBinding]
+
+pub async fn open_project(@store.EditorRepository, String) -> @store.SnapshotRecord?
+
+pub async fn poll_job(@store.EditorRepository, String, String) -> @observation.JobObservation?
+
+pub async fn prepare_local_media_intake(@store.EditorRepository, String, Int, String, String, String, String, Int, String, Int, @domain.ProductionIdentity, @domain.RightsAttestation, @domain.MediaSourceAttestation, String, String) -> WorkspaceIntake
+
+pub async fn recover_jobs(@store.EditorRepository, String, String) -> Array[@jobs.EditorJob]
+
+pub async fn retry_job(@store.EditorRepository, String, String, String) -> @jobs.EditorJob
+
+pub async fn save_review_comment(@store.EditorRepository, WorkspaceReviewComment) -> WorkspaceReviewComment
+
+pub async fn snapshot(@store.EditorRepository, String) -> WorkspaceSnapshot?
+
+pub async fn source_analysis(@store.EditorRepository, @media.MediaRegistry, String, String) -> @media.MediaAnalysis
+
+pub async fn source_media(@store.EditorRepository, @media.MediaRegistry, String, String) -> @download.DownloadDescriptor
+
+pub async fn source_take(@store.EditorRepository, @media.MediaRegistry, String, String) -> SourceTakeProjection
+
+pub async fn source_thumbnail(@store.EditorRepository, @media.MediaRegistry, String, String) -> @download.DownloadDescriptor
+
+pub async fn start_preview(@store.EditorRepository, @render_plan.RenderPlan, @jobs.PreviewRequest, String, String, String, String, String, String, String) -> @jobs.EditorJob
+
+// Errors
+
+// Types and methods
+pub(all) struct ProjectSummary {
+  project_id : String
+  revision : Int
+  timeline_id : String
+  timeline_revision : Int
+  content_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SourceTakeProjection {
+  contract : String
+  take : @integration.GeneratedTake
+  registry_digest : String
+  source : @media.MediaAvailability
+  proxy : @media.MediaObjectRecord?
+  media_path : String?
+  analysis_path : String
+  thumbnail_path : String?
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceIntake {
+  contract : String
+  prepared : @media.PreparedIntake
+  completed : @media.CompletedIntake?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceReviewComment {
+  contract : String
+  project_id : String
+  comment_id : String
+  kind : String
+  start_tick : Int
+  end_tick : Int
+  text : String
+  revision_round : Int
+  expected_editor_revision : Int
+  created_by : String
+  created_at : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceSnapshot {
+  contract : String
+  snapshot : @domain.EditorProject
+  command_log : Array[@domain.CommandLogRecord]
+  revision : Int
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

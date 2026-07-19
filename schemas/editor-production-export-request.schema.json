@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/contracts/editor-production-export-request.v1.schema.json",
+  "title": "Production editor export request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["job_id", "request_id", "expected_editor_revision", "spec"],
+  "properties": {
+    "job_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+    "request_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+    "expected_editor_revision": {"type": "integer", "minimum": 0},
+    "quality": {"enum": ["original", "proxy"]},
+    "range": {
+      "type": "object", "additionalProperties": false,
+      "required": ["start_tick", "duration_ticks"],
+      "properties": {
+        "start_tick": {"type": "integer", "minimum": 0},
+        "duration_ticks": {"type": "integer", "minimum": 1}
+      }
+    },
+    "max_attempts": {"type": "integer", "minimum": 1, "maximum": 10},
+    "spec": {
+      "type": "object", "additionalProperties": false,
+      "required": ["width", "height", "fps", "container", "video_codec", "audio_codec", "subtitle_mode", "ai_label_mode", "retain_sources", "cost_ceiling"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1},
+        "fps": {"type": "object", "required": ["numerator", "denominator"], "properties": {"numerator": {"type": "integer", "minimum": 1}, "denominator": {"type": "integer", "minimum": 1}}},
+        "container": {"const": "mp4"}, "video_codec": {"const": "h264"}, "audio_codec": {"const": "aac"},
+        "subtitle_mode": {"const": "embedded-and-sidecar"}, "ai_label_mode": {"const": "retain-visible"},
+        "retain_sources": {"const": true},
+        "cost_ceiling": {"type": ["string", "number"]}
+      }
+    }
+  }
+}

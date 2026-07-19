@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/contracts/editor-master-promotion.v1.schema.json",
+  "title": "Editor export master promotion authority",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["job_id", "expected_project_revision", "actor", "authority_ref"],
+  "properties": {
+    "job_id": {"type": "string"},
+    "expected_project_revision": {"type": "integer", "minimum": 1},
+    "actor": {"type": "string", "minLength": 1},
+    "authority_ref": {"type": "string", "minLength": 1}
+  }
+}

@@ -1,0 +1,104 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/store"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/domain",
+}
+
+// Values
+pub fn migrate_document(Json) -> (Json, MigrationReceipt) raise
+
+// Errors
+
+// Types and methods
+pub(all) struct BackupRef {
+  digest : String
+  path : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct EditorRepository {
+  snapshots : @vectie/mooncast/native_host/store.AtomicStore
+  events : @vectie/mooncast/native_host/store.AtomicStore
+  jobs : @vectie/mooncast/native_host/store.AtomicStore
+  authorities : @vectie/mooncast/native_host/store.AtomicStore
+  intakes : @vectie/mooncast/native_host/store.AtomicStore
+  reviews : @vectie/mooncast/native_host/store.AtomicStore
+  workspace : @vectie/mooncast/native_host/store.AtomicStore
+  backups : @vectie/mooncast/native_host/store.AtomicStore
+  quarantine : @vectie/mooncast/native_host/store.AtomicStore
+}
+pub async fn EditorRepository::backup(Self, String, String) -> BackupRef
+pub async fn[T : @json.FromJson] EditorRepository::get_authority(Self, String, String) -> T?
+pub async fn[T : @json.FromJson] EditorRepository::get_intake(Self, String, String) -> T?
+pub async fn[T : @json.FromJson] EditorRepository::get_job(Self, String) -> T?
+pub async fn[T : @json.FromJson] EditorRepository::get_workspace(Self, String, String) -> T?
+pub async fn[T : @json.FromJson] EditorRepository::list_intakes(Self, String) -> Array[T]
+pub async fn[T : @json.FromJson] EditorRepository::list_jobs(Self, String) -> Array[T]
+pub async fn[T : @json.FromJson] EditorRepository::list_reviews(Self, String) -> Array[T]
+pub async fn EditorRepository::list_snapshots(Self) -> Array[SnapshotRecord]
+pub async fn EditorRepository::load_events(Self, String) -> Array[EventRecord]
+pub async fn EditorRepository::load_snapshot(Self, String) -> SnapshotRecord?
+pub fn EditorRepository::new(String) -> Self
+pub async fn[T : ToJson] EditorRepository::put_authority(Self, String, String, T) -> Unit
+pub async fn[T : ToJson] EditorRepository::put_intake(Self, String, String, T) -> Unit
+pub async fn[T : ToJson] EditorRepository::put_job(Self, String, T) -> Unit
+pub async fn[T : ToJson] EditorRepository::put_review(Self, String, String, T) -> Unit
+pub async fn[T : ToJson] EditorRepository::put_workspace(Self, String, String, T) -> Unit
+pub async fn EditorRepository::recover(Self) -> Array[RecoveryReceipt]
+pub async fn EditorRepository::replay(Self, @domain.EditorProject) -> @domain.EditorSession
+pub async fn EditorRepository::resolve_backup(Self, BackupRef) -> SnapshotRecord
+pub async fn EditorRepository::save_session(Self, @domain.EditorSession, String) -> SnapshotRecord
+
+pub(all) struct EventRecord {
+  contract : String
+  schema_version : Int
+  project_id : String
+  sequence : Int
+  command : @domain.EditCommand
+  command_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MigrationReceipt {
+  contract : String
+  schema_version : Int
+  from_version : Int
+  to_version : Int
+  steps : Array[String]
+  input_digest : String
+  output_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RecoveryReceipt {
+  contract : String
+  schema_version : Int
+  project_id : String
+  code : String
+  source_key : String
+  quarantine_key : String
+  recovered_revision : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SnapshotRecord {
+  contract : String
+  schema_version : Int
+  project_id : String
+  stored_revision : Int
+  base_snapshot : @domain.EditorProject
+  current_snapshot : @domain.EditorProject
+  command_log : Array[@domain.CommandLogRecord]
+  content_digest : String
+  backup_ref : BackupRef?
+  metadata : StoreMetadata
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct StoreMetadata {
+  migration_receipts : Array[String]
+  recovery : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

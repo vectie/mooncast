@@ -1,0 +1,67 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/cache"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/render_plan",
+  "vectie/mooncast/native_host/store",
+}
+
+// Values
+pub fn cache_report(Array[String], Array[@render_plan.TickRange], Array[@render_plan.TickRange], Array[@render_plan.ProxyReadiness], Array[String], Array[String], Int, Int, Int, Int) -> @render_plan.PreviewCacheReport
+
+pub fn eviction_keys(CacheIndex, Array[String], Int, Int) -> Array[String]
+
+pub fn plan_dirty_ranges(CacheIndex, Array[@render_plan.CacheKeyProjection]) -> DirtyRangePlan
+
+pub fn segment_projections(@render_plan.RenderPlan) -> Array[SegmentProjection] raise
+
+// Errors
+
+// Types and methods
+pub(all) struct CacheIndex {
+  contract : String
+  version : Int
+  segments : Array[SegmentEntry]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DirtyRangePlan {
+  contract : String
+  requested : Array[@render_plan.TickRange]
+  reusable : Array[@render_plan.TickRange]
+  dirty : Array[@render_plan.TickRange]
+  invalidated_segment_keys : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct PreviewCache {
+  index_store : @store.AtomicStore
+  segment_store : @store.AtomicStore
+}
+pub async fn PreviewCache::enforce_quota(Self, Array[String], Int, Int) -> Array[String]
+pub async fn PreviewCache::get_segment(Self, String) -> Bytes?
+pub async fn PreviewCache::invalidate(Self, Array[String]) -> Unit
+pub async fn PreviewCache::load_index(Self) -> CacheIndex
+pub fn PreviewCache::new(String) -> Self
+pub async fn PreviewCache::put_segment(Self, SegmentEntry, Bytes) -> Unit
+pub async fn PreviewCache::save_index(Self, CacheIndex) -> Unit
+
+pub(all) struct SegmentEntry {
+  key : String
+  plan_digest : String
+  range : @render_plan.TickRange
+  media_digest : String
+  size_bytes : Int
+  last_used_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SegmentProjection {
+  key : String
+  range : @render_plan.TickRange
+  plan : @render_plan.RenderPlan
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.dev/schemas/editor-media-registry.schema.json",
+  "title": "Mooncast Editor Media Registry Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "digest",
+    "size",
+    "mime",
+    "duration",
+    "role",
+    "original_digest",
+    "locator",
+    "source_refs",
+    "provenance_refs",
+    "rights_refs",
+    "created_at"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mooncast.editor-media-registry.v1"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "size": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "mime": {
+      "type": "string",
+      "minLength": 1
+    },
+    "duration": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "role": {
+      "enum": [
+        "original",
+        "proxy"
+      ]
+    },
+    "original_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "locator": {
+      "type": "string",
+      "pattern": "^objects/sha256/[0-9a-f]{2}/[0-9a-f]{64}$"
+    },
+    "source_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "provenance_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "rights_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

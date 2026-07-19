@@ -1,0 +1,10 @@
+import {
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+  "vectie/mooncast/editor/domain",
+  "vectie/mooncast/editor/render_plan" @plan,
+  "vectie/mooncast/native_host/store" @host_store,
+}
+
+supported_targets = "native"

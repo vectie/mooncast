@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/editor-review-preview-spec.schema.json",
+  "title": "Frozen low-resolution whole-timeline review profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "requested_range", "render_duration_seconds", "width", "height", "fps", "video_codec", "audio_codec", "profile", "autoplay"],
+  "properties": {
+    "contract": {"const": "mooncast.editor-review-preview-spec.v1"},
+    "requested_range": {
+      "type": "object", "additionalProperties": false,
+      "required": ["start_tick", "duration_ticks"],
+      "properties": {"start_tick": {"type": "integer", "minimum": 0}, "duration_ticks": {"type": "integer", "minimum": 1}}
+    },
+    "render_duration_seconds": {"type": "number", "minimum": 0.25, "maximum": 480},
+    "width": {"const": 640}, "height": {"const": 360}, "fps": {"const": 24},
+    "video_codec": {"const": "h264"}, "audio_codec": {"const": "aac"},
+    "profile": {"const": "bounded-low-resolution-v1"}, "autoplay": {"const": false}
+  }
+}

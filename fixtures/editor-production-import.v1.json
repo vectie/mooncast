@@ -1,0 +1,758 @@
+{
+  "intent": {
+    "annotations": [
+      {
+        "annotation_id": "ann-continuity",
+        "kind": "continuity",
+        "range": {
+          "end_tick": 1000,
+          "start_tick": 0
+        }
+      },
+      {
+        "annotation_id": "ann-qc",
+        "kind": "QC",
+        "range": {
+          "end_tick": 2000,
+          "start_tick": 1000
+        }
+      }
+    ],
+    "budget_ceiling": {
+      "amount": 50,
+      "currency": "CNY"
+    },
+    "contract": "mooncast.editor-production-intent.v1",
+    "current_client_revision_rounds": 1,
+    "delivery_intents": [
+      {
+        "delivery_id": "delivery-horizontal",
+        "height": 1080,
+        "orientation": "horizontal",
+        "width": 1920
+      },
+      {
+        "delivery_id": "delivery-vertical",
+        "height": 1920,
+        "orientation": "vertical",
+        "width": 1080
+      }
+    ],
+    "expected_editor_revision": 0,
+    "expected_production_revision": 7,
+    "max_client_revision_rounds": 2,
+    "placements": [
+      {
+        "duration_ticks": 1000,
+        "placement_id": "clip-video",
+        "role": "video",
+        "start_tick": 0,
+        "take_id": "take-1"
+      },
+      {
+        "duration_ticks": 1000,
+        "placement_id": "clip-dialogue",
+        "role": "dialogue",
+        "start_tick": 0,
+        "take_id": "take-6"
+      },
+      {
+        "duration_ticks": 1000,
+        "placement_id": "clip-voice",
+        "role": "voice",
+        "start_tick": 0,
+        "take_id": "take-7"
+      },
+      {
+        "duration_ticks": 1000,
+        "placement_id": "clip-music",
+        "role": "music",
+        "start_tick": 0,
+        "take_id": "take-8"
+      },
+      {
+        "duration_ticks": 1000,
+        "placement_id": "clip-sfx",
+        "role": "SFX",
+        "start_tick": 0,
+        "take_id": "take-9"
+      },
+      {
+        "duration_ticks": 1000,
+        "placement_id": "clip-subtitle",
+        "role": "subtitle",
+        "start_tick": 0,
+        "take_id": "take-10"
+      },
+      {
+        "duration_ticks": 1000,
+        "placement_id": "clip-title",
+        "role": "title",
+        "start_tick": 0,
+        "take_id": "take-11"
+      },
+      {
+        "duration_ticks": 1000,
+        "placement_id": "clip-effect",
+        "role": "effect",
+        "start_tick": 0,
+        "take_id": "take-12"
+      },
+      {
+        "duration_ticks": 1000,
+        "placement_id": "clip-ai-label",
+        "role": "AI-label",
+        "start_tick": 0,
+        "take_id": "take-13"
+      }
+    ],
+    "project_id": "project-mc3a",
+    "review_comments": [
+      {
+        "comment_id": "comment-1",
+        "range": {
+          "end_tick": 500,
+          "start_tick": 0
+        },
+        "revision_round": 1,
+        "text": "Fixed review note"
+      }
+    ],
+    "take_selections": [
+      {
+        "shot_id": "shot-1",
+        "take_id": "take-1"
+      },
+      {
+        "shot_id": "shot-2",
+        "take_id": "take-3"
+      },
+      {
+        "shot_id": "shot-3",
+        "take_id": "take-4"
+      },
+      {
+        "shot_id": "shot-4",
+        "take_id": "take-5"
+      }
+    ],
+    "ticks_per_second": 1000,
+    "track_role_map": {
+      "AI-label": "track-ai-label",
+      "SFX": "track-sfx",
+      "dialogue": "track-dialogue",
+      "effect": "track-effect",
+      "music": "track-music",
+      "subtitle": "track-subtitle",
+      "title": "track-title",
+      "video": "track-video",
+      "voice": "track-voice"
+    }
+  },
+  "payload_text": {
+    "take-1": "MC-3A fixed payload video take-1",
+    "take-10": "MC-3A fixed payload subtitle take-10",
+    "take-11": "MC-3A fixed payload title take-11",
+    "take-12": "MC-3A fixed payload effect take-12",
+    "take-13": "MC-3A fixed payload AI-label take-13",
+    "take-2": "MC-3A fixed payload video take-2",
+    "take-3": "MC-3A fixed payload video take-3",
+    "take-4": "MC-3A fixed payload video take-4",
+    "take-5": "MC-3A fixed payload video take-5",
+    "take-6": "MC-3A fixed payload dialogue take-6",
+    "take-7": "MC-3A fixed payload voice take-7",
+    "take-8": "MC-3A fixed payload music take-8",
+    "take-9": "MC-3A fixed payload SFX take-9"
+  },
+  "project": {
+    "contract": "mooncast.production-project.v2",
+    "episodes": [
+      {
+        "episode_id": "ep-1",
+        "scenes": [
+          {
+            "scene_id": "scene-1",
+            "shots": [
+              {
+                "assets": [
+                  {
+                    "asset_id": "asset-1",
+                    "attempt_id": "attempt-1",
+                    "content_sha256": "sha256:6a342e51e9158a2049749736582690c4187fa6a8335ae2e70545908abcdcaf9c",
+                    "model_version": "1.0"
+                  },
+                  {
+                    "asset_id": "asset-2",
+                    "attempt_id": "attempt-2",
+                    "content_sha256": "sha256:9f73d7425e4a1a99f5eb7a9f9ae49cd7317ebc4a6e66b957dcf21bbd62921bdf",
+                    "model_version": "1.0"
+                  },
+                  {
+                    "asset_id": "asset-6",
+                    "attempt_id": "attempt-6",
+                    "content_sha256": "sha256:11bd27ae8356c3ef6a65502fb97f9433d0ec6bfd3b143ee94e80f2882b7b1d0f",
+                    "model_version": "1.0"
+                  },
+                  {
+                    "asset_id": "asset-7",
+                    "attempt_id": "attempt-7",
+                    "content_sha256": "sha256:e3d9fe99a8792b3b95bac1eaa1b3345b240c2133265cf23fd9d35f55c7e63a32",
+                    "model_version": "1.0"
+                  },
+                  {
+                    "asset_id": "asset-8",
+                    "attempt_id": "attempt-8",
+                    "content_sha256": "sha256:4c95751201aa519ba2d6232843965da37c7e33a6f45e7624c480958ecee6d3ac",
+                    "model_version": "1.0"
+                  },
+                  {
+                    "asset_id": "asset-9",
+                    "attempt_id": "attempt-9",
+                    "content_sha256": "sha256:1b0f5f1bcde6a2a1452c7c097dcd55a64b102e1f1bfb85a5d1eafcb14e6e3e98",
+                    "model_version": "1.0"
+                  },
+                  {
+                    "asset_id": "asset-10",
+                    "attempt_id": "attempt-10",
+                    "content_sha256": "sha256:dd8de39203dcd195bd248b1b15541882c4c85a83808789486696fed2aefe9239",
+                    "model_version": "1.0"
+                  },
+                  {
+                    "asset_id": "asset-11",
+                    "attempt_id": "attempt-11",
+                    "content_sha256": "sha256:8b48b413ab9fa43a39b44fb724e500efddac5ef988fc5e470644648891aa641c",
+                    "model_version": "1.0"
+                  },
+                  {
+                    "asset_id": "asset-12",
+                    "attempt_id": "attempt-12",
+                    "content_sha256": "sha256:19d2a8f46560b98503168af1fffb5216e1c1b1dac34b83659881bedeb12a7c70",
+                    "model_version": "1.0"
+                  },
+                  {
+                    "asset_id": "asset-13",
+                    "attempt_id": "attempt-13",
+                    "content_sha256": "sha256:3fd8d5a20869ac8491f4514b2d34799b874f9d55eabe5ad452650ecd613d8dc9",
+                    "model_version": "1.0"
+                  }
+                ],
+                "shot_id": "shot-1"
+              },
+              {
+                "assets": [
+                  {
+                    "asset_id": "asset-3",
+                    "attempt_id": "attempt-3",
+                    "content_sha256": "sha256:8df2563f195c2e8785446a25bfe64a3984f5c96ecadc09fbaf58408361d8573c",
+                    "model_version": "1.0"
+                  }
+                ],
+                "shot_id": "shot-2"
+              }
+            ]
+          },
+          {
+            "scene_id": "scene-2",
+            "shots": [
+              {
+                "assets": [
+                  {
+                    "asset_id": "asset-4",
+                    "attempt_id": "attempt-4",
+                    "content_sha256": "sha256:9fe45de629a0151362819ad8069f60465385069da50dcb5625b686a946e15386",
+                    "model_version": "1.0"
+                  }
+                ],
+                "shot_id": "shot-3"
+              },
+              {
+                "assets": [
+                  {
+                    "asset_id": "asset-5",
+                    "attempt_id": "attempt-5",
+                    "content_sha256": "sha256:acfbd5dab821de03b019be821ac93ea7c73cbe605f0103486769841a405dfa18",
+                    "model_version": "1.0"
+                  }
+                ],
+                "shot_id": "shot-4"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "maximum_cost_cny": 100,
+    "project_id": "project-mc3a",
+    "revision": 7
+  },
+  "takes": [
+    {
+      "asset_id": "asset-1",
+      "attempt_id": "attempt-1",
+      "content_sha256": "sha256:6a342e51e9158a2049749736582690c4187fa6a8335ae2e70545908abcdcaf9c",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "video/mp4",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:c134102de39828953f80666c44fb3893c76d40c51bb2a94864ad3f86e3ec2d82",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "video",
+      "scene_id": "scene-1",
+      "seed": 100,
+      "shot_id": "shot-1",
+      "source_asset_ids": [],
+      "take_id": "take-1",
+      "variant": "primary"
+    },
+    {
+      "asset_id": "asset-2",
+      "attempt_id": "attempt-2",
+      "content_sha256": "sha256:9f73d7425e4a1a99f5eb7a9f9ae49cd7317ebc4a6e66b957dcf21bbd62921bdf",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "video/mp4",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:a11b21e4f0957f785f1cd5c5c826993f2a74f85070f7dd10e3796c924c988ee6",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "video",
+      "scene_id": "scene-1",
+      "seed": 101,
+      "shot_id": "shot-1",
+      "source_asset_ids": [],
+      "take_id": "take-2",
+      "variant": "alternate"
+    },
+    {
+      "asset_id": "asset-3",
+      "attempt_id": "attempt-3",
+      "content_sha256": "sha256:8df2563f195c2e8785446a25bfe64a3984f5c96ecadc09fbaf58408361d8573c",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "video/mp4",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:7e069246cd97a941aec45f06f449c23227758c5dc4fa063b21c773e056b544a5",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "video",
+      "scene_id": "scene-1",
+      "seed": 102,
+      "shot_id": "shot-2",
+      "source_asset_ids": [],
+      "take_id": "take-3",
+      "variant": "primary"
+    },
+    {
+      "asset_id": "asset-4",
+      "attempt_id": "attempt-4",
+      "content_sha256": "sha256:9fe45de629a0151362819ad8069f60465385069da50dcb5625b686a946e15386",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "video/mp4",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:63ae278de70223cc4b4bbb0ca2e9f6d57cd92d3b20fa5577cd3be0d62e1c480c",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "video",
+      "scene_id": "scene-2",
+      "seed": 103,
+      "shot_id": "shot-3",
+      "source_asset_ids": [],
+      "take_id": "take-4",
+      "variant": "primary"
+    },
+    {
+      "asset_id": "asset-5",
+      "attempt_id": "attempt-5",
+      "content_sha256": "sha256:acfbd5dab821de03b019be821ac93ea7c73cbe605f0103486769841a405dfa18",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "video/mp4",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:56ece5584a7b67f5df395e22b95a8eef5e8f61f236131bb55c2caf77c2c7fc0c",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "video",
+      "scene_id": "scene-2",
+      "seed": 104,
+      "shot_id": "shot-4",
+      "source_asset_ids": [],
+      "take_id": "take-5",
+      "variant": "primary"
+    },
+    {
+      "asset_id": "asset-6",
+      "attempt_id": "attempt-6",
+      "content_sha256": "sha256:11bd27ae8356c3ef6a65502fb97f9433d0ec6bfd3b143ee94e80f2882b7b1d0f",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "audio/wav",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:72aceb4770c16625ecc6a4090e9ab3d4f57542144ea60a79d7da8249a20ce306",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "dialogue",
+      "scene_id": "scene-1",
+      "seed": 105,
+      "shot_id": "shot-1",
+      "source_asset_ids": [],
+      "take_id": "take-6",
+      "variant": "primary"
+    },
+    {
+      "asset_id": "asset-7",
+      "attempt_id": "attempt-7",
+      "content_sha256": "sha256:e3d9fe99a8792b3b95bac1eaa1b3345b240c2133265cf23fd9d35f55c7e63a32",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "audio/wav",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:a39ad0945bfeca6a4b0f4208f908d8d1adf2881a4e0d079e3566ed412b79c2cc",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "voice",
+      "scene_id": "scene-1",
+      "seed": 106,
+      "shot_id": "shot-1",
+      "source_asset_ids": [],
+      "take_id": "take-7",
+      "variant": "primary"
+    },
+    {
+      "asset_id": "asset-8",
+      "attempt_id": "attempt-8",
+      "content_sha256": "sha256:4c95751201aa519ba2d6232843965da37c7e33a6f45e7624c480958ecee6d3ac",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "audio/wav",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:88ff2e711a891065746515124f56b386041a6e13d3f83d24160300ff3d2966c9",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "music",
+      "scene_id": "scene-1",
+      "seed": 107,
+      "shot_id": "shot-1",
+      "source_asset_ids": [],
+      "take_id": "take-8",
+      "variant": "primary"
+    },
+    {
+      "asset_id": "asset-9",
+      "attempt_id": "attempt-9",
+      "content_sha256": "sha256:1b0f5f1bcde6a2a1452c7c097dcd55a64b102e1f1bfb85a5d1eafcb14e6e3e98",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "audio/wav",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:06ebd165193ffc382d32f90cf3d3fb2d1ab7b6b55bac82ed2e5a9a0b22ef9422",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "SFX",
+      "scene_id": "scene-1",
+      "seed": 108,
+      "shot_id": "shot-1",
+      "source_asset_ids": [],
+      "take_id": "take-9",
+      "variant": "primary"
+    },
+    {
+      "asset_id": "asset-10",
+      "attempt_id": "attempt-10",
+      "content_sha256": "sha256:dd8de39203dcd195bd248b1b15541882c4c85a83808789486696fed2aefe9239",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "application/json",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:4143f93e5e307b248958a685734a704ff44ffa34bc581495960c9b8757dc808e",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "subtitle",
+      "scene_id": "scene-1",
+      "seed": 109,
+      "shot_id": "shot-1",
+      "source_asset_ids": [],
+      "take_id": "take-10",
+      "variant": "primary"
+    },
+    {
+      "asset_id": "asset-11",
+      "attempt_id": "attempt-11",
+      "content_sha256": "sha256:8b48b413ab9fa43a39b44fb724e500efddac5ef988fc5e470644648891aa641c",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "application/json",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:5d5a0047b383b74418af8905b838da3b91532e1916c798a5a5a503f72d464fea",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "title",
+      "scene_id": "scene-1",
+      "seed": 110,
+      "shot_id": "shot-1",
+      "source_asset_ids": [],
+      "take_id": "take-11",
+      "variant": "primary"
+    },
+    {
+      "asset_id": "asset-12",
+      "attempt_id": "attempt-12",
+      "content_sha256": "sha256:19d2a8f46560b98503168af1fffb5216e1c1b1dac34b83659881bedeb12a7c70",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "application/json",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:4a9166b53f9d9fe02a42d856b3181ac79e9c90899242619c504caff9f521db37",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "effect",
+      "scene_id": "scene-1",
+      "seed": 111,
+      "shot_id": "shot-1",
+      "source_asset_ids": [],
+      "take_id": "take-12",
+      "variant": "primary"
+    },
+    {
+      "asset_id": "asset-13",
+      "attempt_id": "attempt-13",
+      "content_sha256": "sha256:3fd8d5a20869ac8491f4514b2d34799b874f9d55eabe5ad452650ecd613d8dc9",
+      "contract": "mooncast.editor-generated-take.v1",
+      "cost": {
+        "amount": 1,
+        "currency": "CNY"
+      },
+      "created_at": "2026-01-01T00:00:00Z",
+      "duration_ticks": 1000,
+      "episode_id": "ep-1",
+      "mime_type": "application/json",
+      "model_ref": "fixture-model",
+      "model_version": "1.0",
+      "project_id": "project-mc3a",
+      "prompt_digest": "sha256:298c74ec6f8e56bf731fd0d225e2efcc219ea7b7c7e5d65865134fd186148c2c",
+      "provider_ref": "fixture-provider",
+      "qc": {
+        "findings": [],
+        "status": "passed"
+      },
+      "rights": {
+        "refs": [
+          "fixture-license"
+        ],
+        "status": "cleared"
+      },
+      "role": "AI-label",
+      "scene_id": "scene-1",
+      "seed": 112,
+      "shot_id": "shot-1",
+      "source_asset_ids": [],
+      "take_id": "take-13",
+      "variant": "primary"
+    }
+  ]
+}

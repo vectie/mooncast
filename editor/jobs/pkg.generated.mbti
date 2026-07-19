@@ -1,0 +1,114 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/jobs"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/store",
+}
+
+// Values
+pub async fn load(@store.EditorRepository, String, String) -> EditorJob?
+
+pub fn preview_authority(PreviewRequest, String, String, String, String, String, String, String) -> PreviewAuthority raise
+
+pub fn recover_after_restart(EditorJob, String) -> EditorJob
+
+pub async fn save(@store.EditorRepository, EditorJob) -> Unit
+
+pub fn verify_preview_authority(PreviewAuthority, String, String, Int, String, Int, String, String) -> Unit raise
+
+// Errors
+
+// Types and methods
+pub(all) struct EditorJob {
+  contract : String
+  job_id : String
+  project_id : String
+  kind : String
+  state : String
+  plan_digest : String
+  request_digest : String
+  output_digest : String
+  output_ref : String
+  progress_numerator : Int
+  progress_denominator : Int
+  retry_count : Int
+  maximum_retries : Int
+  attempts : Array[JobAttempt]
+  created_at : String
+  updated_at : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn EditorJob::cancel(Self, String) -> Self raise
+pub fn EditorJob::fail(Self, String, String, String) -> Self raise
+pub fn EditorJob::progress(Self, Int, Int, String) -> Self raise
+pub fn EditorJob::queued(String, String, String, String, String, String) -> Self
+pub fn EditorJob::retry(Self, String) -> Self raise
+pub fn EditorJob::start(Self, String) -> Self raise
+pub fn EditorJob::succeed(Self, String, String, String) -> Self raise
+
+pub(all) struct JobAttempt {
+  attempt : Int
+  started_at : String
+  finished_at : String
+  state : String
+  error_code : String
+  error_message : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreviewAuthority {
+  contract : String
+  schema_version : Int
+  project_id : String
+  job_id : String
+  session_id : String
+  project_revision : Int
+  timeline_id : String
+  timeline_revision : Int
+  request : PreviewRequest
+  request_digest : String
+  plan_digest : String
+  spec_digest : String
+  provenance_digest : String
+  snapshot_digest : String
+  command_prefix_digest : String
+  created_at : String
+  publication_authority : Bool
+  provider_authority : Bool
+  anchor_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreviewRange {
+  start_tick : Int
+  duration_ticks : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PreviewRequest {
+  session_id : String
+  project_id : String
+  project_revision : Int
+  timeline_id : String
+  timeline_revision : Int
+  quality : String
+  plan_digest : String
+  spec_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ReviewPreviewSpec {
+  contract : String
+  requested_range : PreviewRange
+  render_duration_seconds : Double
+  width : Int
+  height : Int
+  fps : Int
+  video_codec : String
+  audio_codec : String
+  profile : String
+  autoplay : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

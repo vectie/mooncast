@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/contracts/editor-production-import.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "snapshot",
+    "command_log",
+    "media_records",
+    "lineage",
+    "annotations",
+    "review_comments",
+    "delivery_intents",
+    "track_roles",
+    "import_digest",
+    "publication_authority",
+    "provider_authority"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mooncast.editor-production-import.v1"
+    },
+    "snapshot": {
+      "$ref": "https://mooncast.local/contracts/editor-project.v1.schema.json"
+    },
+    "command_log": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "media_records": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "lineage": {
+      "type": "array",
+      "items": {
+        "$ref": "https://mooncast.local/contracts/editor-generated-take.v1.schema.json"
+      }
+    },
+    "annotations": {
+      "type": "array",
+      "items": {}
+    },
+    "review_comments": {
+      "type": "array",
+      "items": {}
+    },
+    "delivery_intents": {
+      "type": "array",
+      "items": {}
+    },
+    "track_roles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "import_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "publication_authority": {
+      "const": false
+    },
+    "provider_authority": {
+      "const": false
+    }
+  }
+}

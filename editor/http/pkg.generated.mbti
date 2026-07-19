@@ -1,0 +1,123 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/http"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/domain",
+  "vectie/mooncast/editor/download",
+  "vectie/mooncast/editor/export",
+  "vectie/mooncast/editor/integration",
+  "vectie/mooncast/editor/jobs",
+  "vectie/mooncast/editor/media",
+  "vectie/mooncast/editor/observation",
+  "vectie/mooncast/editor/render_plan",
+  "vectie/mooncast/editor/store",
+  "vectie/mooncast/editor/workspace",
+}
+
+// Values
+pub async fn cancel_job(@store.EditorRepository, String, String, String) -> @observation.JobObservation
+
+pub async fn complete_media_intake(@store.EditorRepository, @media.MediaRegistry, String, String, Bytes, String, String) -> @workspace.WorkspaceIntake
+
+pub async fn complete_media_intake_raw(@media.MediaRegistry, @media.IntakeRequest, Bytes, Int, String, String, String) -> @media.CompletedIntake
+
+pub async fn create_project(@store.EditorRepository, @domain.EditorProject, String) -> @store.SnapshotRecord
+
+pub async fn describe_media(@media.MediaRegistry, String, Int, Int) -> @media.MediaByteDescriptor?
+
+pub async fn dispatch_project_command(@store.EditorRepository, String, @domain.EditCommand, String) -> @store.SnapshotRecord
+
+pub async fn export_download(@store.EditorRepository, String, String, Int) -> @download.DownloadDescriptor
+
+pub fn failure(String, String) -> HttpFailure
+
+pub async fn freeze_render_plan(@store.EditorRepository, String, Array[@domain.LocalMediaBinding], String) -> @render_plan.RenderPlan
+
+pub async fn get_export(@store.EditorRepository, String, String, String, @render_plan.RenderPlan) -> @export.ExportEnvelope
+
+pub async fn get_project(@store.EditorRepository, String) -> @store.SnapshotRecord?
+
+pub async fn get_snapshot(@store.EditorRepository, String) -> @workspace.WorkspaceSnapshot?
+
+pub async fn import_production(@store.EditorRepository, @media.MediaRegistry, @integration.ProductionProjectBinding, Array[@integration.GeneratedTake], @integration.ProductionIntent, Array[@integration.TakePayload], String) -> @integration.ProductionImportResult
+
+pub async fn list_projects(@store.EditorRepository) -> Array[@workspace.ProjectSummary]
+
+pub fn moonflow_candidate(@integration.MoonFlowCandidateRequest, @integration.AuthoritativeDeliveryBindings, @export.ExportEnvelope, String, String) -> @integration.MoonFlowHandoffCandidate raise
+
+pub async fn observe_job(@store.EditorRepository, String, String) -> @observation.JobObservation?
+
+pub async fn prepare_media_intake(@store.EditorRepository, String, Int, String, String, String, String, Int, String, Int, @domain.ProductionIdentity, @domain.RightsAttestation, @domain.MediaSourceAttestation, String, String) -> @workspace.WorkspaceIntake
+
+pub fn promote_master(String, Int, Int, @integration.MasterPromotionRequest, @integration.ExportReceipt, String, String, String) -> @integration.MasterPromotionReceipt raise
+
+pub fn promote_master_bundle(String, Int, Int, @integration.MasterPromotionRequest, @integration.ExportReceipt, @integration.MasterProvenance, Array[@integration.ShotAttemptBinding], String?, String, Int, String, String, String, String) -> @integration.MasterPromotionBundle raise
+
+pub async fn queue_job(@store.EditorRepository, String, String, String, String, String, String) -> @jobs.EditorJob
+
+pub async fn recover_job(@store.EditorRepository, String, String, String) -> @jobs.EditorJob?
+
+pub fn require_expected_revision(Int) -> Int raise
+
+pub fn require_id(String) -> String raise
+
+pub fn require_idempotency_key(String) -> String raise
+
+pub fn require_relative_path(String) -> String raise
+
+pub async fn retry_job(@store.EditorRepository, String, String, String) -> @observation.JobObservation
+
+pub fn routes() -> Array[RouteDescriptor]
+
+pub async fn save_review_comment(@store.EditorRepository, @workspace.WorkspaceReviewComment) -> @workspace.WorkspaceReviewComment
+
+pub async fn source_analysis(@store.EditorRepository, @media.MediaRegistry, String, String) -> @media.MediaAnalysis
+
+pub async fn source_media(@store.EditorRepository, @media.MediaRegistry, String, String) -> @download.DownloadDescriptor
+
+pub async fn source_thumbnail(@store.EditorRepository, @media.MediaRegistry, String, String) -> @download.DownloadDescriptor
+
+pub fn[T : ToJson] success(T, Int?, Bool, Bool) -> HttpSuccess
+
+// Errors
+
+// Types and methods
+pub(all) struct HttpErrorBody {
+  code : String
+  message : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct HttpFailure {
+  ok : Bool
+  dirty : Bool
+  saved : Bool
+  revision : Int?
+  conflict : Bool
+  error : HttpErrorBody
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct HttpSuccess {
+  ok : Bool
+  dirty : Bool
+  saved : Bool
+  revision : Int?
+  conflict : Bool
+  error : HttpErrorBody?
+  data : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RouteDescriptor {
+  request_method : String
+  path_template : String
+  handler : String
+  body_contract : String
+  response_contract : String
+  authority : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

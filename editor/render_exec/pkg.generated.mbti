@@ -1,0 +1,161 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/render_exec"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/domain",
+  "vectie/mooncast/editor/render_plan",
+  "vectie/mooncast/native_host/process",
+}
+
+// Values
+pub fn compile(String, @render_plan.RenderPlan, Array[ResolvedMedia], String) -> RenderInvocation raise
+
+pub fn compile_concat(String, Array[String], String, String, Int) -> ConcatInvocation raise
+
+pub fn compile_proxy(String, String, String, String, String) -> ProxyInvocation
+
+pub fn compile_thumbnail(String, String, String, String) -> AnalysisInvocation
+
+pub fn compile_waveform(String, String, String) -> AnalysisInvocation
+
+pub fn compile_with_encoding(String, @render_plan.RenderPlan, Array[ResolvedMedia], String, RenderEncoding) -> RenderInvocation raise
+
+pub fn delivery_encoding(String, String, String) -> RenderEncoding raise
+
+pub async fn execute(RenderInvocation) -> RenderReceipt
+
+pub async fn execute_analysis(AnalysisInvocation) -> @process.CommandResult
+
+pub async fn execute_concat(ConcatInvocation) -> RenderReceipt
+
+pub async fn execute_proxy(ProxyInvocation) -> RenderReceipt
+
+pub async fn inspect_render_output(String, String, String, Int, OutputExpectation) -> OutputInspection
+
+pub fn subtitle_sidecar(@render_plan.RenderPlan) -> SubtitleSidecar
+
+// Errors
+
+// Types and methods
+pub(all) struct AnalysisInvocation {
+  contract : String
+  kind : String
+  source_digest : String
+  output_path : String
+  command : @process.CommandSpec
+} derive(@debug.Debug)
+
+pub(all) struct ConcatInvocation {
+  contract : String
+  segment_paths : Array[String]
+  concat_manifest_path : String
+  output_path : String
+  manifest_text : String
+  command : @process.CommandSpec
+} derive(@debug.Debug)
+
+pub(all) struct OutputExpectation {
+  project_id : String
+  plan_digest : String
+  duration_seconds : Double
+  width : Int
+  height : Int
+  fps : @domain.FrameRate
+  container : String
+  video_codec : String
+  audio_codec : String
+  audio_required : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct OutputInspection {
+  contract : String
+  project_id : String
+  plan_digest : String
+  output_digest : String
+  output_size : Int
+  duration_seconds : Double
+  width : Int
+  height : Int
+  frame_rate : String
+  format_name : String
+  video_codec : String
+  audio_codec : String
+  passed : Bool
+  checks : Array[String]
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type OutputProbeDocument derive(@json.FromJson)
+
+type OutputProbeFormat derive(@json.FromJson)
+
+type OutputProbeStream derive(@json.FromJson)
+
+pub(all) struct ProxyInvocation {
+  contract : String
+  source_digest : String
+  source_path : String
+  output_path : String
+  profile : String
+  command : @process.CommandSpec
+} derive(@debug.Debug)
+
+pub(all) struct RenderEncoding {
+  container : String
+  video_codec : String
+  audio_codec : String
+  pixel_format : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RenderInvocation {
+  contract : String
+  executable : String
+  arguments : Array[String]
+  plan_digest : String
+  output_path : String
+  timeout_ms : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RenderReceipt {
+  contract : String
+  plan_digest : String
+  output_path : String
+  exit_code : Int
+  stderr_tail : String
+  timed_out : Bool
+  output_truncated : Bool
+  succeeded : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ResolvedMedia {
+  digest : String
+  path : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SidecarCue {
+  start_tick : Int
+  end_tick : Int
+  text : String
+  source_clip_id : String
+  evidence_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SubtitleSidecar {
+  contract : String
+  project_id : String
+  timeline_id : String
+  plan_digest : String
+  format : String
+  content : String
+  cue_count : Int
+  digest : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

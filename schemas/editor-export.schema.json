@@ -1,0 +1,154 @@
+{
+  "$id": "https://mooncast.local/contracts/editor-export.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contract": {
+      "const": "mooncast.editor-export.v1"
+    },
+    "job": {
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "project_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "project_revision": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "request_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "queued",
+            "running",
+            "succeeded",
+            "failed"
+          ]
+        },
+        "timeline_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "timeline_revision": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "job_id",
+        "request_id",
+        "state",
+        "project_id",
+        "timeline_id",
+        "project_revision",
+        "timeline_revision"
+      ],
+      "type": "object"
+    },
+    "request": {
+      "additionalProperties": false,
+      "properties": {
+        "project_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "project_revision": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "publication_authority": {
+          "const": false
+        },
+        "request_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "timeline_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "timeline_revision": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "request_id",
+        "project_id",
+        "timeline_id",
+        "project_revision",
+        "timeline_revision",
+        "publication_authority"
+      ],
+      "type": "object"
+    },
+    "result": {
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "output_refs": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "project_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "project_revision": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "publication_authority": {
+          "const": false
+        },
+        "state": {
+          "enum": [
+            "succeeded",
+            "failed"
+          ]
+        },
+        "timeline_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "timeline_revision": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "job_id",
+        "state",
+        "output_refs",
+        "publication_authority",
+        "project_id",
+        "timeline_id",
+        "project_revision",
+        "timeline_revision"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "contract",
+    "request",
+    "job",
+    "result"
+  ],
+  "title": "editor-export.v1",
+  "type": "object"
+}

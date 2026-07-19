@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.dev/schemas/editor-preview-authority.schema.json",
+  "title": "Mooncast Editor Preview Authority",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "schema_version",
+    "project_id",
+    "job_id",
+    "session_id",
+    "project_revision",
+    "timeline_id",
+    "timeline_revision",
+    "request",
+    "request_digest",
+    "plan_digest",
+    "spec_digest",
+    "provenance_digest",
+    "snapshot_digest",
+    "command_prefix_digest",
+    "created_at",
+    "publication_authority",
+    "provider_authority",
+    "anchor_digest"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mooncast.editor-preview-authority.v1"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "job_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "timeline_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timeline_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "request": {
+      "type": "object"
+    },
+    "request_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "plan_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "spec_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "provenance_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "snapshot_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "command_prefix_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "publication_authority": {
+      "const": false
+    },
+    "provider_authority": {
+      "const": false
+    },
+    "anchor_digest": {
+      "$ref": "#/$defs/digest"
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

@@ -1,0 +1,292 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.dev/schemas/editor-export-job.schema.json",
+  "title": "Mooncast Editor Export Job",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "job_id",
+    "state",
+    "plan",
+    "plan_digest",
+    "spec",
+    "attempt_count",
+    "job_revision",
+    "max_attempts",
+    "provider_ref",
+    "provider_version",
+    "cancel_requested",
+    "error",
+    "receipts",
+    "publication_authority"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mooncast.editor-export-job.v1"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "enum": [
+        "queued",
+        "running",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "plan": {
+      "$ref": "editor-render-plan.schema.json"
+    },
+    "plan_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "width",
+        "height",
+        "fps",
+        "container",
+        "video_codec",
+        "audio_codec",
+        "subtitle_mode",
+        "ai_label_mode",
+        "provenance",
+        "project_id",
+        "timeline_id",
+        "project_revision",
+        "timeline_revision",
+        "cost_ceiling",
+        "estimated_cost",
+        "estimate_method",
+        "contract",
+        "test_only",
+        "publication_authority",
+        "spec_digest"
+      ],
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "fps": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "numerator",
+            "denominator"
+          ],
+          "properties": {
+            "numerator": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "denominator": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "container": {
+          "type": "string",
+          "minLength": 1
+        },
+        "video_codec": {
+          "type": "string",
+          "minLength": 1
+        },
+        "audio_codec": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subtitle_mode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ai_label_mode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "retain_sources"
+          ],
+          "properties": {
+            "retain_sources": {
+              "type": "boolean"
+            }
+          }
+        },
+        "project_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeline_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timeline_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cost_ceiling": {
+          "type": "string"
+        },
+        "estimated_cost": {
+          "type": "string"
+        },
+        "estimate_method": {
+          "const": "decimal-mpix-frames-v1"
+        },
+        "contract": {
+          "const": "mooncast.editor-export.v1"
+        },
+        "test_only": {
+          "type": "boolean"
+        },
+        "publication_authority": {
+          "const": false
+        },
+        "spec_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "attempt_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "job_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_attempts": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "provider_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provider_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cancel_requested": {
+      "type": "boolean"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "minLength": 1
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "provider_ref": {
+              "type": "string",
+              "minLength": 1
+            },
+            "details": {}
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "receipts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "digest",
+          "size",
+          "output_ref",
+          "provenance",
+          "test_only",
+          "publication_authority"
+        ],
+        "properties": {
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "output_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "provider_ref",
+              "provider_version",
+              "plan_digest",
+              "spec_digest"
+            ],
+            "properties": {
+              "provider_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "provider_version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "plan_digest": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "spec_digest": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            }
+          },
+          "test_only": {
+            "type": "boolean"
+          },
+          "publication_authority": {
+            "const": false
+          }
+        }
+      }
+    },
+    "publication_authority": {
+      "const": false
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/editor-local-media-receipt.schema.json",
+  "title": "Mooncast local media intake receipt",
+  "type": "object",
+  "required": ["contract", "intake_id", "project_id", "role", "sha256", "rights", "source", "status", "request_digest", "publication_authority", "provider_authority"],
+  "properties": {
+    "contract": {"const": "mooncast.editor-local-media-intake.v1"},
+    "intake_id": {"type": "string"}, "project_id": {"type": "string"},
+    "role": {"enum": ["voice", "music", "SFX", "subtitle", "image", "logo"]},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "request_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "status": {"enum": ["awaiting-content", "completed"]},
+    "rights": {"type": "object"}, "source": {"type": "object"},
+    "media_ref_id": {"type": ["string", "null"]}, "registry_digest": {"type": ["string", "null"]},
+    "receipt_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "processing": {"type": "object"},
+    "track_id": {"type": "string"}, "track_kind": {"enum": ["audio", "overlay"]},
+    "publication_authority": {"const": false}, "provider_authority": {"const": false}
+  }
+}

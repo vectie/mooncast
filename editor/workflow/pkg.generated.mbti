@@ -1,0 +1,40 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/workflow"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/jobs",
+  "vectie/mooncast/editor/media",
+  "vectie/mooncast/editor/render_exec",
+  "vectie/mooncast/editor/store",
+}
+
+// Values
+pub async fn analyze_source(@media.MediaRegistry, String, String, String, String) -> @media.MediaAnalysis
+
+pub async fn complete_source_analysis(@media.MediaRegistry, @media.MediaAnalysis, Bytes?, String?, Int?, Int?, Bytes?, String) -> @media.MediaAnalysis
+
+pub async fn register_proxy(@media.MediaRegistry, @render_exec.ProxyInvocation, Bytes, String, Double?, String) -> @media.MediaObjectRecord
+
+pub async fn run_concat(@store.EditorRepository, @jobs.EditorJob, @render_exec.ConcatInvocation, String, String, String) -> RenderRun
+
+pub async fn run_proxy(@store.EditorRepository, @jobs.EditorJob, @render_exec.ProxyInvocation, String, String, String, String) -> RenderRun
+
+pub async fn run_render(@store.EditorRepository, @jobs.EditorJob, @render_exec.RenderInvocation, String, String, String, String) -> RenderRun
+
+pub async fn run_verified_render(@store.EditorRepository, @jobs.EditorJob, @render_exec.RenderInvocation, String, @render_exec.OutputExpectation, String, String, String, Int, String) -> (RenderRun, @render_exec.OutputInspection?)
+
+// Errors
+
+// Types and methods
+pub(all) struct RenderRun {
+  contract : String
+  job : @jobs.EditorJob
+  receipt : @render_exec.RenderReceipt
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

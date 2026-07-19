@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/editor-local-media-binding.schema.json",
+  "title": "Frozen local media render binding",
+  "type": "object",
+  "required": ["contract", "project_id", "intake_id", "intake_receipt_digest", "intake_receipt", "request_digest", "role", "rights_ref", "media_digest"],
+  "properties": {
+    "contract": {"const": "mooncast.editor-local-media-binding.v1"},
+    "project_id": {"type": "string"}, "intake_id": {"type": "string"},
+    "intake_receipt_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "intake_receipt": {"type": "object"},
+    "request_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "role": {"enum": ["voice", "music", "SFX", "subtitle", "image", "logo"]},
+    "rights_ref": {"type": "string", "minLength": 1},
+    "media_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "parser_version": {"type": "string"}, "cues": {"type": "array"},
+    "cue_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "inspector_version": {"type": "string"}, "width": {"type": "integer", "minimum": 1},
+    "height": {"type": "integer", "minimum": 1}
+  },
+  "allOf": [
+    {"if": {"properties": {"role": {"const": "subtitle"}}}, "then": {"required": ["parser_version", "cues", "cue_digest"]}},
+    {"if": {"properties": {"role": {"enum": ["image", "logo"]}}}, "then": {"required": ["inspector_version", "width", "height"]}}
+  ],
+  "additionalProperties": false
+}

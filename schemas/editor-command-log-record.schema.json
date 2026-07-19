@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/editor-command-log-record.schema.json",
+  "title": "Mooncast editor command log record v1",
+  "type": "object",
+  "required": ["contract", "schema_version", "project_id", "sequence", "command", "command_digest"],
+  "properties": {
+    "contract": {"const": "mooncast.editor-command-log-record.v1"},
+    "schema_version": {"const": 1},
+    "project_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "command": {"type": "object"},
+    "command_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "additionalProperties": false
+}

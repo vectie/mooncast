@@ -1,0 +1,876 @@
+{
+  "$id": "https://mooncast.local/contracts/editor-edit-command.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "actor": {
+      "additionalProperties": false,
+      "properties": {
+        "actor_id": {"$ref": "#/$defs/id"},
+        "provenance": {"minLength": 1, "type": "string"}
+      },
+      "required": ["actor_id", "provenance"],
+      "type": "object"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "type": "string"
+    },
+    "keyframePoint": {
+      "additionalProperties": false,
+      "properties": {
+        "tick": {"minimum": 0, "type": "integer"},
+        "value": {"type": "number"},
+        "interpolation": {
+          "enum": ["hold", "linear", "ease-in", "ease-out", "ease-in-out"]
+        }
+      },
+      "required": ["tick", "value", "interpolation"],
+      "type": "object"
+    },
+    "keyframes": {
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "opacity": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": 0, "maximum": 1}}}]}},
+        "scale": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": 0.1, "maximum": 4}}}]}},
+        "position_x": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": -1, "maximum": 1}}}]}},
+        "position_y": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": -1, "maximum": 1}}}]}},
+        "brightness": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": -1, "maximum": 1}}}]}},
+        "contrast": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": 0, "maximum": 3}}}]}},
+        "saturation": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": 0, "maximum": 3}}}]}},
+        "gamma": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": 0.1, "maximum": 3}}}]}},
+        "volume_db": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": -60, "maximum": 12}}}]}},
+        "pan": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": -1, "maximum": 1}}}]}}
+      },
+      "type": "object"
+    },
+    "transitionInput": {
+      "type": "object", "additionalProperties": false,
+      "required": ["transition_id", "track_id", "from_clip_id", "to_clip_id", "kind", "duration_ticks", "outgoing_handle_ticks", "incoming_handle_ticks", "color", "direction"],
+      "properties": {
+        "transition_id": {"$ref": "#/$defs/id"}, "track_id": {"$ref": "#/$defs/id"},
+        "from_clip_id": {"$ref": "#/$defs/id"}, "to_clip_id": {"$ref": "#/$defs/id"},
+        "kind": {"enum": ["cut", "cross-dissolve", "fade-through-color", "wipe-left", "wipe-right", "equal-power-crossfade"]},
+        "duration_ticks": {"type": "integer", "minimum": 0},
+        "outgoing_handle_ticks": {"type": "integer", "minimum": 0},
+        "incoming_handle_ticks": {"type": "integer", "minimum": 0},
+        "color": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$"},
+        "direction": {"enum": ["none", "left", "right"]}
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {"$ref": "#/$defs/actor"}, "command_id": {"$ref": "#/$defs/id"},
+        "contract": {"const": "mooncast.editor-edit-command.v1"}, "expected_revision": {"minimum": 0, "type": "integer"},
+        "payload": {"type": "object", "additionalProperties": false, "required": ["transition"], "properties": {"transition": {"$ref": "#/$defs/transitionInput"}}},
+        "type": {"const": "configure_transition"}
+      },
+      "required": ["contract", "command_id", "expected_revision", "actor", "type", "payload"], "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {"$ref": "#/$defs/actor"}, "command_id": {"$ref": "#/$defs/id"},
+        "contract": {"const": "mooncast.editor-edit-command.v1"}, "expected_revision": {"minimum": 0, "type": "integer"},
+        "payload": {"type": "object", "additionalProperties": false, "required": ["transition_id"], "properties": {"transition_id": {"$ref": "#/$defs/id"}}},
+        "type": {"const": "remove_transition"}
+      },
+      "required": ["contract", "command_id", "expected_revision", "actor", "type", "payload"], "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "additionalProperties": false,
+          "properties": {
+            "actor_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            "provenance": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "actor_id",
+            "provenance"
+          ],
+          "type": "object"
+        },
+        "command_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "contract": {
+          "const": "mooncast.editor-edit-command.v1"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "clip": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+                  "type": "string"
+                },
+                "clip_id": {
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+                  "type": "string"
+                },
+                "duration_ticks": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "identity": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "asset_id": {
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+                      "type": "string"
+                    },
+                    "episode_id": {
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+                      "type": "string"
+                    },
+                    "project_id": {
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+                      "type": "string"
+                    },
+                    "scene_id": {
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+                      "type": "string"
+                    },
+                    "shot_id": {
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "project_id",
+                    "episode_id",
+                    "scene_id",
+                    "shot_id",
+                    "asset_id"
+                  ],
+                  "type": "object"
+                },
+                "intent": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "intent_ref": {
+                      "pattern": "^moonwiki:intent:[A-Za-z0-9._:-]+$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "intent_ref"
+                  ],
+                  "type": "object"
+                },
+                "media_ref_id": {
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+                  "type": "string"
+                },
+                "source_in_tick": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "source_out_tick": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "start_tick": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "settings": {
+                  "type": "object"
+                },
+                "keyframes": {
+                  "$ref": "#/$defs/keyframes"
+                }
+              },
+              "required": [
+                "clip_id",
+                "media_ref_id",
+                "identity",
+                "intent",
+                "start_tick",
+                "duration_ticks",
+                "source_in_tick",
+                "source_out_tick"
+              ],
+              "type": "object"
+            },
+            "track_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "track_id",
+            "clip"
+          ],
+          "type": "object"
+        },
+        "type": {
+          "const": "add"
+        }
+      },
+      "required": [
+        "contract",
+        "command_id",
+        "expected_revision",
+        "actor",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "additionalProperties": false,
+          "properties": {
+            "actor_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            "provenance": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "actor_id",
+            "provenance"
+          ],
+          "type": "object"
+        },
+        "command_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "contract": {
+          "const": "mooncast.editor-edit-command.v1"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "clip_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            "start_tick": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "track_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip_id",
+            "track_id",
+            "start_tick"
+          ],
+          "type": "object"
+        },
+        "type": {
+          "const": "move"
+        }
+      },
+      "required": [
+        "contract",
+        "command_id",
+        "expected_revision",
+        "actor",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "additionalProperties": false,
+          "properties": {
+            "actor_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            "provenance": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "actor_id",
+            "provenance"
+          ],
+          "type": "object"
+        },
+        "command_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "contract": {
+          "const": "mooncast.editor-edit-command.v1"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "clip_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            "source_in_tick": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_out_tick": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "start_tick": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "clip_id",
+            "source_in_tick",
+            "source_out_tick"
+          ],
+          "type": "object"
+        },
+        "type": {
+          "const": "trim"
+        }
+      },
+      "required": [
+        "contract",
+        "command_id",
+        "expected_revision",
+        "actor",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "additionalProperties": false,
+          "properties": {
+            "actor_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            "provenance": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "actor_id",
+            "provenance"
+          ],
+          "type": "object"
+        },
+        "command_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "contract": {
+          "const": "mooncast.editor-edit-command.v1"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "clip_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            "left_clip_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            "right_clip_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            "split_tick": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "clip_id",
+            "split_tick",
+            "left_clip_id",
+            "right_clip_id"
+          ],
+          "type": "object"
+        },
+        "type": {
+          "const": "split"
+        }
+      },
+      "required": [
+        "contract",
+        "command_id",
+        "expected_revision",
+        "actor",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "additionalProperties": false,
+          "properties": {
+            "actor_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            "provenance": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "actor_id",
+            "provenance"
+          ],
+          "type": "object"
+        },
+        "command_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "contract": {
+          "const": "mooncast.editor-edit-command.v1"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "clip_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "clip_id"
+          ],
+          "type": "object"
+        },
+        "type": {
+          "const": "delete"
+        }
+      },
+      "required": [
+        "contract",
+        "command_id",
+        "expected_revision",
+        "actor",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "additionalProperties": false,
+          "properties": {
+            "actor_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            "provenance": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "actor_id",
+            "provenance"
+          ],
+          "type": "object"
+        },
+        "command_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "contract": {
+          "const": "mooncast.editor-edit-command.v1"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "target_command_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "type": {
+          "const": "undo"
+        }
+      },
+      "required": [
+        "contract",
+        "command_id",
+        "expected_revision",
+        "actor",
+        "type",
+        "target_command_id"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "additionalProperties": false,
+          "properties": {
+            "actor_id": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            "provenance": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "actor_id",
+            "provenance"
+          ],
+          "type": "object"
+        },
+        "command_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "contract": {
+          "const": "mooncast.editor-edit-command.v1"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "target_command_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        "type": {
+          "const": "redo"
+        }
+      },
+      "required": [
+        "contract",
+        "command_id",
+        "expected_revision",
+        "actor",
+        "type",
+        "target_command_id"
+      ],
+      "type": "object"
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract", "command_id", "expected_revision", "actor", "type", "payload"],
+      "properties": {
+        "contract": {"const": "mooncast.editor-edit-command.v1"},
+        "command_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+        "expected_revision": {"type": "integer", "minimum": 0},
+        "actor": {"type": "object", "required": ["actor_id", "provenance"]},
+        "type": {"enum": ["ripple_insert", "ripple_move", "ripple_trim", "ripple_delete"]},
+        "payload": {
+          "oneOf": [
+            {
+              "type": "object", "additionalProperties": false, "required": ["track_id", "clip"],
+              "properties": {
+                "track_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+                "clip": {"$ref": "#/oneOf/0/properties/payload/properties/clip"},
+                "before_clip_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"}
+              }
+            },
+            {
+              "type": "object", "additionalProperties": false, "required": ["clip_id", "track_id"],
+              "properties": {
+                "clip_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+                "track_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+                "before_clip_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"}
+              }
+            },
+            {
+              "type": "object", "additionalProperties": false, "required": ["clip_id", "source_in_tick", "source_out_tick"],
+              "properties": {
+                "clip_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+                "source_in_tick": {"type": "integer", "minimum": 0},
+                "source_out_tick": {"type": "integer", "minimum": 1}
+              }
+            },
+            {
+              "type": "object", "additionalProperties": false, "required": ["clip_id"],
+              "properties": {
+                "clip_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"}
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract", "command_id", "expected_revision", "actor", "type", "payload"],
+      "properties": {
+        "contract": {"const": "mooncast.editor-edit-command.v1"},
+        "command_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+        "expected_revision": {"type": "integer", "minimum": 0},
+        "actor": {"type": "object", "required": ["actor_id", "provenance"]},
+        "type": {"const": "configure_clip"},
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["clip_id", "settings"],
+          "properties": {
+            "clip_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+            "settings": {"type": "object"}
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract", "command_id", "expected_revision", "actor", "type", "payload"],
+      "properties": {
+        "contract": {"const": "mooncast.editor-edit-command.v1"},
+        "command_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+        "expected_revision": {"type": "integer", "minimum": 0},
+        "actor": {"type": "object", "required": ["actor_id", "provenance"]},
+        "type": {"const": "configure_track"},
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["track_id", "mix"],
+          "properties": {
+            "track_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+            "mix": {
+              "type": "object", "additionalProperties": false, "required": ["volume_db", "pan", "muted"],
+              "properties": {
+                "volume_db": {"type": "number", "minimum": -60, "maximum": 12},
+                "pan": {"type": "number", "minimum": -1, "maximum": 1},
+                "muted": {"type": "boolean"}
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract", "command_id", "expected_revision", "actor", "type", "payload"],
+      "properties": {
+        "contract": {"const": "mooncast.editor-edit-command.v1"},
+        "command_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+        "expected_revision": {"type": "integer", "minimum": 0},
+        "actor": {"type": "object", "required": ["actor_id", "provenance"]},
+        "type": {"const": "configure_output"},
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["output"],
+          "properties": {
+            "output": {
+              "type": "object", "additionalProperties": false,
+              "required": ["preset", "fps", "background"],
+              "properties": {
+                "preset": {"enum": ["horizontal-1080p", "vertical-1080p"]},
+                "fps": {
+                  "type": "object", "additionalProperties": false, "required": ["numerator", "denominator"],
+                  "properties": {"numerator": {"type": "integer", "minimum": 1}, "denominator": {"type": "integer", "minimum": 1}}
+                },
+                "background": {"type": "string", "minLength": 1}
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {"$ref": "#/$defs/actor"},
+        "command_id": {"$ref": "#/$defs/id"},
+        "contract": {"const": "mooncast.editor-edit-command.v1"},
+        "expected_revision": {"minimum": 0, "type": "integer"},
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "clip_id": {"$ref": "#/$defs/id"},
+            "keyframes": {"$ref": "#/$defs/keyframes"}
+          },
+          "required": ["clip_id", "keyframes"],
+          "type": "object"
+        },
+        "type": {"const": "set_keyframes"}
+      },
+      "required": ["contract", "command_id", "expected_revision", "actor", "type", "payload"],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {"$ref": "#/$defs/actor"},
+        "command_id": {"$ref": "#/$defs/id"},
+        "contract": {"const": "mooncast.editor-edit-command.v1"},
+        "expected_revision": {"minimum": 0, "type": "integer"},
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "moves": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "clip_id": {"$ref": "#/$defs/id"},
+                  "track_id": {"$ref": "#/$defs/id"},
+                  "start_tick": {"minimum": 0, "type": "integer"}
+                },
+                "required": ["clip_id", "track_id", "start_tick"],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "required": ["moves"],
+          "type": "object"
+        },
+        "type": {"const": "group_move"}
+      },
+      "required": ["contract", "command_id", "expected_revision", "actor", "type", "payload"],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {"$ref": "#/$defs/actor"},
+        "command_id": {"$ref": "#/$defs/id"},
+        "contract": {"const": "mooncast.editor-edit-command.v1"},
+        "expected_revision": {"minimum": 0, "type": "integer"},
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "clip_ids": {
+              "items": {"$ref": "#/$defs/id"},
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "track_id": {"$ref": "#/$defs/id"},
+            "before_clip_id": {"$ref": "#/$defs/id"}
+          },
+          "required": ["clip_ids", "track_id"],
+          "type": "object"
+        },
+        "type": {"const": "group_ripple_move"}
+      },
+      "required": ["contract", "command_id", "expected_revision", "actor", "type", "payload"],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {"$ref": "#/$defs/actor"},
+        "command_id": {"$ref": "#/$defs/id"},
+        "contract": {"const": "mooncast.editor-edit-command.v1"},
+        "expected_revision": {"minimum": 0, "type": "integer"},
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "clip_ids": {
+              "items": {"$ref": "#/$defs/id"},
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          "required": ["clip_ids"],
+          "type": "object"
+        },
+        "type": {"const": "group_delete"}
+      },
+      "required": ["contract", "command_id", "expected_revision", "actor", "type", "payload"],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {"$ref": "#/$defs/actor"},
+        "command_id": {"$ref": "#/$defs/id"},
+        "contract": {"const": "mooncast.editor-edit-command.v1"},
+        "expected_revision": {"minimum": 0, "type": "integer"},
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "trims": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "clip_id": {"$ref": "#/$defs/id"},
+                  "source_in_tick": {"minimum": 0, "type": "integer"},
+                  "source_out_tick": {"minimum": 1, "type": "integer"},
+                  "start_tick": {"minimum": 0, "type": "integer"}
+                },
+                "required": ["clip_id", "source_in_tick", "source_out_tick"],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "required": ["trims"],
+          "type": "object"
+        },
+        "type": {"const": "group_trim"}
+      },
+      "required": ["contract", "command_id", "expected_revision", "actor", "type", "payload"],
+      "type": "object"
+    }
+  ],
+  "title": "Edit Command v1"
+}

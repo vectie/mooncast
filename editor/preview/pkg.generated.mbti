@@ -1,0 +1,72 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/preview"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/cache",
+  "vectie/mooncast/editor/media",
+  "vectie/mooncast/editor/render_exec",
+  "vectie/mooncast/editor/render_plan",
+}
+
+// Values
+pub async fn commit_segment(@cache.PreviewCache, SegmentCommit) -> Unit
+
+pub async fn finalize_preview_cache(@cache.PreviewCache, PreviewWorkOrder, Int, Int) -> @render_plan.PreviewCacheReport
+
+pub async fn prepare_preview(@cache.PreviewCache, String, @render_plan.RenderPlan, Array[@render_exec.ResolvedMedia], Array[@render_plan.ProxyReadiness], Array[ProxyTask], String, String) -> PreviewWorkOrder
+
+pub async fn prepare_proxy_tasks(@media.MediaRegistry, String, Array[String], Array[SourcePathBinding], String) -> (Array[@render_plan.ProxyReadiness], Array[ProxyTask])
+
+// Errors
+
+// Types and methods
+pub(all) struct PreviewWorkOrder {
+  contract : String
+  project_id : String
+  project_revision : Int
+  plan_digest : String
+  proxy_readiness : Array[@render_plan.ProxyReadiness]
+  proxy_tasks : Array[ProxyTask]
+  segment_keys : Array[String]
+  cached_segment_paths : Array[String]
+  segment_tasks : Array[SegmentTask]
+  invalidated_segment_keys : Array[String]
+  concat : @render_exec.ConcatInvocation
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(@debug.Debug)
+
+pub(all) struct ProxyTask {
+  source_digest : String
+  expected_profile : String
+  invocation : @render_exec.ProxyInvocation
+} derive(@debug.Debug)
+
+pub(all) struct SegmentCommit {
+  segment_key : String
+  plan_digest : String
+  range : @render_plan.TickRange
+  media_digest : String
+  bytes : Bytes
+  completed_at : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct SegmentTask {
+  segment_key : String
+  range : @render_plan.TickRange
+  output_path : String
+  invocation : @render_exec.RenderInvocation
+} derive(@debug.Debug)
+
+pub(all) struct SourcePathBinding {
+  digest : String
+  path : String
+  media_kind : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

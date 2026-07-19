@@ -1,0 +1,66 @@
+{
+  "$id": "https://mooncast.local/contracts/editor-media-ref.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contract": {
+      "const": "mooncast.editor-media-ref.v1"
+    },
+    "locator": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "pack-relative"
+        },
+        "uri": {
+          "pattern": "^(?!/)(?!.*\\.\\.)[A-Za-z0-9._/-]+$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "uri"
+      ],
+      "type": "object"
+    },
+    "media_ref_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "properties": {
+        "duration_ticks": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "mime_type": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sha256",
+        "mime_type",
+        "size_bytes"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "contract",
+    "media_ref_id",
+    "locator",
+    "metadata"
+  ],
+  "title": "Immutable Media Reference v1",
+  "type": "object"
+}

@@ -1,0 +1,350 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.dev/schemas/editor-render-plan.schema.json",
+  "title": "Mooncast Editor Render Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "project_id",
+    "timeline_id",
+    "project_revision",
+    "timeline_revision",
+    "timebase",
+    "output",
+    "range",
+    "quality",
+    "tracks",
+    "transitions",
+    "findings",
+    "ready",
+    "publication_authority",
+    "plan_digest"
+  ],
+  "properties": {
+    "contract": {
+      "const": "mooncast.editor-render-plan.v1"
+    },
+    "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timeline_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "timebase": {
+      "$ref": "#/$defs/timebase"
+    },
+    "output": {
+      "$ref": "#/$defs/output"
+    },
+    "range": {
+      "$ref": "#/$defs/range"
+    },
+    "tracks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/track"
+      }
+    },
+    "transitions": {
+      "type": "array",
+      "items": {"$ref": "editor-frozen-transition.schema.json"}
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "publication_authority": {
+      "const": false
+    },
+    "timeline_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "quality": {
+      "type": "string",
+      "enum": [
+        "original",
+        "proxy"
+      ]
+    },
+    "ready": {
+      "type": "boolean"
+    },
+    "plan_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "$defs": {
+    "timebase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ticks_per_second"
+      ],
+      "properties": {
+        "ticks_per_second": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preset", "orientation", "width", "height", "fps", "background"],
+      "properties": {
+        "preset": {"enum": ["horizontal-1080p", "vertical-1080p"]},
+        "orientation": {"enum": ["horizontal", "vertical"]},
+        "width": {"type": "integer", "minimum": 1},
+        "height": {"type": "integer", "minimum": 1},
+        "fps": {
+          "type": "object", "additionalProperties": false,
+          "required": ["numerator", "denominator"],
+          "properties": {"numerator": {"type": "integer", "minimum": 1}, "denominator": {"type": "integer", "minimum": 1}}
+        },
+        "background": {"type": "string", "minLength": 1}
+      }
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start_tick",
+        "duration_ticks"
+      ],
+      "properties": {
+        "start_tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duration_ticks": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "track": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "track_id",
+        "kind",
+        "order",
+        "mix",
+        "clips"
+      ],
+      "properties": {
+        "track_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order": {
+          "type": "integer"
+        },
+        "mix": {
+          "type": ["object", "null"]
+        },
+        "clips": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/clip"
+          }
+        }
+      }
+    },
+    "clip": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "clip_id",
+        "media_ref_id",
+        "identity",
+        "start_tick",
+        "duration_ticks",
+        "source_in_tick",
+        "source_out_tick",
+        "settings",
+        "keyframes",
+        "original_digest",
+        "selected_digest",
+        "selection",
+        "original_source_refs",
+        "original_provenance_refs",
+        "original_rights_refs",
+        "selected_source_refs",
+        "selected_provenance_refs",
+        "selected_rights_refs",
+        "local_media"
+      ],
+      "properties": {
+        "clip_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "media_ref_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "local_media": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "editor-local-media-binding.schema.json"}
+          ]
+        },
+        "identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["project_id", "episode_id", "scene_id", "shot_id", "asset_id"],
+          "properties": {
+            "project_id": {"type": "string"},
+            "episode_id": {"type": "string"},
+            "scene_id": {"type": "string"},
+            "shot_id": {"type": "string"},
+            "asset_id": {"type": "string"}
+          }
+        },
+        "start_tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duration_ticks": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "source_in_tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_out_tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "settings": {"type": "object"},
+        "keyframes": {"$ref": "#/$defs/keyframes"},
+        "original_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "selected_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "selection": {
+          "type": "string",
+          "minLength": 1
+        },
+        "original_source_refs": {
+          "$ref": "#/$defs/refs"
+        },
+        "original_provenance_refs": {
+          "$ref": "#/$defs/refs"
+        },
+        "original_rights_refs": {
+          "$ref": "#/$defs/refs"
+        },
+        "selected_source_refs": {
+          "$ref": "#/$defs/refs"
+        },
+        "selected_provenance_refs": {
+          "$ref": "#/$defs/refs"
+        },
+        "selected_rights_refs": {
+          "$ref": "#/$defs/refs"
+        }
+      }
+    },
+    "keyframePoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tick", "value", "interpolation"],
+      "properties": {
+        "tick": {"type": "integer", "minimum": 0},
+        "value": {"type": "number"},
+        "interpolation": {
+          "enum": ["hold", "linear", "ease-in", "ease-out", "ease-in-out"]
+        }
+      }
+    },
+    "keyframes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "opacity": {"type": "array", "minItems": 1, "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": 0, "maximum": 1}}}]}},
+        "scale": {"type": "array", "minItems": 1, "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": 0.1, "maximum": 4}}}]}},
+        "position_x": {"type": "array", "minItems": 1, "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": -1, "maximum": 1}}}]}},
+        "position_y": {"type": "array", "minItems": 1, "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": -1, "maximum": 1}}}]}},
+        "brightness": {"type": "array", "minItems": 1, "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": -1, "maximum": 1}}}]}},
+        "contrast": {"type": "array", "minItems": 1, "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": 0, "maximum": 3}}}]}},
+        "saturation": {"type": "array", "minItems": 1, "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": 0, "maximum": 3}}}]}},
+        "gamma": {"type": "array", "minItems": 1, "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": 0.1, "maximum": 3}}}]}},
+        "volume_db": {"type": "array", "minItems": 1, "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": -60, "maximum": 12}}}]}},
+        "pan": {"type": "array", "minItems": 1, "items": {"allOf": [{"$ref": "#/$defs/keyframePoint"}, {"properties": {"value": {"minimum": -1, "maximum": 1}}}]}}
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detail": {
+          "type": "string"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clip_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "media_ref_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proxy_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "code",
+        "detail"
+      ]
+    },
+    "digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

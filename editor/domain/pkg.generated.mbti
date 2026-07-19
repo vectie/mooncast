@@ -1,0 +1,534 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/domain"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn command_from_json(StringView) -> EditCommand raise
+
+pub fn command_log_from_json(StringView) -> Array[CommandLogRecord] raise
+
+pub fn command_log_to_json(Array[CommandLogRecord]) -> String
+
+pub fn command_to_json(EditCommand) -> String
+
+pub fn default_clip_settings() -> ClipSettings
+
+pub fn empty_keyframes() -> KeyframeSet
+
+pub fn event_from_json(StringView) -> EditorEvent raise
+
+pub fn event_to_json(EditorEvent) -> String
+
+pub fn legacy_command_from_json(Json) -> EditCommand raise
+
+pub fn legacy_command_json(EditCommand) -> Json
+
+pub fn operation_kind(EditOperation) -> String
+
+pub fn replay(EditorProject, Array[EditCommand]) -> EditorSession raise EditorError
+
+pub fn sample_clip(Clip, Int) -> SampledClipState
+
+pub fn sample_curve(Array[KeyframePoint], Int, Double) -> Double
+
+pub fn session_from_json(StringView) -> EditorSession raise
+
+pub fn session_to_json(EditorSession) -> String
+
+pub fn snapshot_from_json(StringView) -> EditorProject raise
+
+pub fn snapshot_to_json(EditorProject) -> String
+
+pub fn split_keyframes(KeyframeSet, Int) -> (KeyframeSet, KeyframeSet)
+
+// Errors
+pub suberror EditorError {
+  InvalidCommand(String)
+  RevisionConflict(expected~ : Int, actual~ : Int)
+  DuplicateId(String)
+  UnknownTrack(String)
+  UnknownClip(String)
+  UnknownTransition(String)
+  IncompatibleTrack(String)
+  InvalidTimeline(String)
+  NothingToUndo
+  NothingToRedo
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+type AddPayload derive(ToJson, @json.FromJson)
+
+pub(all) struct AigcArtifact {
+  contract : String
+  artifact_id : String
+  source_refs : Array[String]
+  output_media_ref_ids : Array[String]
+  provider : String
+  model : String
+  prompt_digest : String
+  rights_state : String
+  review_state : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct AudioBus {
+  bus_id : String
+  kind : String
+  output_bus_id : String?
+  gain_db : Double
+  pan : Double
+  muted : Bool
+  solo : Bool
+  automation : BusAutomation
+  bus_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn AudioBus::sample(Self, Int) -> SampledBusState
+
+type AudioBusPayload derive(ToJson, @json.FromJson)
+
+pub(all) struct AudioMeter {
+  bus_id : String
+  tick : Int
+  peak_dbfs : Double
+  rms_dbfs : Double
+  integrated_lufs : Double
+  true_peak_dbtp : Double
+  clipped : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type AudioRoutePayload derive(ToJson, @json.FromJson)
+
+pub(all) struct AutomationPoint {
+  tick : Int
+  value : Double
+  interpolation : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct BusAutomation {
+  gain_db : Array[AutomationPoint]
+  pan : Array[AutomationPoint]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Clip {
+  clip_id : String
+  media_ref_id : String
+  identity : ProductionIdentity
+  intent : IntentRef
+  artifact_id : String?
+  start_tick : Int
+  duration_ticks : Int
+  source_in_tick : Int
+  source_out_tick : Int
+  settings : ClipSettings
+  keyframes : KeyframeSet
+  effects : Array[Effect]
+  effect_stack_digest : String
+  audio_bus_id : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Clip::source_tick_at(Self, Int) -> Int
+
+type ClipIdPayload derive(ToJson, @json.FromJson)
+
+pub(all) struct ClipSettings {
+  fit : String
+  opacity : Double
+  scale : Double
+  position_x : Double
+  position_y : Double
+  rotation_degrees : Double
+  brightness : Double
+  contrast : Double
+  saturation : Double
+  gamma : Double
+  volume_db : Double
+  pan : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CommandActor {
+  actor_id : String
+  provenance : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CommandLogRecord {
+  contract : String
+  command : EditCommand
+  before : EditorProject
+  after : EditorProject
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn CommandLogRecord::event(Self) -> EditorEvent
+
+type ConfigureClipPayload derive(ToJson, @json.FromJson)
+
+type ConfigureOutputPayload derive(ToJson, @json.FromJson)
+
+type ConfigureTrackPayload derive(ToJson, @json.FromJson)
+
+type ControlPayload derive(ToJson, @json.FromJson)
+
+pub(all) struct CropParameters {
+  left : Double
+  top : Double
+  right : Double
+  bottom : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DeliveryAudio {
+  target_lufs : Double
+  true_peak_limit_dbtp : Double
+  limiter_enabled : Bool
+  delivery_audio_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type DeliveryAudioPayload derive(ToJson, @json.FromJson)
+
+pub(all) struct EditCommand {
+  contract : String
+  command_id : String
+  expected_revision : Int
+  actor : CommandActor
+  operation : EditOperation
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum EditOperation {
+  Add(track_id~ : String, clip~ : Clip)
+  Move(clip_id~ : String, track_id~ : String, start_tick~ : Int)
+  Trim(clip_id~ : String, source_in_tick~ : Int, source_out_tick~ : Int, start_tick~ : Int?)
+  Split(clip_id~ : String, split_tick~ : Int, left_clip_id~ : String, right_clip_id~ : String)
+  Delete(clip_id~ : String)
+  RippleInsert(track_id~ : String, clip~ : Clip, before_clip_id~ : String?)
+  RippleMove(clip_id~ : String, track_id~ : String, before_clip_id~ : String?)
+  RippleTrim(clip_id~ : String, source_in_tick~ : Int, source_out_tick~ : Int)
+  RippleDelete(clip_id~ : String)
+  GroupMove(Array[MoveSpec])
+  GroupRippleMove(clip_ids~ : Array[String], track_id~ : String, before_clip_id~ : String?)
+  GroupDelete(Array[String])
+  GroupTrim(Array[TrimSpec])
+  ConfigureClip(clip_id~ : String, settings~ : ClipSettings)
+  ConfigureTrack(track_id~ : String, mix~ : TrackMix)
+  ConfigureOutput(OutputSettings)
+  SetKeyframes(clip_id~ : String, keyframes~ : KeyframeSet)
+  ConfigureTransition(Transition)
+  RemoveTransition(String)
+  ConfigureEffectStack(clip_id~ : String, effects~ : Array[Effect], effect_stack_digest~ : String)
+  ConfigureAudioRoute(clip_id~ : String, bus_id~ : String)
+  ConfigureAudioBus(AudioBus)
+  ConfigureDeliveryAudio(DeliveryAudio)
+  Undo(target_command_id~ : String?)
+  Redo(target_command_id~ : String?)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorEvent {
+  contract : String
+  event_id : String
+  command_id : String
+  project_id : String
+  timeline_id : String
+  before_revision : Int
+  after_revision : Int
+  actor : CommandActor
+  operation_kind : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorProject {
+  contract : String
+  project_id : String
+  revision : Int
+  identity_graph : Array[ProductionIdentity]
+  media_refs : Array[MediaRef]
+  artifacts : Array[AigcArtifact]
+  intent_refs : Array[IntentRef]
+  timeline : Timeline
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditorSession {
+  initial : EditorProject
+  snapshot : EditorProject
+  command_log : Array[CommandLogRecord]
+  active_command_ids : Array[String]
+  redo_command_ids : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn EditorSession::dispatch(Self, EditCommand) -> Self raise EditorError
+pub fn EditorSession::new(EditorProject) -> Self
+
+pub(all) struct Effect {
+  effect_id : String
+  kind : String
+  enabled : Bool
+  parameters : EffectParameters
+  effect_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EffectParameters {
+  crop : CropParameters?
+  transform : TransformParameters?
+  opacity : Double?
+  blend_mode : String?
+  mask : MaskParameters?
+  speed_points : Array[SpeedPoint]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type EffectPayload derive(ToJson, @json.FromJson)
+
+pub(all) struct FrameRate {
+  numerator : Int
+  denominator : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type GroupDeletePayload derive(ToJson, @json.FromJson)
+
+type GroupMovePayload derive(ToJson, @json.FromJson)
+
+type GroupRippleMovePayload derive(ToJson, @json.FromJson)
+
+type GroupTrimPayload derive(ToJson, @json.FromJson)
+
+pub(all) struct IntentRef {
+  intent_ref : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct KeyframePoint {
+  tick : Int
+  value : Double
+  interpolation : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct KeyframeSet {
+  opacity : Array[KeyframePoint]
+  scale : Array[KeyframePoint]
+  position_x : Array[KeyframePoint]
+  position_y : Array[KeyframePoint]
+  brightness : Array[KeyframePoint]
+  contrast : Array[KeyframePoint]
+  saturation : Array[KeyframePoint]
+  gamma : Array[KeyframePoint]
+  volume_db : Array[KeyframePoint]
+  pan : Array[KeyframePoint]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type KeyframesPayload derive(ToJson, @json.FromJson)
+
+pub(all) struct LocalMediaBinding {
+  contract : String
+  project_id : String
+  intake_id : String
+  intake_receipt_digest : String
+  intake_receipt : LocalMediaReceipt
+  request_digest : String
+  role : String
+  rights_ref : String
+  media_digest : String
+  parser_version : String
+  cue_digest : String
+  cues : Array[SubtitleCue]
+  width : Int
+  height : Int
+  inspector_version : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct LocalMediaReceipt {
+  contract : String
+  intake_id : String
+  project_id : String
+  expected_editor_revision : Int
+  idempotency_key : String
+  role : String
+  file_name : String
+  mime_type : String
+  size_bytes : Int
+  sha256 : String
+  duration_ticks : Int
+  identity : ProductionIdentity
+  rights : RightsAttestation
+  source : MediaSourceAttestation
+  created_by : String
+  request_digest : String
+  status : String
+  created_at : String
+  completed_at : String
+  media_ref_id : String
+  registry_digest : String
+  track_id : String
+  track_kind : String
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MaskParameters {
+  shape : String
+  x : Double
+  y : Double
+  width : Double
+  height : Double
+  feather : Double
+  invert : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MediaLocator {
+  kind : String
+  uri : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MediaMetadata {
+  sha256 : String
+  mime_type : String
+  size_bytes : Int
+  duration_ticks : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MediaRef {
+  contract : String
+  media_ref_id : String
+  locator : MediaLocator
+  metadata : MediaMetadata
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MediaSourceAttestation {
+  kind : String
+  source_id : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type MovePayload derive(ToJson, @json.FromJson)
+
+pub(all) struct MoveSpec {
+  clip_id : String
+  track_id : String
+  start_tick : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct OutputSettings {
+  preset : String
+  orientation : String
+  width : Int
+  height : Int
+  fps : FrameRate
+  background : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProductionIdentity {
+  project_id : String
+  episode_id : String
+  scene_id : String
+  shot_id : String
+  asset_id : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RightsAttestation {
+  confirmed : Bool
+  rights_ref : String
+  owner : String
+  basis : String
+  territory : String
+  channels : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type RippleInsertPayload derive(ToJson, @json.FromJson)
+
+type RippleMovePayload derive(ToJson, @json.FromJson)
+
+pub(all) struct SampledBusState {
+  bus_id : String
+  gain_db : Double
+  pan : Double
+  muted : Bool
+  solo : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SampledClipState {
+  opacity : Double
+  scale : Double
+  position_x : Double
+  position_y : Double
+  brightness : Double
+  contrast : Double
+  saturation : Double
+  gamma : Double
+  volume_db : Double
+  pan : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SpeedPoint {
+  timeline_tick : Int
+  source_tick : Int
+  interpolation : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type SplitPayload derive(ToJson, @json.FromJson)
+
+pub(all) struct SubtitleCue {
+  cue_id : String
+  start_tick : Int
+  end_tick : Int
+  text : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Timebase {
+  ticks_per_second : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Timeline {
+  contract : String
+  timeline_id : String
+  revision : Int
+  timebase : Timebase
+  output : OutputSettings
+  tracks : Array[Track]
+  transitions : Array[Transition]
+  audio_buses : Array[AudioBus]
+  delivery_audio : DeliveryAudio
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Track {
+  track_id : String
+  kind : String
+  order : Int
+  mix : TrackMix?
+  clips : Array[Clip]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct TrackMix {
+  volume_db : Double
+  pan : Double
+  muted : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct TransformParameters {
+  scale : Double
+  x : Double
+  y : Double
+  rotation_degrees : Double
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct Transition {
+  transition_id : String
+  track_id : String
+  from_clip_id : String
+  to_clip_id : String
+  kind : String
+  duration_ticks : Int
+  outgoing_handle_ticks : Int
+  incoming_handle_ticks : Int
+  color : String
+  direction : String
+  transition_digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type TransitionIdPayload derive(ToJson, @json.FromJson)
+
+type TransitionPayload derive(ToJson, @json.FromJson)
+
+type TrimPayload derive(ToJson, @json.FromJson)
+
+pub(all) struct TrimSpec {
+  clip_id : String
+  source_in_tick : Int
+  source_out_tick : Int
+  start_tick : Int?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+
