@@ -541,23 +541,32 @@ pub fn handle(command : ProjectCommand) -> CommandResult {
               )
             } else {
               match (command.actor, command.role) {
-                (Some(actor), Some(role)) if actor != "" && role != "" => {
-                  let event = {
-                    ..event_from(command, "gate-advanced", None),
-                    gate_receipt: Some({
-                      gate,
-                      actor,
-                      role,
-                      evidence_digest: command.evidence_digest,
-                      snapshot_revision: command.snapshot.revision,
-                      decided_at: command.recorded_at,
-                    }),
+                (Some(actor), Some(role)) => {
+                  let responsibility_issues = gate_reviewer_issues(actor, role)
+                  if !responsibility_issues.is_empty() {
+                    error_result(
+                      command,
+                      "named_human_reviewer_required",
+                      responsibility_issues.join(","),
+                    )
+                  } else {
+                    let event = {
+                      ..event_from(command, "gate-advanced", None),
+                      gate_receipt: Some({
+                        gate,
+                        actor,
+                        role,
+                        evidence_digest: command.evidence_digest,
+                        snapshot_revision: command.snapshot.revision,
+                        decided_at: command.recorded_at,
+                      }),
+                    }
+                    success_result(command, [event], readiness=ready)
                   }
-                  success_result(command, [event], readiness=ready)
                 }
                 _ =>
                   error_result(
-                    command, "named_reviewer_required", "actor and role are required",
+                    command, "named_human_reviewer_required", "actor and human role are required",
                   )
               }
             }

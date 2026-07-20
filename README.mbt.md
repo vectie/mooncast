@@ -21,6 +21,9 @@ moonbook pack install /path/to/mooncast /path/to/workspace host-profile.json
 Mooncast owns production policy and schemas. MoonLib, MoonBook, MoonClaw,
 MoonDesk, and Moonstat only consume generic pack projections.
 
+See [Responsibility and testability](docs/RESPONSIBILITY_AND_TESTABILITY.md)
+for the executable ownership boundary and layered verification model.
+
 Version 0.2 adds a systematic long-form production path alongside the original
 12-second local preview: durable projects, episode/scene/shot plans, G0–G7
 evidence gates, rights and bible locks, script/storyboard/animatic approval,
