@@ -21,6 +21,7 @@ import {
   "vectie/mooncast/editor/render_plan",
   "vectie/mooncast/kernel",
   "vectie/mooncast/native_host/http",
+  "vectie/mooncast/production/control_tower",
   "vectie/mooncast/production/creative",
   "vectie/mooncast/production/governance",
   "vectie/mooncast/production/project",
@@ -91,6 +92,10 @@ type ClientRevisionPolicyProjection derive(ToJson)
 type ClientWorkspaceProjection derive(ToJson)
 
 type CommercialDashboardProjection derive(ToJson)
+
+type ControlTowerActualsInput derive(ToJson, @json.FromJson)
+
+type ControlTowerAssignmentInput derive(ToJson, @json.FromJson)
 
 type ConversionProjection derive(ToJson)
 
@@ -378,6 +383,16 @@ pub(all) struct MediaRecord {
 
 type MoonWikiImportRequest derive(@json.FromJson)
 
+type MoonflowAdapterExercise derive(ToJson, @debug.Debug, @json.FromJson)
+
+type MoonflowAdapterRequest derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type MoonflowAttemptRecord derive(ToJson, @debug.Debug, @json.FromJson)
+
+type MoonflowInvokeEnvelope derive(ToJson, @debug.Debug, @json.FromJson)
+
+type MoonflowOperationSpec derive(Eq, @debug.Debug)
+
 type OutcomeHandoffPrepareInput derive(@json.FromJson)
 
 type OutcomeHandoffPrepareProjection derive(ToJson)
@@ -389,6 +404,8 @@ type PerformanceMetricsInput derive(ToJson, @json.FromJson)
 type PerformanceReviewInput derive(@json.FromJson)
 
 type PortalsProjection derive(ToJson)
+
+type PortfolioReservation
 
 type PostprocessTaskRequest derive(@json.FromJson)
 
@@ -425,6 +442,8 @@ pub(all) struct ProjectCommandResponse {
   result : @kernel.CommandResult
   idempotent_replay : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type ProjectCommercialBinding
 
 type ProjectExperienceMetadata derive(ToJson, @json.FromJson)
 
@@ -625,6 +644,7 @@ pub async fn StudioService::list_routed_executions(Self, String) -> Array[Routed
 pub fn StudioService::new(String, provider_catalog? : @vectie/mooncast/application/execution.ProviderCatalog) -> Self
 pub async fn StudioService::plan_routed_execution(Self, String, RoutedPlanRequest) -> RoutedExecutionRecord
 pub async fn StudioService::prepare_editor_intake(Self, String, EditorPrepareIntakeRequest) -> EditorPreparedIntake
+pub async fn StudioService::production_control_tower(Self, as_of_date? : String) -> @control_tower.ControlTower
 pub async fn StudioService::promote_editor_master(Self, String, String, EditorMasterPromotionEnvelope) -> @integration.MasterPromotionReceipt
 pub async fn StudioService::qualify_commercial_lead(Self, String, HumanDecisionInput) -> LeadProjection
 pub async fn StudioService::record_creative_artifact(Self, String, CreativeArtifactRequest) -> ProjectCommandResponse
@@ -634,7 +654,9 @@ pub async fn StudioService::record_project_qualification(Self, String, ProjectEx
 pub fn StudioService::register_animatic_routes(Self) -> Unit
 pub fn StudioService::register_asset_factory_routes(Self) -> Unit
 pub fn StudioService::register_automated_qc_routes(Self) -> Unit
+pub fn StudioService::register_control_tower_routes(Self) -> Unit
 pub async fn StudioService::register_media(Self, MediaRecord, Bytes) -> MediaRecord
+pub fn StudioService::register_moonflow_adapter_routes(Self) -> Unit
 pub fn StudioService::register_needs_intake_routes(Self) -> Unit
 pub fn StudioService::register_postprocess_routes(Self) -> Unit
 pub fn StudioService::register_production_coordinator_routes(Self) -> Unit

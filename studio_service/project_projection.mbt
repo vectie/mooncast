@@ -447,9 +447,12 @@ fn gates_json(snapshot : @kernel.ProjectSnapshot) -> Json {
   for gate in @governance.gate_sequence() {
     let id = gate.to_string()
     let receipts = snapshot.gate_receipts.filter(item => item.gate == gate)
+    let readiness = @kernel.gate_readiness(snapshot, gate)
     values[id] = Json::object({
       "name": names.get(id).unwrap_or(id).to_json(),
       "status": (if receipts.is_empty() { "pending" } else { "passed" }).to_json(),
+      "ready": readiness.ready.to_json(),
+      "reasons": readiness.reasons.to_json(),
       "receipt": if receipts.is_empty() {
         Json::null()
       } else {

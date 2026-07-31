@@ -106,9 +106,7 @@ pub async fn AssetFactoryService::record_plan(
   project_revision : Int,
 ) -> @factory.AssetFactoryPlan {
   let errors = @factory.plan_errors(plan, graph, project_revision)
-  guard errors.is_empty() else {
-    raise FactoryInvalid(errors.join("; "))
-  }
+  guard errors.is_empty() else { raise FactoryInvalid(errors.join("; ")) }
   let key = plan_key(plan.project_id, plan.plan.version)
   match self.store.get_json(key) {
     Some(value) => {
@@ -116,14 +114,18 @@ pub async fn AssetFactoryService::record_plan(
         _ => raise FactoryConflict("stored asset plan is corrupt")
       }
       guard prior == plan else {
-        raise FactoryConflict("plan id/version already binds different evidence")
+        raise FactoryConflict(
+          "plan id/version already binds different evidence",
+        )
       }
       prior
     }
     None => {
       for prior in self.list_plans(plan.project_id) {
         if prior.plan.version > plan.plan.version {
-          raise FactoryConflict("older asset plan cannot supersede a newer version")
+          raise FactoryConflict(
+            "older asset plan cannot supersede a newer version",
+          )
         }
       }
       ignore(self.store.put_json(key, plan.to_json()))
@@ -138,7 +140,11 @@ pub async fn AssetFactoryService::list_plans(
   project_id : String,
 ) -> Array[@factory.AssetFactoryPlan] {
   let values : Array[@factory.AssetFactoryPlan] = []
-  for key in self.store.list_keys(prefix="asset-plan-" + project_id + "-v", suffix=".json") {
+  for
+    key in self.store.list_keys(
+      prefix="asset-plan-" + project_id + "-v",
+      suffix=".json",
+    ) {
     match self.store.get_json(key) {
       Some(value) => {
         let plan : @factory.AssetFactoryPlan = @json.from_json(value) catch {
@@ -221,7 +227,9 @@ async fn AssetFactoryService::plan_approved(
   self : AssetFactoryService,
   plan : @factory.AssetFactoryPlan,
 ) -> Bool {
-  let matches = self.list_plan_decisions().filter(value => value.plan == plan.plan)
+  let matches = self
+    .list_plan_decisions()
+    .filter(value => value.plan == plan.plan)
   if matches.is_empty() {
     return false
   }
@@ -268,7 +276,11 @@ pub async fn AssetFactoryService::authorize_variants(
   let variants : Array[@factory.AssetGenerationVariant] = []
   for spec in plan.specs {
     for variant = 1; variant <= spec.variant_limit; variant = variant + 1 {
-      let variant_id = spec.asset_id + "-v" + spec.asset_version.to_string() + "-variant-" + variant.to_string()
+      let variant_id = spec.asset_id +
+        "-v" +
+        spec.asset_version.to_string() +
+        "-variant-" +
+        variant.to_string()
       match self.store.get_json(variant_key(variant_id)) {
         Some(value) => {
           variants.push(@json.from_json(value))
@@ -317,7 +329,12 @@ pub async fn AssetFactoryService::authorize_variants(
         modality: spec.capability,
         cost_cny: 0.0,
         state: provider.job.state,
-        evidence_refs: [plan.plan.digest, spec.intent.source_digest, spec.prompt_digest, ..spec.rights_refs],
+        evidence_refs: [
+          plan.plan.digest,
+          spec.intent.source_digest,
+          spec.prompt_digest,
+          ..spec.rights_refs,
+        ],
         updated_at: provider.updated_at,
         network_effect_performed: false,
         publication_authority: false,
@@ -351,7 +368,9 @@ async fn AssetFactoryService::refresh_variant(
         }),
         immutable: record.job.state == "completed",
       }
-      ignore(self.store.put_json(variant_key(value.variant_id), refreshed.to_json()))
+      ignore(
+        self.store.put_json(variant_key(value.variant_id), refreshed.to_json()),
+      )
       refreshed
     }
   }
@@ -396,9 +415,18 @@ pub async fn AssetFactoryService::record_finding(
     variant.state == "completed" else {
     raise FactoryInvalid("QC must bind a completed variant and named reviewer")
   }
-  let finding_id = "asset-qc-" + digest_text(
-    request.variant_id + ":" + request.dimension + ":" + request.evidence_digest + ":" + request.reviewer + ":" + request.reviewed_at,
-  )[7:31].to_owned()
+  let finding_id = "asset-qc-" +
+    digest_text(
+      request.variant_id +
+      ":" +
+      request.dimension +
+      ":" +
+      request.evidence_digest +
+      ":" +
+      request.reviewer +
+      ":" +
+      request.reviewed_at,
+    )[7:31].to_owned()
   let finding : @factory.AssetQcFinding = {
     contract: "mooncast.asset-qc-finding.v1",
     finding_id,
@@ -471,17 +499,33 @@ pub async fn AssetFactoryService::approve_asset(
     variant.provider_artifact_id is Some(provider_artifact_id) &&
     variant.output_digest is Some(output_digest) &&
     @factory.variant_passes_qc(request.variant_id, self.list_findings()) else {
-    raise FactoryInvalid("approval requires completed output and five passing QC dimensions")
+    raise FactoryInvalid(
+      "approval requires completed output and five passing QC dimensions",
+    )
   }
   guard self.current_plan_from_ref(variant.plan) is Some(plan) &&
-    plan.specs.iter().find_first(spec => {
-      spec.asset_id == request.asset_id && spec.asset_version == request.asset_version
-    }) is Some(spec) else {
+    plan.specs
+    .iter()
+    .find_first(spec => {
+      spec.asset_id == request.asset_id &&
+      spec.asset_version == request.asset_version
+    })
+    is Some(spec) else {
     raise FactoryConflict("asset spec changed before approval")
   }
-  let findings = self.list_findings().filter(value => value.variant_id == request.variant_id)
+  let findings = self
+    .list_findings()
+    .filter(value => value.variant_id == request.variant_id)
   let approval_digest = digest_text(
-    output_digest + ":" + request.actor + ":" + request.actor_role + ":" + request.approved_at + ":" + findings.map(item => item.finding_id).join("|"),
+    output_digest +
+    ":" +
+    request.actor +
+    ":" +
+    request.actor_role +
+    ":" +
+    request.approved_at +
+    ":" +
+    findings.map(item => item.finding_id).join("|"),
   )
   let approved : @factory.ApprovedReusableAsset = {
     contract: "mooncast.approved-reusable-asset.v1",
@@ -576,25 +620,38 @@ pub async fn AssetFactoryService::bind_approved_assets(
   let approved = self.list_approved_assets()
   let bindings : Array[@factory.ShotAssetBinding] = []
   for shot_id in shot_ids {
-    let specs = plan.specs.filter(spec => spec.dependent_shot_ids.contains(shot_id))
+    let specs = plan.specs.filter(spec => {
+      spec.dependent_shot_ids.contains(shot_id)
+    })
     if specs.is_empty() {
       continue
     }
     let assets : Array[@project.Asset] = []
     let approvals : Array[String] = []
     for spec in specs {
-      guard approved.iter().find_first(value => {
+      guard approved
+        .iter()
+        .find_first(value => {
           value.reference.asset_id == spec.asset_id &&
           value.reference.version == spec.asset_version &&
           value.plan == plan.plan
-        }) is Some(value) else {
-        raise FactoryConflict("every dependent asset must be approved before shot binding")
+        })
+        is Some(value) else {
+        raise FactoryConflict(
+          "every dependent asset must be approved before shot binding",
+        )
       }
       assets.push(value.reference)
       approvals.push(value.approval_digest)
     }
     let binding_id = digest_text(
-      project_id + ":" + project_revision.to_string() + ":" + shot_id + ":" + approvals.join("|"),
+      project_id +
+      ":" +
+      project_revision.to_string() +
+      ":" +
+      shot_id +
+      ":" +
+      approvals.join("|"),
     )[7:31].to_owned()
     let binding : @factory.ShotAssetBinding = {
       contract: "mooncast.shot-asset-binding.v1",
@@ -635,12 +692,18 @@ pub async fn AssetFactoryService::shot_assets(
   project_revision : Int,
   shot_id : String,
 ) -> Array[@project.Asset]? {
-  let matches = self.list_bindings().filter(value => {
-    value.project_id == project_id &&
-    value.project_revision == project_revision &&
-    value.shot_id == shot_id
-  })
-  if matches.length() == 1 { Some(matches[0].assets) } else { None }
+  let matches = self
+    .list_bindings()
+    .filter(value => {
+      value.project_id == project_id &&
+      value.project_revision == project_revision &&
+      value.shot_id == shot_id
+    })
+  if matches.length() == 1 {
+    Some(matches[0].assets)
+  } else {
+    None
+  }
 }
 
 ///|
@@ -649,15 +712,15 @@ pub async fn AssetFactoryService::workspace(
   project_id : String,
 ) -> @factory.AssetFactoryWorkspace {
   let project_plans = self.list_plans(project_id)
-  let variants = self.list_variants().filter(value => {
-    project_plans.any(plan => plan.plan == value.plan)
-  })
-  let plan_decisions = self.list_plan_decisions().filter(value => {
-    project_plans.any(plan => plan.plan == value.plan)
-  })
-  let approved_assets = self.list_approved_assets().filter(value => {
-    project_plans.any(plan => plan.plan == value.plan)
-  })
+  let variants = self
+    .list_variants()
+    .filter(value => project_plans.any(plan => plan.plan == value.plan))
+  let plan_decisions = self
+    .list_plan_decisions()
+    .filter(value => project_plans.any(plan => plan.plan == value.plan))
+  let approved_assets = self
+    .list_approved_assets()
+    .filter(value => project_plans.any(plan => plan.plan == value.plan))
   {
     contract: "mooncast.asset-factory-workspace.v1",
     plans: project_plans,
@@ -665,8 +728,12 @@ pub async fn AssetFactoryService::workspace(
     variants,
     findings: self.list_findings(),
     approved_assets,
-    shot_bindings: self.list_bindings().filter(value => value.project_id == project_id),
-    total_spent_cny: variants.fold(init=0.0, (sum, value) => sum + value.cost_cny),
+    shot_bindings: self
+    .list_bindings()
+    .filter(value => value.project_id == project_id),
+    total_spent_cny: variants.fold(init=0.0, (sum, value) => {
+      sum + value.cost_cny
+    }),
     publication_authority: false,
     provider_execution_authority: false,
   }

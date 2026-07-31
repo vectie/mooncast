@@ -311,6 +311,7 @@ fn asset_bin(dispatch : @rabbita.Emit[Msg], model : Model) -> @rabbita.Html {
             selected_take(model).map(take_is_eligible).unwrap_or(false) == false,
           on_click=dispatch(AddSelectedTake),
           match selected_take(model) {
+            Some(take) if take.already_placed => "Already placed"
             Some(take) => "Add \{take.role} → \{take.track_id}"
             None => "Add selected to timeline"
           },

@@ -248,7 +248,7 @@ fn native_take_variant(
     local_media: None,
     track_id: value.track_id,
     track_kind: value.track_kind,
-    already_placed: value.already_placed,
+    already_placed: value.already_placed || placed is Some(_),
     approved: value.approved,
     intent_ref,
     source: {
@@ -585,25 +585,53 @@ fn inspector_for_clip(model : Model, clip_id : String) -> InspectorDraft {
   let track_mix = track_for_clip(model, clip_id).bind(track => track.mix)
   {
     ..draft,
-    brightness: color
-    .map(value => value.brightness.to_string())
+    brightness: option_or(
+      settings.bind(value => value.brightness),
+      color.map(value => value.brightness),
+    )
+    .map(value => value.to_string())
     .unwrap_or(draft.brightness),
-    contrast: color
-    .map(value => value.contrast.to_string())
+    contrast: option_or(
+      settings.bind(value => value.contrast),
+      color.map(value => value.contrast),
+    )
+    .map(value => value.to_string())
     .unwrap_or(draft.contrast),
-    saturation: color
-    .map(value => value.saturation.to_string())
+    saturation: option_or(
+      settings.bind(value => value.saturation),
+      color.map(value => value.saturation),
+    )
+    .map(value => value.to_string())
     .unwrap_or(draft.saturation),
-    gamma: color.map(value => value.gamma.to_string()).unwrap_or(draft.gamma),
-    opacity: effect
-    .map(value => value.opacity.to_string())
+    gamma: option_or(
+      settings.bind(value => value.gamma),
+      color.map(value => value.gamma),
+    )
+    .map(value => value.to_string())
+    .unwrap_or(draft.gamma),
+    opacity: option_or(
+      settings.bind(value => value.opacity),
+      effect.map(value => value.opacity),
+    )
+    .map(value => value.to_string())
     .unwrap_or(draft.opacity),
-    scale: effect.map(value => value.scale.to_string()).unwrap_or(draft.scale),
-    position_x: effect
-    .map(value => value.x.to_string())
+    scale: option_or(
+      settings.bind(value => value.scale),
+      effect.map(value => value.scale),
+    )
+    .map(value => value.to_string())
+    .unwrap_or(draft.scale),
+    position_x: option_or(
+      settings.bind(value => value.position_x),
+      effect.map(value => value.x),
+    )
+    .map(value => value.to_string())
     .unwrap_or(draft.position_x),
-    position_y: effect
-    .map(value => value.y.to_string())
+    position_y: option_or(
+      settings.bind(value => value.position_y),
+      effect.map(value => value.y),
+    )
+    .map(value => value.to_string())
     .unwrap_or(draft.position_y),
     overlay_text: overlay.map(value => value.text).unwrap_or(draft.overlay_text),
     overlay_position: overlay
@@ -1031,9 +1059,18 @@ fn draw_proxy_media(
     return false
   }
   let effect = clip.settings.bind(value => value.effect)
-  let scale = effect.map(value => value.scale).unwrap_or(1.0)
-  let x = effect.map(value => value.x).unwrap_or(0.0)
-  let y = effect.map(value => value.y).unwrap_or(0.0)
+  let scale = option_or(
+    clip.settings.bind(value => value.scale),
+    effect.map(value => value.scale),
+  ).unwrap_or(1.0)
+  let x = option_or(
+    clip.settings.bind(value => value.position_x),
+    effect.map(value => value.x),
+  ).unwrap_or(0.0)
+  let y = option_or(
+    clip.settings.bind(value => value.position_y),
+    effect.map(value => value.y),
+  ).unwrap_or(0.0)
   let width = canvas_width * scale
   let height = canvas_height * scale
   let dx = (canvas_width - width) / 2.0 +

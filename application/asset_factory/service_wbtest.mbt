@@ -147,29 +147,36 @@ async test "multimodal asset factory binds immutable approved versions before sh
   assert_true(variants.all(value => !value.network_effect_performed))
   for variant in variants {
     for dimension in @factory.required_qc_dimensions() {
-      ignore(service.record_finding({
-        variant_id: variant.variant_id,
-        dimension,
-        status: "pass",
-        evidence_digest: variant.output_digest.unwrap() + ":" + dimension,
-        reviewer: "continuity-lead",
-        reviewer_role: "human-reviewer",
-        reviewed_at: "2026-07-19T12:02:00+08:00",
-        human_confirmed: true,
-      }))
+      ignore(
+        service.record_finding({
+          variant_id: variant.variant_id,
+          dimension,
+          status: "pass",
+          evidence_digest: variant.output_digest.unwrap() + ":" + dimension,
+          reviewer: "continuity-lead",
+          reviewer_role: "human-reviewer",
+          reviewed_at: "2026-07-19T12:02:00+08:00",
+          human_confirmed: true,
+        }),
+      )
     }
-    ignore(service.approve_asset({
-      asset_id: variant.asset_id,
-      asset_version: variant.asset_version,
-      variant_id: variant.variant_id,
-      actor: "creative-director",
-      actor_role: "creative-director",
-      approved_at: "2026-07-19T12:03:00+08:00",
-      human_confirmed: true,
-    }))
+    ignore(
+      service.approve_asset({
+        asset_id: variant.asset_id,
+        asset_version: variant.asset_version,
+        variant_id: variant.variant_id,
+        actor: "creative-director",
+        actor_role: "creative-director",
+        approved_at: "2026-07-19T12:03:00+08:00",
+        human_confirmed: true,
+      }),
+    )
   }
   let bindings = service.bind_approved_assets(
-    graph.project_id, 7, ["factory-shot-1"], "2026-07-19T12:04:00+08:00",
+    graph.project_id,
+    7,
+    ["factory-shot-1"],
+    "2026-07-19T12:04:00+08:00",
   )
   assert_eq(bindings.length(), 1)
   assert_eq(bindings[0].assets.length(), 6)

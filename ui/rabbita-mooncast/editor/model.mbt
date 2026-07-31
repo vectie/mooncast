@@ -72,6 +72,7 @@ struct InspectorDraft {
 
 ///|
 struct IntakeDraft {
+  selected_blob : @dom.Blob?
   role : String
   file_name : String
   mime_type : String
@@ -86,6 +87,15 @@ struct IntakeDraft {
   source_kind : String
   source_ref : String
   pasted_content : String
+}
+
+///|
+struct LocalMediaSelection {
+  blob : @dom.Blob
+  file_name : String
+  mime_type : String
+  size_bytes : Int
+  sha256 : String
 }
 
 ///|
@@ -466,6 +476,7 @@ fn initial_model() -> Model {
     },
     inspector: initial_inspector(),
     intake: {
+      selected_blob: None,
       role: "voice",
       file_name: "",
       mime_type: "audio/wav",

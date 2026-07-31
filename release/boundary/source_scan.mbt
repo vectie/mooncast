@@ -37,6 +37,28 @@ fn is_source_or_config(path : String) -> Bool {
 }
 
 ///|
+async fn contains_source_tree(directory : String) -> Bool {
+  let names = @fs.readdir(
+    directory,
+    include_hidden=true,
+    include_special=false,
+    sort=true,
+  )
+  for name in names {
+    if excluded_directories.contains(name) {
+      continue
+    }
+    let child = directory + "/" + name
+    match @fs.kind(child, follow_symlink=false) {
+      Regular if is_source_or_config(name) => return true
+      Directory if contains_source_tree(child) => return true
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
 fn imported_generic_core(line : String) -> Bool {
   let normalized = line.trim().to_owned().to_lower()
   for name in generic_core_names {
@@ -178,7 +200,8 @@ async fn scan_source_tree(
     let kind = @fs.kind(child, follow_symlink=false)
     match kind {
       Directory => {
-        if generic_core_names.contains(name.to_lower()) {
+        if generic_core_names.contains(name.to_lower()) &&
+          contains_source_tree(child) {
           issues.push(
             "\{child_relative}: embedded generic-core or Moonfish source tree",
           )

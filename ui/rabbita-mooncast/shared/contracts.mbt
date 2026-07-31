@@ -103,6 +103,18 @@ pub(all) struct OverlaySettings {
 
 ///|
 pub(all) struct ClipSettings {
+  fit : String?
+  opacity : Double?
+  scale : Double?
+  position_x : Double?
+  position_y : Double?
+  rotation_degrees : Double?
+  brightness : Double?
+  contrast : Double?
+  saturation : Double?
+  gamma : Double?
+  volume_db : Double?
+  pan : Double?
   transition : TransitionSettings?
   color : ColorSettings?
   effect : EffectSettings?

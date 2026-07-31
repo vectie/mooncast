@@ -10,7 +10,7 @@ struct ProbeStream {
 
 ///|
 struct ProbeFormat {
-  duration : String
+  duration : String?
 } derive(FromJson)
 
 ///|
@@ -80,11 +80,11 @@ pub async fn probe(
     source_size,
     source_mime: mime,
     state: "available",
-    duration_seconds: Some(
-      @string.parse_double(document.format.duration) catch {
+    duration_seconds: document.format.duration.map(duration => {
+      @string.parse_double(duration) catch {
         _ => 0.0
-      },
-    ),
+      }
+    }),
     video: {
       state: if video_codec == "" {
         "unavailable"

@@ -679,7 +679,7 @@ async fn StudioService::dispatch_unsafe(
     ) => {
       let take = self.find_editor_take(project_id, take_id)
       ignore(self.analyze_editor_media(take.media_digest))
-      let (media, content) = self.resolve_editor_media(take.media_digest, true)
+      let (media, content) = self.resolve_editor_media(take.media_digest, false)
       let range = request.headers.get("range")
       let if_none_match = request.headers.get("if-none-match")
       let response = @host_http.static_response(

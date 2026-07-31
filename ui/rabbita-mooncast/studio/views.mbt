@@ -479,6 +479,30 @@ fn gate_passed(project : ProjectProjection, gate : String) -> Bool {
 }
 
 ///|
+fn gate_reason_label(reason : String) -> String {
+  match reason {
+    "project_graph_invalid" => "repair the production graph"
+    "qualified_paid_scenario_required" => "record the qualified paid scenario"
+    "exact_brief_approval_required" => "approve the exact brief"
+    "cleared_rights_ledger_required" => "clear the rights ledger"
+    "rights_approval_required" => "approve the exact rights ledger"
+    "ip_bible_approval_required" => "approve the IP bible"
+    "script_approval_required" => "approve the script"
+    "claims_approval_required" => "approve the claims ledger"
+    "creative_dependency_binding_stale" => "refresh stale creative bindings"
+    "storyboard_approval_required" => "approve the storyboard"
+    "animatic_approval_required" => "approve the animatic"
+    "storyboard_animatic_duration_mismatch" => "align storyboard and animatic duration"
+    "animatic_cost_outside_budget" => "bring animatic cost inside budget"
+    "exact_rendered_animatic_approval_required" =>
+      "approve the exact rendered animatic"
+    "producer_and_finance_route_approval_required" =>
+      "obtain producer and finance route approvals"
+    other => other.replace_all(old="_", new=" ")
+  }
+}
+
+///|
 fn render_gate_rail(
   dispatch : Dispatch[Msg],
   model : Model,
@@ -489,7 +513,13 @@ fn render_gate_rail(
     gate_sequence().map(gate => {
       let value = project.gates
         .get(gate)
-        .unwrap_or({ name: gate, status: "pending", receipt: None })
+        .unwrap_or({
+          name: gate,
+          status: "pending",
+          ready: false,
+          reasons: ["gate readiness is unavailable"],
+          receipt: None,
+        })
       article(class="gate-card " + status_tone(value.status), [
         div([strong(gate), status_chip(value.status)]),
         p(value.name),
@@ -500,12 +530,24 @@ fn render_gate_rail(
             class="secondary compact",
             disabled=model.busy ||
               !model.operator.human_confirmed ||
+              !value.ready ||
               next_gate(project) != Some(gate),
             on_click=dispatch(AdvanceGate(gate)),
-            "Record evidence gate",
+            if value.ready {
+              "Record evidence gate"
+            } else {
+              "Complete prerequisites"
+            },
           )
         } else {
           small("Controlled in the dedicated downstream workspace")
+        },
+        if value.status != "passed" && !value.ready {
+          small(
+            "Next: " + value.reasons.map(gate_reason_label).join(" · "),
+          )
+        } else {
+          small("")
         },
       ])
     }),

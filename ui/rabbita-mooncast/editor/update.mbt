@@ -573,13 +573,17 @@ fn update(
         Ok(response) if take_id == model.selected_take_id =>
           match decode_analysis_response(response) {
             Some(analysis) =>
-              (@rabbita.none, { ..model, analysis: Some(analysis) })
+              (@rabbita.none, { ..model, analysis: Some(analysis), error: "" })
             None =>
               (
                 @rabbita.none,
                 {
                   ..model,
-                  error: "Media analysis used an unsupported response contract.",
+                  error: decode_api_error(response)
+                  .map(error => error.message)
+                  .unwrap_or(
+                    "Media analysis used an unsupported response contract.",
+                  ),
                 },
               )
           }
@@ -966,6 +970,15 @@ fn update(
       guard take_is_eligible(take) else {
         return (@rabbita.none, { ..model, error: take_eligibility(Some(take)) })
       }
+      guard !clips(model).any(clip => clip.media_ref_id == take.media_ref_id) else {
+        return (
+          @rabbita.none,
+          {
+            ..model,
+            error: "This media is already placed on the authoritative timeline.",
+          },
+        )
+      }
       guard take.add_clip_template is Some(template) else {
         return (@rabbita.none, model)
       }
@@ -1248,7 +1261,11 @@ fn update(
               {
                 ..model,
                 busy: false,
-                error: "Editor mutation used an unsupported response contract.",
+                error: decode_api_error(response)
+                .map(error => error.message)
+                .unwrap_or(
+                  "Editor mutation used an unsupported response contract.",
+                ),
               },
             )
           }
@@ -1805,6 +1822,65 @@ fn update(
         },
       )
     }
+    IntakeFileSelected(blob) =>
+      match blob {
+        None =>
+          (
+            @rabbita.none,
+            {
+              ..model,
+              intake: {
+                ..model.intake,
+                selected_blob: None,
+                file_name: "",
+                size_bytes: "0",
+                sha256: "",
+              },
+              busy: false,
+              error: "Choose one local media file.",
+            },
+          )
+        Some(value) =>
+          (
+            prepare_local_media_blob(dispatch, value),
+            {
+              ..model,
+              busy: true,
+              status: "Hashing the selected local media in the browser…",
+              error: "",
+            },
+          )
+      }
+    IntakeFilePrepared(result) =>
+      match result {
+        Err(error) =>
+          (
+            @rabbita.none,
+            {
+              ..model,
+              busy: false,
+              error: "Could not read selected local media: \{error}",
+            },
+          )
+        Ok(selection) =>
+          (
+            @rabbita.none,
+            {
+              ..model,
+              busy: false,
+              intake: {
+                ..model.intake,
+                selected_blob: Some(selection.blob),
+                file_name: selection.file_name,
+                mime_type: selection.mime_type,
+                size_bytes: selection.size_bytes.to_string(),
+                sha256: selection.sha256,
+              },
+              status: "Local media digest ready; confirm rights and source evidence.",
+              error: "",
+            },
+          )
+      }
     IntakeChanged(field, value) => {
       let draft = model.intake
       let intake = match field {
@@ -1891,17 +1967,25 @@ fn update(
       match result {
         Ok(response) =>
           match decode_intake_prepared(response) {
-            Some(prepared) =>
+            Some(prepared) => {
+              let upload = match model.intake.selected_blob {
+                Some(blob) => @http.post(prepared.upload_url).with_blob(blob)
+                None =>
+                  @http.post(prepared.upload_url).with_text(
+                    model.intake.pasted_content,
+                  )
+              }
               (
-                @http.post(prepared.upload_url)
-                .with_text(model.intake.pasted_content)
-                .expect_json(value => dispatch(IntakeContentUploaded(value))),
+                upload.expect_json(value => {
+                  dispatch(IntakeContentUploaded(value))
+                }),
                 {
                   ..model,
                   pending_intake_id: prepared.intake_id,
                   status: "Uploading immutable local media bytes…",
                 },
               )
+            }
             None =>
               (
                 @rabbita.none,
@@ -1933,6 +2017,7 @@ fn update(
               ..model,
               busy: false,
               loading: true,
+              intake: { ..model.intake, selected_blob: None },
               selected_take_id: "take-" + model.pending_intake_id,
               pending_intake_id: "",
               status: "Media verified; refreshing asset registry…",

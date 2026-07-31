@@ -343,6 +343,8 @@ struct AssetFactoryWorkspaceProjection {
 struct GateProjection {
   name : String
   status : String
+  ready : Bool
+  reasons : Array[String]
   receipt : Json?
 } derive(FromJson)
 

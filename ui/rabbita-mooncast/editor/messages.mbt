@@ -72,6 +72,8 @@ enum Msg {
   UtilityConcatCreated(Result[UtilityConcatJob, Error])
   UtilityConcatInputUploaded(Result[UtilityConcatJob, Error])
   UtilityConcatFinished(Result[UtilityConcatJob, Error])
+  IntakeFileSelected(@dom.Blob?)
+  IntakeFilePrepared(Result[LocalMediaSelection, Error])
   IntakeChanged(String, String)
   CreateMediaIntake
   IntakeCreated(Result[Json, Error])

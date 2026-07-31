@@ -36,7 +36,10 @@ fn media_intake_view(
         @html.input(
           input_type=@html.File,
           accept="audio/*,image/*,.srt,.vtt,.txt",
-          on_change=dispatch.map(value => IntakeChanged("file_name", value)),
+          id="media-intake-file",
+          on_change=dispatch.map(_ => {
+            IntakeFileSelected(selected_local_media_blob())
+          }),
         ),
       ],
       intake_input(dispatch, "Safe file name", "file_name", draft.file_name),
@@ -74,7 +77,7 @@ fn media_intake_view(
       ],
       @html.p(
         class="wide microcopy",
-        "Rabbita freezes rights metadata before upload. Binary picker wiring remains constrained to library-provided Blob selection; no ad-hoc JavaScript bridge is installed.",
+        "Rabbita reads the selected Blob, computes its SHA-256 in the browser, freezes rights and source metadata, then uploads those exact bytes. Text paste remains available for subtitle fixtures.",
       ),
       @html.button(
         class="primary wide",

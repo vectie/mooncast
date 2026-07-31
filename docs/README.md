@@ -13,4 +13,8 @@
 - [Multimodal asset factory](multimodal-asset-factory.md) — production graph.
 - [Local studio API](local-studio-api.md) and
   [native route coverage](native-route-coverage.md) — current service surface.
+- [UI-to-UI use cases](qualification/UI_TO_UI_USE_CASES.md) — repeatable
+  Studio, Cut Editor, and Client Review qualification.
+- [MoonVis → MoonCast creative loop](qualification/CROSS_PRODUCT_CREATIVE_LOOP.md)
+  — exact visual-asset intake, edit, render, and customer-review handoff.
 - [`adr/`](adr/) — editor and architecture decisions.

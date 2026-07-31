@@ -15,9 +15,9 @@ pub fn supported_capability(value : String) -> Bool {
 
 ///|
 pub fn supported_kind(value : String) -> Bool {
-  [
-    "character", "location", "prop", "voice", "music", "motion", "image", "text",
-  ].contains(value)
+  ["character", "location", "prop", "voice", "music", "motion", "image", "text"].contains(
+    value,
+  )
 }
 
 ///|
@@ -34,7 +34,9 @@ pub fn kind_capability_valid(kind : String, capability : String) -> Bool {
 
 ///|
 pub fn plan_digest(plan : AssetFactoryPlan) -> String {
-  sha256_text({ ..plan, plan: { ..plan.plan, digest: "" } }.to_json().stringify())
+  sha256_text(
+    { ..plan, plan: { ..plan.plan, digest: "" } }.to_json().stringify(),
+  )
 }
 
 ///|
@@ -52,7 +54,9 @@ pub fn plan_errors(
     plan.created_at == "" ||
     plan.publication_authority ||
     plan.provider_execution_authority {
-    errors.push("plan identity, project binding, time, and authority boundary are invalid")
+    errors.push(
+      "plan identity, project binding, time, and authority boundary are invalid",
+    )
   }
   if plan.specs.is_empty() {
     errors.push("at least one reusable asset spec is required")
@@ -61,7 +65,8 @@ pub fn plan_errors(
   let mut total = 0.0
   for index, spec in plan.specs {
     total = total + spec.cost_ceiling_cny * spec.variant_limit.to_double()
-    if spec.asset_id == "" || spec.asset_version < 1 ||
+    if spec.asset_id == "" ||
+      spec.asset_version < 1 ||
       !supported_kind(spec.kind) ||
       !supported_capability(spec.capability) ||
       !kind_capability_valid(spec.kind, spec.capability) ||

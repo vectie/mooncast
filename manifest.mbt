@@ -872,8 +872,7 @@ pub fn manifest() -> @pack.MoonPackManifest {
       contract("performance-feedback", "workflows/performance-feedback.md"),
       contract("moonflow-closed-loop", "workflows/moonflow-closed-loop.md"),
       contract(
-        "moonfind-review-episode",
-        "workflows/moonfind-review-episode.md",
+        "moonfind-review-episode", "workflows/moonfind-review-episode.md",
       ),
     ],
     skills: [

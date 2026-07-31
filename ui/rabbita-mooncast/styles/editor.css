@@ -83,10 +83,25 @@ a { color: var(--accent); }
 .surface-tabs button.is-active { color: var(--accent); }
 .source-monitor, .program-monitor { position: relative; min-height: 360px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: #03050a; }
 .source-monitor video, .source-monitor .source-image, .program-monitor video, .program-canvas { width: 100%; max-height: 500px; object-fit: contain; }
-.program-canvas-stack { width: 100%; display: grid; place-items: center; }
+.program-canvas-stack { position: relative; width: 100%; display: grid; place-items: center; overflow: hidden; }
 .program-canvas { aspect-ratio: 16 / 9; image-rendering: auto; }
-.program-media-bank { position: absolute; width: 1px; height: 1px; overflow: hidden; pointer-events: none; }
+.program-media-bank { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .program-proxy-media { width: 1px !important; height: 1px !important; opacity: 0; }
+.program-proxy-media.is-program-visible {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: none;
+  object-fit: contain;
+  opacity: var(--program-opacity, 1);
+  transform: translate(
+    calc(var(--program-x, 0) * 50%),
+    calc(var(--program-y, 0) * 50%)
+  ) scale(var(--program-scale, 1))
+    rotate(calc(var(--program-rotation, 0) * 1deg));
+  transform-origin: center;
+}
 .program-monitor .surface-tabs { position: absolute; z-index: 3; top: 10px; left: 10px; }
 .proxy-status { position: absolute; z-index: 3; bottom: 10px; left: 10px; display: flex; gap: 5px; }
 .cache-report { position: absolute; z-index: 3; right: 10px; bottom: 10px; max-width: 45%; display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: rgba(5,7,14,.86); font-size: .68rem; }

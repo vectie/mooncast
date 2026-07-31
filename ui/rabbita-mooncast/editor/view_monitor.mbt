@@ -96,16 +96,30 @@ fn program_media_node(
       let mime = take.source.mime.unwrap_or("")
       let active = clip_is_active(clip, model.playhead_ticks)
       let track_muted = track.mix.map(value => value.muted).unwrap_or(false)
+      let settings = clip.settings
+      let visible = active &&
+        !track_muted &&
+        (mime.has_prefix("video/") || mime.has_prefix("image/"))
+      let visual_class = "program-proxy-media" +
+        (if visible { " is-program-visible" } else { "" })
+      let visual_style = [
+        "--program-opacity: \{settings.bind(value => value.opacity).unwrap_or(1.0)}",
+        "--program-scale: \{settings.bind(value => value.scale).unwrap_or(1.0)}",
+        "--program-x: \{settings.bind(value => value.position_x).unwrap_or(0.0)}",
+        "--program-y: \{settings.bind(value => value.position_y).unwrap_or(0.0)}",
+        "--program-rotation: \{settings.bind(value => value.rotation_degrees).unwrap_or(0.0)}",
+      ]
       if source == "" {
         @html.nothing
       } else if mime.has_prefix("video/") {
         @html.video(
           id=program_media_id(clip),
-          class="program-proxy-media",
+          class=visual_class,
           src=source,
           autoplay=model.playing && active,
           muted=true,
           preload="auto",
+          style=visual_style,
           "",
         )
       } else if mime.has_prefix("audio/") {
@@ -121,11 +135,12 @@ fn program_media_node(
       } else if mime.has_prefix("image/") {
         @html.img(
           id=program_media_id(clip),
-          class="program-proxy-media",
+          class=visual_class,
           src=source,
           alt="",
           loading="eager",
           decoding="async",
+          style=visual_style,
         )
       } else {
         @html.nothing
@@ -142,7 +157,7 @@ fn program_media_bank(model : Model) -> @rabbita.Html {
       nodes.push(program_media_node(model, track, clip))
     }
   }
-  @html.div(class="program-media-bank", hidden=true) <| nodes
+  @html.div(class="program-media-bank") <| nodes
 }
 
 ///|
@@ -151,7 +166,7 @@ fn program_monitor(
   model : Model,
 ) -> @rabbita.Html {
   let ready = takes(model)
-    .filter(take => take.source.proxy_state.unwrap_or("missing") == "ready")
+    .filter(take => take.source.media_url is Some(_))
     .length()
   @html.div(class="program-monitor") <| [
     @html.div(class="surface-tabs") <| [
@@ -219,7 +234,7 @@ fn program_monitor(
         } else {
           "hold"
         },
-        "\{ready}/\{takes(model).length()} proxies ready",
+        "\{ready}/\{takes(model).length()} sources bound",
       ),
     ],
   ]
