@@ -17,6 +17,7 @@ fn safe_file_name(value : String) -> Bool {
 ///|
 fn allowed_intake_mime(role : String, mime : String) -> Bool {
   match role {
+    "video" => mime.has_prefix("video/")
     "voice" | "music" | "SFX" => mime.has_prefix("audio/")
     "subtitle" =>
       mime == "text/plain" ||
@@ -151,7 +152,9 @@ pub async fn complete_intake(
   guard record.digest == request.sha256 else {
     fail("local media digest mismatch")
   }
-  let track_kind = if request.role == "image" ||
+  let track_kind = if request.role == "video" {
+    "video"
+  } else if request.role == "image" ||
     request.role == "logo" ||
     request.role == "subtitle" {
     "overlay"

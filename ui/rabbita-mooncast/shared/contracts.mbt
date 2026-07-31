@@ -7,6 +7,11 @@ pub(all) struct ApiErrorBody {
 } derive(FromJson, ToJson)
 
 ///|
+pub(all) struct ErrorEnvelope {
+  error : ApiErrorBody?
+} derive(FromJson)
+
+///|
 pub(all) struct ProjectSummary {
   project_id : String
   revision : Int

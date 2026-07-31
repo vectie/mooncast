@@ -1,4 +1,8 @@
-# Mooncast
+# MoonCast
+
+> **Domain pack and studio · deterministic pipeline alpha.** Read the
+> [product contract](docs/PRODUCT_CONTRACT.md) for the cut-editor boundary,
+> provider truth, commercial acceptance and release gates.
 
 Paid productions now enter through a pack-local commercial intake: qualified lead, immutable 3–8 minute quote, named commercial/production/client decisions, finite studio capacity, margin and founder-hour forecast, then exact quote-to-draft-project conversion. See [Contract, quote, capacity, and project intake](docs/contract-quote-capacity-intake.md). No CRM, email, payment, calendar, creative, delivery, or publication authority is inferred by this flow.
 

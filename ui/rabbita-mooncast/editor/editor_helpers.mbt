@@ -347,6 +347,14 @@ fn decode_workspace_response(value : Json) -> @api.WorkspaceSnapshot? {
 }
 
 ///|
+fn decode_api_error(value : Json) -> @api.ApiErrorBody? {
+  let envelope : @api.ErrorEnvelope = @json.from_json(value) catch {
+    _ => return None
+  }
+  envelope.error
+}
+
+///|
 fn decode_mutation_response(
   value : Json,
   current : @api.WorkspaceSnapshot,

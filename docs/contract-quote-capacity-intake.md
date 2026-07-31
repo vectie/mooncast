@@ -34,6 +34,17 @@ Conversion prepopulates customer acceptance criteria, channels, objective, sched
 
 The UI exposes Leads, Quote Builder, Capacity Board, Margin Forecast, and Convert to Project in the existing production studio.
 
-## Next product gap
+## Portfolio continuation
 
-After intake, the next major product gap is a multi-project production control tower: planned versus actual labor/provider spend, live schedule drift, cross-project staffing changes, exception ownership, delivery-SLA risk, and portfolio-level contribution margin. The current slice decides whether work can be accepted; it does not yet manage several accepted productions as a studio portfolio.
+The intake board still decides whether an exact quote can be accepted and
+converted. The [multi-project production control
+tower](production-control-tower.md) continues that record after conversion. It
+compares accepted projects for cross-project overbooking and presents
+planned-versus-actual spend, remaining work, forecast drift, delivery-SLA risk,
+revision burden, accepted-minute cost, portfolio margin and named exception
+ownership.
+
+The continuation does not widen authority. It reads the exact converted quote
+and canonical production evidence; operator-entered actuals require named
+evidence. It never infers a CRM event, payment, invoice, provider result or
+publication.

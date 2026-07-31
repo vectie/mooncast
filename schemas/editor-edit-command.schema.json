@@ -627,7 +627,7 @@
               "type": "object", "additionalProperties": false, "required": ["track_id", "clip"],
               "properties": {
                 "track_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
-                "clip": {"$ref": "#/oneOf/0/properties/payload/properties/clip"},
+                "clip": {"$ref": "#/oneOf/2/properties/payload/properties/clip"},
                 "before_clip_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"}
               }
             },

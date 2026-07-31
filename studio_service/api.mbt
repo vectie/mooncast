@@ -539,6 +539,44 @@ async fn StudioService::dispatch_unsafe(
         self.project_command_ui(response),
       )
     }
+    (Post, ["api", "editor", "utility-concats"]) => {
+      let input : UtilityConcatCreateRequest = decode_body(request)
+      json_value_response(201, self.create_utility_concat(input))
+    }
+    (Post, ["api", "editor", "utility-concats", job_id, "inputs", index_text]) => {
+      let index = @string.parse_int(index_text) catch {
+        _ =>
+          raise Invalid(
+            code="utility_concat_index_invalid",
+            message="utility concat input index must be an integer",
+          )
+      }
+      json_value_response(
+        201,
+        self.upload_utility_concat_input(job_id, index, request.body),
+      )
+    }
+    (Post, ["api", "editor", "utility-concats", job_id, "run"]) =>
+      json_value_response(200, self.run_utility_concat(job_id))
+    (Get, ["api", "editor", "utility-concats", job_id]) =>
+      json_value_response(200, self.get_utility_concat(job_id))
+    (Get | Head, ["api", "editor", "utility-concats", job_id, "media"]) => {
+      let job = self.get_utility_concat(job_id)
+      let content = self.resolve_utility_concat_media(job_id)
+      let range = request.headers.get("range")
+      let if_none_match = request.headers.get("if-none-match")
+      let response = @host_http.static_response(
+        job.output_digest,
+        content,
+        range?,
+        if_none_match?,
+      )
+      response.headers["Content-Type"] = "video/mp4"
+      response.headers["Content-Disposition"] = "attachment; filename=\"mooncast-" +
+        job.job_id +
+        ".mp4\""
+      response
+    }
     (Get, ["api", "editor", "projects"]) =>
       json_value_response(200, self.list_editor_projects())
     (Post, ["api", "editor", "projects"]) => {

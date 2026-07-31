@@ -224,9 +224,15 @@ async fn handle_request(
     )
     return
   }
-  let body_limit = if path.has_prefix("/api/editor/projects/") &&
-    path.contains("/media-intakes/") &&
-    path.has_suffix("/content") {
+  let body_limit = if (
+      path.has_prefix("/api/editor/projects/") &&
+      path.contains("/media-intakes/") &&
+      path.has_suffix("/content")
+    ) ||
+    (
+      path.has_prefix("/api/editor/utility-concats/") &&
+      path.contains("/inputs/")
+    ) {
     max_editor_media_body
   } else {
     max_request_body
@@ -283,9 +289,14 @@ fn main {
     }
     let rabbita_root = @fs.realpath(configured_rabbita_root)
     let release_root = @fs.realpath(configured_release_root)
-    let data_root = @env.get_env_var("MOONCAST_DATA_ROOT").unwrap_or(
-      "var/native",
-    )
+    let data_root = match @env.get_env_var("MOONCAST_DATA_ROOT") {
+      Some(root) => root
+      None =>
+        match @env.get_env_var("LEPUSA_APP_DATA_DIR") {
+          Some(app_data) => app_data + "/mooncast"
+          None => "var/native"
+        }
+    }
     let server = @async_http.Server::new(
       @socket.Addr::parse(host + ":" + port.to_string()),
       reuse_addr=true,

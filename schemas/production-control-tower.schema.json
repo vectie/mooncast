@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast.production-control-tower.v1",
+  "title": "Multi-project production control tower",
+  "type": "object",
+  "required": [
+    "contract",
+    "pack_id",
+    "pack_version",
+    "as_of_date",
+    "projects",
+    "capacity_conflicts",
+    "exceptions",
+    "totals",
+    "missing_evidence",
+    "publication_authority",
+    "payment_effect_performed",
+    "external_effect_authorized",
+    "digest"
+  ],
+  "properties": {
+    "contract": {"const": "mooncast.production-control-tower.v1"},
+    "pack_id": {"const": "mooncast"},
+    "pack_version": {"type": "string", "minLength": 1},
+    "as_of_date": {"type": "string", "format": "date"},
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "contract",
+          "project_id",
+          "project_revision",
+          "title",
+          "stage",
+          "actual",
+          "schedule",
+          "remaining",
+          "revisions",
+          "capacity_conflict_ids",
+          "exception_ids",
+          "missing_evidence",
+          "digest"
+        ],
+        "properties": {
+          "contract": {"const": "mooncast.project-control-tower.v1"},
+          "project_id": {"type": "string", "minLength": 1},
+          "project_revision": {"type": "integer", "minimum": 0},
+          "title": {"type": "string"},
+          "stage": {"type": "string"},
+          "planned": {"type": ["object", "null"]},
+          "actual": {"type": "object"},
+          "variance": {"type": ["object", "null"]},
+          "schedule": {"type": "object"},
+          "remaining": {"type": "object"},
+          "revisions": {"type": "object"},
+          "accepted_minutes": {"type": ["number", "null"], "minimum": 0},
+          "cost_per_accepted_minute_cny": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "capacity_conflict_ids": {"type": "array", "items": {"type": "string"}},
+          "exception_ids": {"type": "array", "items": {"type": "string"}},
+          "missing_evidence": {"type": "array", "items": {"type": "string"}},
+          "digest": {"pattern": "^sha256:[0-9a-f]{64}$"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "capacity_conflicts": {"type": "array", "items": {"type": "object"}},
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "exception_id",
+          "kind",
+          "severity",
+          "summary",
+          "evidence_refs",
+          "digest"
+        ],
+        "properties": {
+          "exception_id": {"type": "string", "minLength": 1},
+          "kind": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["attention", "high", "critical"]},
+          "summary": {"type": "string", "minLength": 1},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}},
+          "digest": {"pattern": "^sha256:[0-9a-f]{64}$"},
+          "assignment": {
+            "oneOf": [
+              {"type": "null"},
+              {"$ref": "control-tower-exception-assignment.schema.json"}
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "totals": {
+      "type": "object",
+      "required": [
+        "project_count",
+        "projects_with_accepted_quotes",
+        "planned_revenue_cny",
+        "planned_direct_cost_cny",
+        "planned_contribution_margin_cny",
+        "actual_provider_cost_cny",
+        "planned_founder_hours",
+        "projects_at_sla_risk",
+        "open_exception_count",
+        "unowned_exception_count"
+      ],
+      "additionalProperties": true
+    },
+    "missing_evidence": {"type": "array", "items": {"type": "string"}},
+    "publication_authority": {"const": false},
+    "payment_effect_performed": {"const": false},
+    "external_effect_authorized": {"const": false},
+    "digest": {"pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "additionalProperties": false
+}

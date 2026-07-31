@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mooncast.local/schemas/host-authority-grant.schema.json",
+  "type": "object",
+  "required": [
+    "contract",
+    "authority",
+    "granted",
+    "granted_by",
+    "authority_ref",
+    "valid_until",
+    "publication_authority"
+  ],
+  "properties": {
+    "contract": {"const": "mooncast.host-authority-grant.v1"},
+    "authority": {"enum": ["provider-execution", "sandbox-process"]},
+    "granted": {"const": true},
+    "granted_by": {"type": "string", "minLength": 1},
+    "authority_ref": {"type": "string", "minLength": 1},
+    "valid_until": {"type": "string", "minLength": 1},
+    "publication_authority": {"const": false}
+  },
+  "additionalProperties": false
+}

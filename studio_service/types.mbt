@@ -313,6 +313,54 @@ pub(all) struct EditorExportCreateRequest {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+pub(all) struct UtilityConcatInputRequest {
+  file_name : String
+  mime_type : String
+  size_bytes : Int
+  sha256 : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct UtilityConcatCreateRequest {
+  contract : String
+  job_id : String
+  idempotency_key : String
+  inputs : Array[UtilityConcatInputRequest]
+  created_by : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct UtilityConcatInput {
+  index : Int
+  file_name : String
+  mime_type : String
+  size_bytes : Int
+  sha256 : String
+  uploaded : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct UtilityConcatJob {
+  contract : String
+  job_id : String
+  idempotency_key : String
+  request_digest : String
+  state : String
+  inputs : Array[UtilityConcatInput]
+  uploaded_count : Int
+  expected_count : Int
+  output_digest : String
+  output_size : Int
+  media_url : String
+  error : String
+  created_by : String
+  created_at : String
+  updated_at : String
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 pub(all) struct EditorJobView {
   job : @editor_jobs.EditorJob
   render_plan : @editor_plan.RenderPlan

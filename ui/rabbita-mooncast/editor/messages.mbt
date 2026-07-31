@@ -66,6 +66,12 @@ enum Msg {
   RemoveTransition
   SetKeyframe
   RemoveKeyframe
+  UtilityConcatFilesSelected(Array[UtilityConcatInput])
+  StartUtilityConcat
+  UtilityConcatFileHashed(Int, Result[String, Error])
+  UtilityConcatCreated(Result[UtilityConcatJob, Error])
+  UtilityConcatInputUploaded(Result[UtilityConcatJob, Error])
+  UtilityConcatFinished(Result[UtilityConcatJob, Error])
   IntakeChanged(String, String)
   CreateMediaIntake
   IntakeCreated(Result[Json, Error])

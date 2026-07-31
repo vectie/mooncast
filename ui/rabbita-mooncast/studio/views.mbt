@@ -31,6 +31,7 @@ type Dispatch[A] = @rabbita.Emit[A]
 fn tab_label(tab : StudioTab) -> String {
   match tab {
     Overview => "Overview"
+    ControlTower => "Control tower"
     NeedsStrategy => "Needs / Strategy"
     Creative => "Creative"
     AssetFactory => "Asset Factory"
@@ -62,8 +63,16 @@ fn tab_button(
 ///|
 fn status_tone(status : String) -> String {
   match status {
-    "passed" | "approved" | "completed" | "accepted" => "good"
-    "failed" | "rejected" | "attention-required" | "cancelled" => "bad"
+    "passed" | "approved" | "completed" | "accepted" | "complete" | "on-track" =>
+      "good"
+    "failed"
+    | "rejected"
+    | "attention-required"
+    | "cancelled"
+    | "breached"
+    | "high"
+    | "overage" =>
+      "bad"
     "running" | "building" => "active"
     _ => "pending"
   }
@@ -121,6 +130,7 @@ fn render_header(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
     ]),
     nav(class="studio-tabs", [
       tab_button(dispatch, model.tab, Overview),
+      tab_button(dispatch, model.tab, ControlTower),
       tab_button(dispatch, model.tab, NeedsStrategy),
       tab_button(dispatch, model.tab, Creative),
       tab_button(dispatch, model.tab, AssetFactory),
@@ -573,6 +583,488 @@ fn render_create_project(
       ),
     ]),
   ])
+}
+
+///|
+fn tower_money(value : Double?) -> String {
+  value.map(item => "CNY " + item.to_string()).unwrap_or("Evidence missing")
+}
+
+///|
+fn tower_number(value : Double?, suffix : String) -> String {
+  value.map(item => item.to_string() + suffix).unwrap_or("Evidence missing")
+}
+
+///|
+fn render_tower_project(
+  project : TowerProjectProjection,
+) -> @rabbita.Html {
+  let planned = project.planned
+  article(class="tower-project-card", [
+    div(class="tower-project-head", [
+      div([
+        small(project.project_id + " · r" + project.project_revision.to_string()),
+        h2(project.title),
+      ]),
+      div(class="chips", [
+        status_chip(project.stage),
+        status_chip(project.schedule.risk),
+      ]),
+    ]),
+    div(class="tower-project-metrics", [
+      metric(
+        "Completion",
+        "\{(project.remaining.completion_rate * 100.0).to_int()}%",
+        "\{project.remaining.work_units_complete}/\{project.remaining.work_units_total} governed work units",
+      ),
+      metric(
+        "Schedule drift",
+        project.schedule.drift_days
+        .map(value => value.to_string() + " days")
+        .unwrap_or("Evidence missing"),
+        project.schedule.basis.join(" · "),
+      ),
+      metric(
+        "Contribution margin",
+        tower_money(project.actual.contribution_margin_cny),
+        "Plan " +
+        planned
+        .map(value => "CNY " + value.contribution_margin_cny.to_string())
+        .unwrap_or("missing"),
+      ),
+      metric(
+        "Accepted-minute cost",
+        tower_money(project.cost_per_accepted_minute_cny),
+        project.accepted_minutes
+        .map(value => value.to_string() + " accepted minutes")
+        .unwrap_or("No exact client-accepted master"),
+      ),
+    ]),
+    div(class="tower-cost-grid", [
+      article(class="tower-cost-card", [
+        small("Provider spend"),
+        strong(
+          "Actual CNY " +
+          project.actual.provider.confirmed_total_cny
+          .unwrap_or(project.actual.provider.operational_total_cny)
+          .to_string(),
+        ),
+        p(
+          "Plan " +
+          planned
+          .map(value => "CNY " + value.provider_cny.to_string())
+          .unwrap_or("missing") +
+          " · " +
+          project.actual.provider.evidence_state,
+        ),
+        small(
+          "Shots " +
+          project.actual.provider.generation_attempts_cny.to_string() +
+          " · assets " +
+          project.actual.provider.asset_factory_cny.to_string() +
+          " · animatic " +
+          project.actual.provider.animatic_cny.to_string() +
+          " · post " +
+          project.actual.provider.postprocess_cny.to_string() +
+          " · QC " +
+          project.actual.provider.automated_qc_cny.to_string(),
+        ),
+      ]),
+      article(class="tower-cost-card", [
+        small("Labor / other"),
+        strong(
+          tower_money(project.actual.labor_cny) +
+          " / " +
+          tower_money(project.actual.other_cny),
+        ),
+        p(
+          "Plan labor " +
+          planned
+          .map(value => "CNY " + value.labor_cny.to_string())
+          .unwrap_or("missing") +
+          " · other " +
+          planned
+          .map(value => "CNY " + value.other_cny.to_string())
+          .unwrap_or("missing"),
+        ),
+        small(
+          tower_number(
+            project.actual.completed_labor_hours,
+            " completed labor hours",
+          ),
+        ),
+      ]),
+      article(class="tower-cost-card", [
+        small("Revenue / gross margin"),
+        strong(
+          tower_money(project.actual.revenue_cny) +
+          " / " +
+          tower_money(project.actual.gross_margin_cny),
+        ),
+        p(
+          "Plan revenue " +
+          planned
+          .map(value => "CNY " + value.revenue_cny.to_string())
+          .unwrap_or("missing"),
+        ),
+        small(
+          "Founder hours actual " +
+          tower_number(project.actual.founder_hours, "") +
+          " · plan " +
+          planned.map(value => value.founder_hours.to_string()).unwrap_or("missing"),
+        ),
+      ]),
+      article(class="tower-cost-card", [
+        small("Revision burden"),
+        strong(
+          project.revisions.used_rounds.to_string() +
+          " used / " +
+          project.revisions.included_rounds
+          .map(value => value.to_string())
+          .unwrap_or("?") +
+          " included",
+        ),
+        p(project.revisions.state),
+        small(
+          "\{project.remaining.shots_without_output} shots need output · \{project.remaining.shots_awaiting_qc} await QC",
+        ),
+      ]),
+    ]),
+    div(class="tower-next-actions", [
+      div([
+        small("Remaining work"),
+        ul(
+          if project.remaining.next_actions.is_empty() {
+            [li("No tracked production work remains.")]
+          } else {
+            project.remaining.next_actions.map(value => li(value))
+          },
+        ),
+      ]),
+      div([
+        small("Missing evidence"),
+        ul(
+          if project.missing_evidence.is_empty() {
+            [li("No required operating evidence is missing.")]
+          } else {
+            project.missing_evidence.map(value => li(value))
+          },
+        ),
+      ]),
+    ]),
+  ])
+}
+
+///|
+fn render_control_tower_actuals(
+  dispatch : Dispatch[Msg],
+  model : Model,
+  tower : ProductionControlTowerProjection,
+) -> @rabbita.Html {
+  let candidates = tower.projects.filter(value => {
+    value.project_id == model.selected_project_id
+  })
+  if candidates.length() != 1 {
+    return section(class="panel", [
+      div(class="panel-heading", [
+        div([small("OPERATING EVIDENCE"), h2("Select a project")]),
+        p("Choose a project in the left rail to record its named operating actuals."),
+      ]),
+    ])
+  }
+  let project = candidates[0]
+  let form = model.control_tower_actuals_form
+  section(class="panel", [
+    div(class="panel-heading", [
+      div([
+        small("OPERATING EVIDENCE · " + project.project_id),
+        h2("Record actuals against r" + project.project_revision.to_string()),
+      ]),
+      p(
+        "Blank values remain missing. Provider-operation spend is computed by Mooncast; a confirmed value records reconciliation evidence and exposes any discrepancy.",
+      ),
+    ]),
+    div(class="form-grid", [
+      form_field(
+        "Confirmed provider cost CNY",
+        form.provider_cost_confirmed_cny,
+        "blank until reconciled",
+        fn(value) { dispatch(SetControlTowerActualsField("provider", value)) },
+      ),
+      form_field(
+        "Direct labor cost CNY",
+        form.labor_cost_cny,
+        "blank until evidenced",
+        fn(value) { dispatch(SetControlTowerActualsField("labor", value)) },
+      ),
+      form_field(
+        "Other direct cost CNY",
+        form.other_cost_cny,
+        "blank until evidenced",
+        fn(value) { dispatch(SetControlTowerActualsField("other", value)) },
+      ),
+      form_field(
+        "Recognized revenue CNY",
+        form.recognized_revenue_cny,
+        "not payment inference",
+        fn(value) { dispatch(SetControlTowerActualsField("revenue", value)) },
+      ),
+      form_field(
+        "Founder hours",
+        form.founder_hours,
+        "blank until measured",
+        fn(value) { dispatch(SetControlTowerActualsField("founder", value)) },
+      ),
+      form_field(
+        "Completed labor hours",
+        form.completed_labor_hours,
+        "named time evidence",
+        fn(value) { dispatch(SetControlTowerActualsField("labor_hours", value)) },
+      ),
+      form_field(
+        "Forecast completion date",
+        form.forecast_completion_date,
+        "YYYY-MM-DD",
+        fn(value) { dispatch(SetControlTowerActualsField("forecast", value)) },
+      ),
+      text_field(
+        "Evidence references",
+        form.evidence_refs,
+        "One durable evidence reference per line",
+        4,
+        fn(value) { dispatch(SetControlTowerActualsField("evidence", value)) },
+      ),
+    ]),
+    div(class="form-actions", [
+      button(
+        class=if form.provider_cost_reconciled {
+          "confirmation confirmed"
+        } else {
+          "confirmation"
+        },
+        on_click=dispatch(ToggleProviderCostReconciled),
+        if form.provider_cost_reconciled {
+          "Provider cost reconciled"
+        } else {
+          "Provider cost remains operational-only"
+        },
+      ),
+      button(
+        class="primary",
+        disabled=model.busy || !model.operator.human_confirmed,
+        on_click=dispatch(RecordControlTowerActuals),
+        "Record exact operating actuals",
+      ),
+    ]),
+    p(
+      class="boundary-note",
+      "This record does not contact CRM, payment, calendar, publication, or provider systems.",
+    ),
+  ])
+}
+
+///|
+fn render_control_tower(
+  dispatch : Dispatch[Msg],
+  model : Model,
+) -> @rabbita.Html {
+  match model.control_tower {
+    None =>
+      section(class="panel empty-large", [
+        h2("Control tower unavailable"),
+        p("Refresh the canonical portfolio projection."),
+        button(
+          class="primary",
+          on_click=dispatch(RefreshControlTower),
+          "Refresh control tower",
+        ),
+      ])
+    Some(tower) => {
+      let totals = tower.totals
+      div(class="surface-stack", [
+        section(class="hero panel tower-hero", [
+          div([
+            small(tower.contract + " · " + tower.as_of_date),
+            h1("Production control tower"),
+            p(
+              class="lead",
+              "Run several accepted productions as one governed studio portfolio. Unknown actuals stay unknown; no customer, payment, publication, or provider authority is inferred.",
+            ),
+            div(class="chips", [
+              status_chip("pack " + tower.pack_version),
+              status_chip(
+                if totals.projects_at_sla_risk == 0 {
+                  "on-track"
+                } else {
+                  "attention-required"
+                },
+              ),
+            ]),
+          ]),
+          div(class="hero-facts", [
+            strong(totals.project_count.to_string()),
+            span("active project records"),
+            small(tower.digest),
+          ]),
+        ]),
+        div(class="metrics", [
+          metric(
+            "Planned revenue",
+            "CNY " + totals.planned_revenue_cny.to_string(),
+            "\{totals.projects_with_accepted_quotes}/\{totals.project_count} projects bind accepted quotes",
+          ),
+          metric(
+            "Contribution margin",
+            tower_money(totals.actual_contribution_margin_cny),
+            "Plan CNY " +
+            totals.planned_contribution_margin_cny.to_string(),
+          ),
+          metric(
+            "Provider spend",
+            "CNY " + totals.actual_provider_cost_cny.to_string(),
+            "Canonical operational records; reconciliation shown per project",
+          ),
+          metric(
+            "Exception ownership",
+            "\{totals.unowned_exception_count} unowned",
+            "\{totals.open_exception_count} open · \{totals.projects_at_sla_risk} projects at SLA risk",
+          ),
+        ]),
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([small("PROJECT PORTFOLIO"), h2("Plan versus actual")]),
+            button(
+              class="secondary",
+              on_click=dispatch(RefreshControlTower),
+              "Refresh evidence",
+            ),
+          ]),
+          div(
+            class="tower-project-list",
+            if tower.projects.is_empty() {
+              [p(class="empty", "No canonical production projects exist.")]
+            } else {
+              tower.projects.map(render_tower_project)
+            },
+          ),
+        ]),
+        render_control_tower_actuals(dispatch, model, tower),
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([small("FINITE CAPACITY"), h2("Conflicts and reallocation")]),
+            p(
+              "Candidates match role, skills, dates, and remaining weekly hours. Mooncast proposes; it does not rewrite reservations automatically.",
+            ),
+          ]),
+          div(
+            class="tower-conflict-list",
+            if tower.capacity_conflicts.is_empty() {
+              [p(class="callout good", "No cross-project capacity conflict is visible.")]
+            } else {
+              tower.capacity_conflicts.map(conflict => {
+                article(class="tower-conflict-card", [
+                  div(class="tower-project-head", [
+                    div([
+                      small(conflict.conflict_id),
+                      h3(conflict.resource_name + " · " + conflict.role),
+                    ]),
+                    status_chip("high"),
+                  ]),
+                  p(
+                    "\{conflict.reserved_hours}h reserved against \{conflict.weekly_hours}h weekly capacity · \{conflict.overbooked_hours}h over",
+                  ),
+                  small(
+                    conflict.project_ids.join(" ↔ ") +
+                    " · " +
+                    conflict.overlap_start +
+                    " to " +
+                    conflict.overlap_end,
+                  ),
+                  div(
+                    class="tower-candidates",
+                    if conflict.reallocation_candidates.is_empty() {
+                      [p(class="inline-error", "No compatible free resource is recorded.")]
+                    } else {
+                      conflict.reallocation_candidates.map(candidate => {
+                        div([
+                          strong(candidate.resource_name),
+                          small(
+                            "\{candidate.available_hours}h available · " +
+                            candidate.matched_skills.join(", "),
+                          ),
+                        ])
+                      })
+                    },
+                  ),
+                ])
+              })
+            },
+          ),
+        ]),
+        section(class="panel", [
+          div(class="panel-heading", [
+            div([small("EXCEPTION INBOX"), h2("Named ownership")]),
+            form_field(
+              "Owner action due",
+              model.control_tower_ownership_form.action_due_date,
+              "YYYY-MM-DD",
+              fn(value) { dispatch(SetControlTowerOwnershipDue(value)) },
+            ),
+          ]),
+          div(
+            class="tower-exception-list",
+            if tower.exceptions.is_empty() {
+              [p(class="callout good", "No operating exception is open.")]
+            } else {
+              tower.exceptions.map(exception => {
+                article(class="tower-exception-card", [
+                  div(class="tower-project-head", [
+                    div([
+                      small(
+                        exception.project_id.unwrap_or("portfolio") +
+                        " · " +
+                        exception.kind,
+                      ),
+                      h3(exception.summary),
+                    ]),
+                    status_chip(exception.severity),
+                  ]),
+                  small(exception.evidence_refs.join(" · ")),
+                  match exception.assignment {
+                    Some(owner) =>
+                      div(class="tower-owner", [
+                        strong(owner.owner + " · " + owner.owner_role),
+                        small(
+                          "Due " +
+                          owner.action_due_date +
+                          " · assignment v" +
+                          owner.version.to_string(),
+                        ),
+                      ])
+                    None =>
+                      div(class="tower-owner unowned", [
+                        strong("No named owner"),
+                        button(
+                          class="secondary",
+                          disabled=model.busy ||
+                            !model.operator.human_confirmed,
+                          on_click=dispatch(
+                            AssignControlTowerException(
+                              exception.exception_id,
+                            ),
+                          ),
+                          "Assign to current operator",
+                        ),
+                      ])
+                  },
+                ])
+              })
+            },
+          ),
+        ]),
+      ])
+    }
+  }
 }
 
 ///|
@@ -2811,6 +3303,7 @@ fn render_status(model : Model) -> @rabbita.Html {
 fn render_surface(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
   match model.tab {
     Overview => render_overview(dispatch, model, model.project)
+    ControlTower => render_control_tower(dispatch, model)
     NeedsStrategy => render_needs_strategy(dispatch, model)
     Creative => render_creative(dispatch, model, model.project)
     AssetFactory => render_asset_factory(dispatch, model)

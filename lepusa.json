@@ -1,0 +1,72 @@
+{
+  "identifier": "dev.vectie.mooncast",
+  "productName": "Mooncast",
+  "version": "0.2.0",
+  "runtime": {
+    "backend": "system-webview",
+    "assetProtocol": "lepusa",
+    "devtools": false
+  },
+  "signing": {
+    "identity": "-"
+  },
+  "window": {
+    "label": "studio",
+    "title": "Mooncast Studio",
+    "width": 1440,
+    "height": 960,
+    "resizable": true,
+    "source": {
+      "localhost": {
+        "host": "127.0.0.1",
+        "port": 4302,
+        "path": "/apps/mooncast/studio",
+        "readinessPath": "/health",
+        "command": [
+          "mooncast-studio"
+        ]
+      }
+    }
+  },
+  "plugins": [
+    {
+      "name": "localhost"
+    },
+    {
+      "name": "fileDialog"
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "studio",
+      "windows": [
+        "studio"
+      ],
+      "permissions": [
+        "localhost",
+        "file-dialog"
+      ]
+    }
+  ],
+  "bundleResources": [
+    {
+      "source": "_build/native/release/build/cmd/studio/studio.exe",
+      "path": "mooncast-studio",
+      "executable": true
+    },
+    {
+      "source": "ui/rabbita-mooncast/dist",
+      "path": "ui/rabbita-mooncast/dist"
+    },
+    {
+      "source": ".tools/ffmpeg/darwin_arm64/ffmpeg",
+      "path": ".tools/ffmpeg/darwin_arm64/ffmpeg",
+      "executable": true
+    },
+    {
+      "source": ".tools/ffmpeg/darwin_arm64/ffprobe",
+      "path": ".tools/ffmpeg/darwin_arm64/ffprobe",
+      "executable": true
+    }
+  ]
+}

@@ -167,12 +167,41 @@ button.confirmation.confirmed { border-style: solid; border-color: #5b802e; back
 .animatic-sheet { width: 100%; max-height: 460px; object-fit: contain; border: 1px solid #303641; border-radius: 10px; background: #0c0e12; }
 .animatic-player { width: 100%; max-height: 560px; margin-top: 12px; border: 1px solid #303641; border-radius: 10px; background: #08090c; }
 
+.tower-hero { border-color: #40552c; }
+.tower-project-list, .tower-conflict-list, .tower-exception-list { display: grid; gap: 12px; }
+.tower-project-card, .tower-conflict-card, .tower-exception-card {
+  display: grid; gap: 13px; padding: 16px; border: 1px solid #303640;
+  border-radius: 11px; background: #14181e;
+}
+.tower-project-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.tower-project-head h2, .tower-project-head h3 { margin: 4px 0 0; }
+.tower-project-head small { color: #7f8794; }
+.tower-project-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.tower-project-metrics .metric-card { min-height: 100px; background: #0e1217; }
+.tower-cost-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.tower-cost-card { display: grid; gap: 7px; padding: 13px; border: 1px solid #2b3139; border-radius: 9px; background: #0d1015; }
+.tower-cost-card small { color: #7e8793; line-height: 1.45; overflow-wrap: anywhere; }
+.tower-cost-card strong { font-size: 14px; overflow-wrap: anywhere; }
+.tower-cost-card p { margin: 0; color: #9ba2ad; font-size: 11px; line-height: 1.45; }
+.tower-next-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tower-next-actions > div { padding: 12px; border-radius: 9px; background: #0d1015; }
+.tower-next-actions small { color: #858d99; text-transform: uppercase; letter-spacing: .06em; }
+.tower-next-actions ul { margin: 10px 0 0; padding-left: 18px; color: #b5bbc4; font-size: 12px; line-height: 1.7; }
+.tower-conflict-card > p { margin: 0; color: #c7ccd3; }
+.tower-candidates { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 7px; }
+.tower-candidates > div { display: grid; gap: 4px; padding: 10px; border-radius: 8px; background: #0d1115; }
+.tower-candidates small { color: #858d98; }
+.tower-exception-list { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.tower-owner { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border-radius: 8px; background: #142013; }
+.tower-owner.unowned { background: #21171a; }
+.tower-owner small { color: #8c949f; }
+
 @media (max-width: 1180px) {
   .studio-header { grid-template-columns: 1fr auto; }
   .studio-tabs { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; overflow-x: auto; }
   .operator-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .operator-title { grid-column: 1 / -1; }
-  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metrics, .tower-project-metrics, .tower-cost-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
@@ -181,7 +210,7 @@ button.confirmation.confirmed { border-style: solid; border-color: #5b802e; back
   .studio-shell { grid-template-columns: 1fr; }
   .project-rail { position: static; height: auto; border-right: 0; border-bottom: 1px solid #292d35; }
   .project-list { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-  .operator-bar, .form-grid, .hero, .creative-layout, .metrics, .capacity-columns, .quote-metrics, .master-review-grid { grid-template-columns: 1fr; }
+  .operator-bar, .form-grid, .hero, .creative-layout, .metrics, .capacity-columns, .quote-metrics, .master-review-grid, .tower-project-metrics, .tower-cost-grid, .tower-next-actions { grid-template-columns: 1fr; }
   .operator-title { grid-column: auto; }
   .hero-facts { border-left: 0; border-top: 1px solid #333a40; }
   .panel-heading, .rail-heading { display: grid; }

@@ -60,9 +60,9 @@ async fn StudioService::bind_postprocess_output(
       input
     }
     "delivery" => {
-      guard self.delivery_application.list(project_id).any(build => {
-        build.build_id == input.destination_id
-      }) else {
+      guard self.delivery_application
+        .list(project_id)
+        .any(build => build.build_id == input.destination_id) else {
         raise Conflict(
           code="postprocess_delivery_missing",
           message="delivery destination was not found",
@@ -71,7 +71,8 @@ async fn StudioService::bind_postprocess_output(
       input
     }
     "editor" => {
-      guard self.editor_repository.load_snapshot(input.destination_id) is Some(_) &&
+      guard self.editor_repository.load_snapshot(input.destination_id)
+        is Some(_) &&
         self.execution_application.artifact_metadata(output.reference.digest)
         is Some(metadata) &&
         self.execution_application.artifact_bytes(output.reference.digest)
@@ -110,7 +111,12 @@ async fn StudioService::dispatch_postprocess_http(
       Some(json_value_response(200, self.postprocess.workspace(project_id)))
     (Post, ["api", "v2", "projects", project_id, "postprocess-jobs", "tasks"]) => {
       let input : PostprocessTaskRequest = decode_body(request)
-      Some(json_value_response(201, self.record_postprocess_task(project_id, input)))
+      Some(
+        json_value_response(
+          201,
+          self.record_postprocess_task(project_id, input),
+        ),
+      )
     }
     (Post, ["api", "v2", "projects", project_id, "postprocess-jobs", "run"]) => {
       let input : @postprocess_app.PostprocessRunRequest = decode_body(request)
@@ -118,7 +124,12 @@ async fn StudioService::dispatch_postprocess_http(
     }
     (Post, ["api", "v2", "projects", project_id, "postprocess-jobs", "imports"]) => {
       let input : @postprocess_app.PostprocessBindRequest = decode_body(request)
-      Some(json_value_response(201, self.bind_postprocess_output(project_id, input)))
+      Some(
+        json_value_response(
+          201,
+          self.bind_postprocess_output(project_id, input),
+        ),
+      )
     }
     _ => None
   }

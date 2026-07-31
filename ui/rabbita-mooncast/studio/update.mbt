@@ -30,6 +30,15 @@ fn api_error_message(value : Json) -> String? {
 }
 
 ///|
+fn optional_double_json(value : String) -> Json {
+  if value.trim() == "" {
+    Json::null()
+  } else {
+    (@string.parse_double(value) catch { _ => 0.0 }).to_json()
+  }
+}
+
+///|
 fn update(
   emit : @rabbita.Emit[Msg],
   msg : Msg,
@@ -46,8 +55,11 @@ fn update(
       let needs = @http.get("/api/v2/needs-intakes").expect_json(
         emit.map(fn(result) { LoadedNeedsIntake(result) }),
       )
+      let tower = @http.get("/api/control-tower").expect_json(
+        emit.map(fn(result) { LoadedControlTower(result) }),
+      )
       (
-        @rabbita.batch([projects, commercial, needs]),
+        @rabbita.batch([projects, commercial, needs, tower]),
         {
           ..model,
           loading: true,
@@ -55,7 +67,17 @@ fn update(
         },
       )
     }
-    SelectTab(tab) => (@rabbita.none, { ..model, tab, })
+    SelectTab(tab) =>
+      if tab == ControlTower {
+        (
+          @http.get("/api/control-tower").expect_json(
+            emit.map(fn(result) { LoadedControlTower(result) }),
+          ),
+          { ..model, tab, status: "Refreshing portfolio evidence…" },
+        )
+      } else {
+        (@rabbita.none, { ..model, tab, })
+      }
     SelectProject(project_id) => {
       let cmd = @http.get("/api/v2/projects/" + project_id).expect_json(
         emit.map(fn(result) { LoadedProject(result) }),
@@ -256,6 +278,187 @@ fn update(
           error: Some("Capacity board: \{error}"),
         },
       )
+    LoadedControlTower(Ok(value)) =>
+      (
+        @rabbita.none,
+        {
+          ..model,
+          control_tower: Some(value),
+          status: "Production control tower refreshed from canonical ledgers.",
+        },
+      )
+    LoadedControlTower(Err(error)) =>
+      (
+        @rabbita.none,
+        {
+          ..model,
+          error: Some("Production control tower: \{error}"),
+        },
+      )
+    RefreshControlTower =>
+      (
+        @http.get("/api/control-tower").expect_json(
+          emit.map(fn(result) { LoadedControlTower(result) }),
+        ),
+        { ..model, status: "Refreshing portfolio evidence…", error: None },
+      )
+    SetControlTowerActualsField(field, value) => {
+      let form = match field {
+        "provider" =>
+          { ..model.control_tower_actuals_form, provider_cost_confirmed_cny: value }
+        "labor" =>
+          { ..model.control_tower_actuals_form, labor_cost_cny: value }
+        "other" =>
+          { ..model.control_tower_actuals_form, other_cost_cny: value }
+        "revenue" =>
+          { ..model.control_tower_actuals_form, recognized_revenue_cny: value }
+        "founder" =>
+          { ..model.control_tower_actuals_form, founder_hours: value }
+        "labor_hours" =>
+          { ..model.control_tower_actuals_form, completed_labor_hours: value }
+        "forecast" =>
+          { ..model.control_tower_actuals_form, forecast_completion_date: value }
+        "evidence" =>
+          { ..model.control_tower_actuals_form, evidence_refs: value }
+        _ => model.control_tower_actuals_form
+      }
+      (@rabbita.none, { ..model, control_tower_actuals_form: form })
+    }
+    ToggleProviderCostReconciled =>
+      (
+        @rabbita.none,
+        {
+          ..model,
+          control_tower_actuals_form: {
+            ..model.control_tower_actuals_form,
+            provider_cost_reconciled: !model
+            .control_tower_actuals_form
+            .provider_cost_reconciled,
+          },
+        },
+      )
+    RecordControlTowerActuals =>
+      match model.control_tower {
+        Some(tower) => {
+          let candidates = tower.projects.filter(value => {
+            value.project_id == model.selected_project_id
+          })
+          if candidates.length() != 1 {
+            (
+              @rabbita.none,
+              { ..model, error: Some("Select one project in the project rail.") },
+            )
+          } else {
+            let project = candidates[0]
+            let form = model.control_tower_actuals_form
+            let body : Json = {
+              "command_id": "tower-actuals-" +
+              (model.command_sequence + 1).to_string(),
+              "expected_project_revision": project.project_revision,
+              "expected_actuals_version": project.actuals_version
+              .map(value => value.to_json())
+              .unwrap_or(Json::null()),
+              "expected_actuals_digest": project.actuals_digest
+              .map(value => value.to_json())
+              .unwrap_or(Json::null()),
+              "provider_cost_confirmed_cny": optional_double_json(
+                form.provider_cost_confirmed_cny,
+              ),
+              "labor_cost_cny": optional_double_json(form.labor_cost_cny),
+              "other_cost_cny": optional_double_json(form.other_cost_cny),
+              "recognized_revenue_cny": optional_double_json(
+                form.recognized_revenue_cny,
+              ),
+              "founder_hours": optional_double_json(form.founder_hours),
+              "completed_labor_hours": optional_double_json(
+                form.completed_labor_hours,
+              ),
+              "forecast_completion_date": if form.forecast_completion_date.trim() == "" {
+                Json::null()
+              } else {
+                form.forecast_completion_date.to_json()
+              },
+              "provider_cost_reconciled": form.provider_cost_reconciled,
+              "evidence_refs": split_lines(form.evidence_refs),
+              "actor": model.operator.actor,
+              "actor_role": model.operator.role,
+              "observed_at": model.operator.recorded_at,
+              "human_confirmed": model.operator.human_confirmed,
+            }
+            let cmd = @http.post(
+                "/api/control-tower/projects/" +
+                project.project_id +
+                "/actuals",
+              )
+              .with_json(body)
+              .expect_json(
+                emit.map(fn(result) {
+                  ActionCompleted("Control-tower operating actuals", result)
+                }),
+              )
+            (cmd, { ..model, busy: true, error: None })
+          }
+        }
+        None => (@rabbita.none, model)
+      }
+    SetControlTowerOwnershipDue(value) =>
+      (
+        @rabbita.none,
+        {
+          ..model,
+          control_tower_ownership_form: {
+            action_due_date: value,
+          },
+        },
+      )
+    AssignControlTowerException(exception_id) =>
+      match model.control_tower {
+        Some(tower) => {
+          let candidates = tower.exceptions.filter(value => {
+            value.exception_id == exception_id
+          })
+          if candidates.length() != 1 {
+            (@rabbita.none, model)
+          } else {
+            let exception = candidates[0]
+            let assignment = exception.assignment
+            let body : Json = {
+              "command_id": "tower-owner-" +
+              (model.command_sequence + 1).to_string(),
+              "expected_exception_digest": exception.digest,
+              "expected_assignment_version": assignment
+              .map(value => value.version.to_json())
+              .unwrap_or(Json::null()),
+              "expected_assignment_digest": assignment
+              .map(value => value.digest.to_json())
+              .unwrap_or(Json::null()),
+              "owner": model.operator.actor,
+              "owner_role": model.operator.role,
+              "action_due_date": model
+              .control_tower_ownership_form
+              .action_due_date,
+              "note": model.operator.note,
+              "assigned_by": model.operator.actor,
+              "assigned_by_role": model.operator.role,
+              "assigned_at": model.operator.recorded_at,
+              "human_confirmed": model.operator.human_confirmed,
+            }
+            let cmd = @http.post(
+                "/api/control-tower/exceptions/" +
+                exception_id +
+                "/assignment",
+              )
+              .with_json(body)
+              .expect_json(
+                emit.map(fn(result) {
+                  ActionCompleted("Named exception ownership", result)
+                }),
+              )
+            (cmd, { ..model, busy: true, error: None })
+          }
+        }
+        None => (@rabbita.none, model)
+      }
     LoadedNeedsIntake(Ok(value)) => {
       let selected = if model.selected_intake_id == "" &&
         !value.intakes.is_empty() {
@@ -839,6 +1042,11 @@ fn update(
           commands.push(
             @http.get("/api/commercial-intake").expect_json(
               emit.map(fn(result) { LoadedCommercial(result) }),
+            ),
+          )
+          commands.push(
+            @http.get("/api/control-tower").expect_json(
+              emit.map(fn(result) { LoadedControlTower(result) }),
             ),
           )
           commands.push(

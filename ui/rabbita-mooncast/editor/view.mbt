@@ -13,6 +13,7 @@ fn view(dispatch : @rabbita.Emit[Msg], model : Model) -> @rabbita.Html {
         inspector_panel(dispatch, model),
       ],
       @html.section(class="workflow-stack") <| [
+        utility_concat_view(dispatch, model),
         media_intake_view(dispatch, model),
         review_view(dispatch, model),
       ],

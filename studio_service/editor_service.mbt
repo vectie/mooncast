@@ -775,8 +775,9 @@ async fn StudioService::ensure_approved_editor_subtitles(
 fn track_binding_for_role(
   project : @editor_domain.EditorProject,
   role : String,
-) -> (String, String, String?) {
+) -> (String, String, String?) raise {
   let (wanted_id, wanted_kind, bus) = match role {
+    "video" => ("track-video", "video", None)
     "voice" => ("track-voice", "audio", Some("bus-voice"))
     "music" => ("track-music", "audio", Some("bus-music"))
     "SFX" | "sfx" => ("track-sfx", "audio", Some("bus-sfx"))
@@ -785,8 +786,9 @@ fn track_binding_for_role(
     "title" => ("track-title", "overlay", None)
     "logo" | "AI-label" => ("track-ai-label", "overlay", None)
     "image" | "effect" => ("track-effect", "overlay", None)
-    _ => ("track-video", "video", None)
+    _ => ("", "", None)
   }
+  guard wanted_id != "" else { fail("unsupported local media role") }
   for track in project.timeline.tracks {
     if track.track_id == wanted_id {
       return (track.track_id, track.kind, bus)

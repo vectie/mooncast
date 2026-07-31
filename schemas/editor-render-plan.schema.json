@@ -50,7 +50,7 @@
     },
     "transitions": {
       "type": "array",
-      "items": {"$ref": "editor-frozen-transition.schema.json"}
+      "items": {"$ref": "https://mooncast.local/schemas/editor-frozen-transition.schema.json"}
     },
     "findings": {
       "type": "array",
@@ -202,7 +202,7 @@
         "local_media": {
           "oneOf": [
             {"type": "null"},
-            {"$ref": "editor-local-media-binding.schema.json"}
+            {"$ref": "https://mooncast.local/schemas/editor-local-media-binding.schema.json"}
           ]
         },
         "identity": {

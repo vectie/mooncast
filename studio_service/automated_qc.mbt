@@ -11,8 +11,10 @@ async fn StudioService::record_analyzer_task(
 ) -> @automated_qc.AnalyzerTask {
   let canonical = self.get_project(project_id)
   guard canonical.snapshot.generation_attempts.any(attempt => {
-    attempt.shot_id == input.task.shot_id && attempt.status == "succeeded" &&
-    normalized_digest(attempt.output_digest) == normalized_digest(input.task.attempt_digest)
+    attempt.shot_id == input.task.shot_id &&
+    attempt.status == "succeeded" &&
+    normalized_digest(attempt.output_digest) ==
+    normalized_digest(input.task.attempt_digest)
   }) else {
     raise Conflict(
       code="analyzer_attempt_required",
@@ -41,23 +43,35 @@ async fn StudioService::run_analyzer(
   input : @automated_qc_app.AnalyzerRunRequest,
 ) -> @automated_qc.AnalyzerReceipt {
   let canonical = self.get_project(project_id)
-  let tasks = self.automated_qc.list_tasks(project_id).filter(task => {
-    task.reference.version == input.expected_task_version &&
-    task.reference.digest == input.expected_task_digest
-  })
+  let tasks = self.automated_qc
+    .list_tasks(project_id)
+    .filter(task => {
+      task.reference.version == input.expected_task_version &&
+      task.reference.digest == input.expected_task_digest
+    })
   guard tasks.length() == 1 else {
-    raise Conflict(code="analyzer_task_conflict", message="exact analyzer task not found")
+    raise Conflict(
+      code="analyzer_task_conflict",
+      message="exact analyzer task not found",
+    )
   }
   let task = tasks[0]
   guard canonical.snapshot.generation_attempts.any(attempt => {
-    attempt.shot_id == task.shot_id && attempt.status == "succeeded" &&
-    normalized_digest(attempt.output_digest) == normalized_digest(task.attempt_digest)
+    attempt.shot_id == task.shot_id &&
+    attempt.status == "succeeded" &&
+    normalized_digest(attempt.output_digest) ==
+    normalized_digest(task.attempt_digest)
   }) else {
-    raise Conflict(code="analyzer_attempt_stale", message="analyzer source attempt is no longer current")
+    raise Conflict(
+      code="analyzer_attempt_stale",
+      message="analyzer source attempt is no longer current",
+    )
   }
-  let source = match self.execution_application.artifact_bytes(task.source_artifact_digest) {
+  let source = match
+    self.execution_application.artifact_bytes(task.source_artifact_digest) {
     Some(bytes) => Some(bytes)
-    None => self.editor_media.bytes(normalized_digest(task.source_artifact_digest))
+    None =>
+      self.editor_media.bytes(normalized_digest(task.source_artifact_digest))
   }
   let receipt = self.automated_qc.run(task, source, input)
   let dimension = if receipt.finding.governance_dimension == "continuity" {
@@ -67,21 +81,36 @@ async fn StudioService::run_analyzer(
   }
   let refreshed = self.get_project(project_id)
   let current = refreshed.snapshot.qc_findings.filter(finding => {
-    finding.shot_id == task.shot_id && finding.dimension == dimension &&
-    normalized_digest(finding.attempt_digest) == normalized_digest(task.attempt_digest)
+    finding.shot_id == task.shot_id &&
+    finding.dimension == dimension &&
+    normalized_digest(finding.attempt_digest) ==
+    normalized_digest(task.attempt_digest)
   })
-  let expected_version = if current.is_empty() { None } else { Some(current[current.length() - 1].finding.version) }
-  let expected_digest = if current.is_empty() { None } else { Some(current[current.length() - 1].finding.digest) }
-  ignore(self.record_qc_finding_feature(project_id, task.shot_id, dimension, {
-    expected_project_revision: refreshed.snapshot.revision,
-    expected_attempt_digest: task.attempt_digest,
-    expected_finding_version: expected_version,
-    expected_finding_digest: expected_digest,
-    status: receipt.finding.status,
-    evidence_digest: receipt.finding.evidence_digest,
-    note: task.analyzer + ": " + receipt.finding.note + "; named human decision still required",
-    reported_by: "analyzer:" + input.actor,
-  }))
+  let expected_version = if current.is_empty() {
+    None
+  } else {
+    Some(current[current.length() - 1].finding.version)
+  }
+  let expected_digest = if current.is_empty() {
+    None
+  } else {
+    Some(current[current.length() - 1].finding.digest)
+  }
+  ignore(
+    self.record_qc_finding_feature(project_id, task.shot_id, dimension, {
+      expected_project_revision: refreshed.snapshot.revision,
+      expected_attempt_digest: task.attempt_digest,
+      expected_finding_version: expected_version,
+      expected_finding_digest: expected_digest,
+      status: receipt.finding.status,
+      evidence_digest: receipt.finding.evidence_digest,
+      note: task.analyzer +
+      ": " +
+      receipt.finding.note +
+      "; named human decision still required",
+      reported_by: "analyzer:" + input.actor,
+    }),
+  )
   receipt
 }
 
@@ -95,7 +124,9 @@ async fn StudioService::dispatch_automated_qc_http(
       Some(json_value_response(200, self.automated_qc.workspace(project_id)))
     (Post, ["api", "v2", "projects", project_id, "automated-qc", "tasks"]) => {
       let input : AnalyzerTaskRequest = decode_body(request)
-      Some(json_value_response(201, self.record_analyzer_task(project_id, input)))
+      Some(
+        json_value_response(201, self.record_analyzer_task(project_id, input)),
+      )
     }
     (Post, ["api", "v2", "projects", project_id, "automated-qc", "run"]) => {
       let input : @automated_qc_app.AnalyzerRunRequest = decode_body(request)
@@ -106,7 +137,9 @@ async fn StudioService::dispatch_automated_qc_http(
 }
 
 ///|
-pub fn StudioService::register_automated_qc_routes(self : StudioService) -> Unit {
+pub fn StudioService::register_automated_qc_routes(
+  self : StudioService,
+) -> Unit {
   self.register_route_extension(
     RouteExtension::new("/api/v2/projects", async fn(request) {
       self.dispatch_automated_qc_http(request)

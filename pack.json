@@ -137,7 +137,14 @@
     {"id":"postprocess-import-binding","version":"1.0.0","path":"schemas/postprocess-import-binding.schema.json"},
     {"id":"qc-analyzer-task","version":"1.0.0","path":"schemas/qc-analyzer-task.schema.json"},
     {"id":"qc-analyzer-finding","version":"1.0.0","path":"schemas/qc-analyzer-finding.schema.json"},
-    {"id":"qc-analyzer-receipt","version":"1.0.0","path":"schemas/qc-analyzer-receipt.schema.json"}
+    {"id":"qc-analyzer-receipt","version":"1.0.0","path":"schemas/qc-analyzer-receipt.schema.json"},
+    {"id":"control-tower-query","version":"1.0.0","path":"schemas/control-tower-query.schema.json"},
+    {"id":"production-control-tower","version":"1.0.0","path":"schemas/production-control-tower.schema.json"},
+    {"id":"control-tower-actuals-input","version":"1.0.0","path":"schemas/control-tower-actuals-input.schema.json"},
+    {"id":"control-tower-operating-actuals","version":"1.0.0","path":"schemas/control-tower-operating-actuals.schema.json"},
+    {"id":"control-tower-exception-assignment-input","version":"1.0.0","path":"schemas/control-tower-exception-assignment-input.schema.json"},
+    {"id":"control-tower-exception-assignment","version":"1.0.0","path":"schemas/control-tower-exception-assignment.schema.json"},
+    {"id":"host-authority-grant","version":"1.0.0","path":"schemas/host-authority-grant.schema.json"}
   ],
   "tools": [
     {"id":"brief.validate","owner_product":"mooncast","input_schema_id":"creative-brief","output_schema_id":"creative-brief","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["records/briefs"],"review_required":false},
@@ -221,13 +228,17 @@
     {"id":"handoff.final-deliverable.evidence","owner_product":"mooncast","input_schema_id":"final-deliverable-evidence","output_schema_id":"final-deliverable-evidence","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["handoff-outbox/final-deliverable-evidence"],"review_required":false},
     {"id":"handoff.outcome.evidence","owner_product":"mooncast","input_schema_id":"production-outcome-evidence","output_schema_id":"production-outcome-evidence","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["handoff-outbox/production-outcome-evidence"],"review_required":false},
     {"id":"handoff.moonflow.prepare","owner_product":"mooncast","input_schema_id":"external-handoff-request","output_schema_id":"external-handoff-request","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["handoff-outbox/external-handoff-request","handoff-outbox/bookkeeper-ingress-bundle"],"review_required":true},
-    {"id":"handoff.receipt-reference.record","owner_product":"mooncast","input_schema_id":"external-handoff-receipt-reference","output_schema_id":"external-handoff-receipt-reference","authority":"Observe","idempotent":true,"evidence_outputs":["handoff-outbox/external-handoff-receipt-reference"],"review_required":false}
+    {"id":"handoff.receipt-reference.record","owner_product":"mooncast","input_schema_id":"external-handoff-receipt-reference","output_schema_id":"external-handoff-receipt-reference","authority":"Observe","idempotent":true,"evidence_outputs":["handoff-outbox/external-handoff-receipt-reference"],"review_required":false},
+    {"id":"control-tower.observe","owner_product":"mooncast","input_schema_id":"control-tower-query","output_schema_id":"production-control-tower","authority":"Observe","idempotent":true,"evidence_outputs":[],"review_required":false},
+    {"id":"control-tower.actuals.record","owner_product":"mooncast","input_schema_id":"control-tower-actuals-input","output_schema_id":"control-tower-operating-actuals","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["control-tower/actuals"],"review_required":true},
+    {"id":"control-tower.exception.assign","owner_product":"mooncast","input_schema_id":"control-tower-exception-assignment-input","output_schema_id":"control-tower-exception-assignment","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["control-tower/assignments"],"review_required":true}
   ],
   "workflows": [
     {"id":"brief-to-delivery","version":"1.0.0","path":"workflows/brief-to-delivery.md"},
     {"id":"systematic-long-form","version":"1.0.0","path":"workflows/systematic-long-form.md"},
     {"id":"performance-feedback","version":"1.0.0","path":"workflows/performance-feedback.md"},
-    {"id":"moonflow-closed-loop","version":"1.0.0","path":"workflows/moonflow-closed-loop.md"}
+    {"id":"moonflow-closed-loop","version":"1.0.0","path":"workflows/moonflow-closed-loop.md"},
+    {"id":"moonfind-review-episode","version":"1.0.0","path":"workflows/moonfind-review-episode.md"}
   ],
   "skills": [
     {"id":"mooncast-producer","version":"1.0.0","path":"skills/mooncast-producer/SKILL.md"},

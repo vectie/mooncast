@@ -22,6 +22,75 @@ All commercial-intake endpoints are record-only and pack-local. They never send 
 
 See `docs/contract-quote-capacity-intake.md` for lifecycle and authority boundaries.
 
+## Multi-project production control tower
+
+The systematic MoonFlow adapter is available independently of the UI:
+
+- `GET /api/moonflow/adapter/v2/declaration` returns the 34-operation selected
+  production/control declaration.
+- `GET /api/moonflow/adapter/v2/pack-projection` returns the matching
+  manifest-shaped tool/schema subset for MoonFlow catalog compilation.
+- `POST /api/moonflow/adapter/v2/invoke` durably prepares and invokes one exact
+  manifest operation.
+- `POST /api/moonflow/adapter/v2/reconcile` imports a durable terminal result,
+  safely replays a manifest-idempotent operation, or reports an unknown
+  non-idempotent effect without retrying it.
+- `GET /api/moonflow/adapter/v2/health` returns a five-minute attestation
+  containing only successfully exercised operations.
+- `GET /api/moonflow/adapter/v2/health/evidence` is the corresponding human
+  inspection projection.
+
+See `docs/moonflow-capability-truth.md` and
+`workflows/moonfind-review-episode.md`. The control-tower adapter URLs below
+remain compatibility aliases to this declaration and health state.
+
+- `GET /api/control-tower` returns the durable portfolio projection. Optional
+  `as_of_date=YYYY-MM-DD` makes schedule evaluation replayable.
+- `GET /api/control-tower/projects/{project_id}/actuals` reconciles the latest
+  named operating-evidence record.
+- `POST /api/control-tower/projects/{project_id}/actuals` records actual labor,
+  other direct cost, recognized revenue, founder-hours, completion forecast and
+  optional confirmed provider cost against the exact project revision.
+- `GET /api/control-tower/exceptions/{exception_id}/assignment` reconciles named
+  ownership.
+- `POST /api/control-tower/exceptions/{exception_id}/assignment` binds an owner
+  and due date to the exact exception digest.
+- `GET /api/control-tower/adapter/declaration` returns the installed
+  `moonflow.adapter-declaration.v1`.
+- `GET /api/control-tower/adapter/health` materializes digest-bound evidence
+  below the host data root and returns a five-minute
+  `moonflow.adapter-health.v1` with a workspace-relative `evidence_ref`.
+- `GET /api/control-tower/adapter/health/evidence` is a human inspection view
+  of the current handler/projection evidence; MoonFlow verifies the
+  materialized bytes named by the attestation instead.
+
+Operating actuals and assignments are idempotent, optimistic and durable across
+restart. They record evidence/ownership only and cannot grant provider,
+payment, client-acceptance or publication authority. See
+`docs/production-control-tower.md` and
+`docs/moonflow-capability-truth.md`.
+
+## Project-free utility video concat
+
+The Editor's Quick Combine drawer is separate from governed production export.
+It freezes safe-file-name order, size, MIME type, and browser-computed SHA-256
+for every selected MP4. It never creates production, provider, delivery, or
+publication authority.
+
+- `POST /api/editor/utility-concats` creates or idempotently retrieves a frozen
+  job.
+- `POST /api/editor/utility-concats/{job}/inputs/{index}` accepts one exact
+  digest-pinned MP4 body, up to 64 MiB.
+- `POST /api/editor/utility-concats/{job}/run` normalizes mixed audio when
+  required, stream-copies compatible H.264/HEVC video, concatenates in frozen
+  order, and verifies the result.
+- `GET /api/editor/utility-concats/{job}` returns durable progress and evidence.
+- `GET|HEAD /api/editor/utility-concats/{job}/media` serves the verified MP4
+  with ETag, byte ranges, and an attachment filename.
+
+The current job ceiling is 512 inputs and 1,000,000,000 aggregate source bytes.
+Inputs must contain one supported video stream and at most one audio stream.
+
 ## Interactive proxy monitor
 
 The Program monitor has two deliberately different surfaces. **Interactive proxy** is an immediate, browser-native timeline player driven from the canonical editor snapshot. It applies trims, cuts, track order, clip transforms, opacity, color controls, keyframes, text/image/logo/subtitle overlays, and track/clip audio gain and pan. Its clock, loop range, drift measurement, hidden media elements, and Web Audio graph are ephemeral browser state and never become editor authority.

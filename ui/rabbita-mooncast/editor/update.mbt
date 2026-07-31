@@ -32,6 +32,18 @@ fn update(
               },
             )
           }
+          if projects.is_empty() {
+            return (
+              @rabbita.none,
+              {
+                ..model,
+                projects,
+                loading: false,
+                status: "No governed editor project. Quick combine is ready.",
+                error: "",
+              },
+            )
+          }
           let requested = projects
             .iter()
             .find_first(item => item.project_id == model.project_id)
@@ -92,6 +104,309 @@ fn update(
     }
     ProductionProjectChanged(value) =>
       (@rabbita.none, { ..model, production_project_id: value })
+    UtilityConcatFilesSelected(files) =>
+      (
+        @rabbita.none,
+        {
+          ..model,
+          utility_concat: {
+            files,
+            job_id: "",
+            phase: "selected",
+            completed: 0,
+            output_digest: "",
+            output_size: 0,
+            media_url: "",
+            error: "",
+          },
+        },
+      )
+    StartUtilityConcat => {
+      let state = model.utility_concat
+      guard state.files.get(0) is Some(first) else {
+        return (
+          @rabbita.none,
+          {
+            ..model,
+            utility_concat: {
+              ..state,
+              phase: "failed",
+              error: "Select at least one MP4 video.",
+            },
+          },
+        )
+      }
+      (
+        hash_utility_concat_file(dispatch, 0, first),
+        {
+          ..model,
+          utility_concat: {
+            ..state,
+            phase: "hashing",
+            completed: 0,
+            job_id: "",
+            output_digest: "",
+            output_size: 0,
+            media_url: "",
+            error: "",
+          },
+        },
+      )
+    }
+    UtilityConcatFileHashed(index, result) =>
+      match result {
+        Err(error) =>
+          (
+            @rabbita.none,
+            {
+              ..model,
+              utility_concat: {
+                ..model.utility_concat,
+                phase: "failed",
+                error: "Could not hash selected video: \{error}",
+              },
+            },
+          )
+        Ok(digest) => {
+          let state = model.utility_concat
+          guard state.files.get(index) is Some(file) else {
+            return (
+              @rabbita.none,
+              {
+                ..model,
+                utility_concat: {
+                  ..state,
+                  phase: "failed",
+                  error: "Selected video order changed while hashing.",
+                },
+              },
+            )
+          }
+          let files = state.files.copy()
+          files[index] = { ..file, sha256: digest }
+          let next_index = index + 1
+          let next_state = {
+            ..state,
+            files,
+            completed: next_index,
+            phase: if next_index < files.length() {
+              "hashing"
+            } else {
+              "creating"
+            },
+          }
+          match files.get(next_index) {
+            Some(next) =>
+              (
+                hash_utility_concat_file(dispatch, next_index, next),
+                { ..model, utility_concat: next_state },
+              )
+            None =>
+              (
+                create_utility_concat(dispatch, files),
+                { ..model, utility_concat: next_state },
+              )
+          }
+        }
+      }
+    UtilityConcatCreated(result) =>
+      match result {
+        Err(error) =>
+          (
+            @rabbita.none,
+            {
+              ..model,
+              utility_concat: {
+                ..model.utility_concat,
+                phase: "failed",
+                error: "Could not create utility concat job: \{error}",
+              },
+            },
+          )
+        Ok(job) => {
+          let state = model.utility_concat
+          if job.contract != "mooncast.editor-utility-concat-job.v1" {
+            return (
+              @rabbita.none,
+              {
+                ..model,
+                utility_concat: {
+                  ..state,
+                  phase: "failed",
+                  error: "Utility concat used an unsupported response contract.",
+                },
+              },
+            )
+          }
+          if job.state == "succeeded" {
+            return (
+              @rabbita.none,
+              {
+                ..model,
+                utility_concat: {
+                  ..state,
+                  job_id: job.job_id,
+                  phase: "succeeded",
+                  completed: job.expected_count,
+                  output_digest: job.output_digest,
+                  output_size: job.output_size,
+                  media_url: job.media_url,
+                  error: "",
+                },
+              },
+            )
+          }
+          if job.uploaded_count == job.expected_count &&
+            job.expected_count == state.files.length() {
+            return (
+              run_utility_concat(dispatch, job.job_id),
+              {
+                ..model,
+                utility_concat: {
+                  ..state,
+                  job_id: job.job_id,
+                  phase: "running",
+                  completed: job.uploaded_count,
+                  error: "",
+                },
+              },
+            )
+          }
+          guard job.next_pending_input() is Some(expected) &&
+            state.files.get(expected.index) is Some(file) &&
+            expected.matches_local(file) else {
+            return (
+              @rabbita.none,
+              {
+                ..model,
+                utility_concat: {
+                  ..state,
+                  job_id: job.job_id,
+                  phase: "failed",
+                  error: "Utility concat resume metadata did not match the selected files.",
+                },
+              },
+            )
+          }
+          (
+            upload_utility_concat_input(
+              dispatch,
+              job.job_id,
+              expected.index,
+              file,
+            ),
+            {
+              ..model,
+              utility_concat: {
+                ..state,
+                job_id: job.job_id,
+                phase: "uploading",
+                completed: job.uploaded_count,
+                error: "",
+              },
+            },
+          )
+        }
+      }
+    UtilityConcatInputUploaded(result) =>
+      match result {
+        Err(error) =>
+          (
+            @rabbita.none,
+            {
+              ..model,
+              utility_concat: {
+                ..model.utility_concat,
+                phase: "failed",
+                error: "Exact video upload failed: \{error}",
+              },
+            },
+          )
+        Ok(job) => {
+          let state = model.utility_concat
+          match job.next_pending_input() {
+            Some(expected) => {
+              guard state.files.get(expected.index) is Some(file) &&
+                expected.matches_local(file) else {
+                return (
+                  @rabbita.none,
+                  {
+                    ..model,
+                    utility_concat: {
+                      ..state,
+                      job_id: job.job_id,
+                      phase: "failed",
+                      error: "Utility concat resume metadata did not match the selected files.",
+                    },
+                  },
+                )
+              }
+              (
+                upload_utility_concat_input(
+                  dispatch,
+                  job.job_id,
+                  expected.index,
+                  file,
+                ),
+                {
+                  ..model,
+                  utility_concat: {
+                    ..state,
+                    job_id: job.job_id,
+                    phase: "uploading",
+                    completed: job.uploaded_count,
+                  },
+                },
+              )
+            }
+            None =>
+              (
+                run_utility_concat(dispatch, job.job_id),
+                {
+                  ..model,
+                  utility_concat: {
+                    ..state,
+                    job_id: job.job_id,
+                    phase: "running",
+                    completed: job.uploaded_count,
+                  },
+                },
+              )
+          }
+        }
+      }
+    UtilityConcatFinished(result) =>
+      match result {
+        Err(error) =>
+          (
+            @rabbita.none,
+            {
+              ..model,
+              utility_concat: {
+                ..model.utility_concat,
+                phase: "failed",
+                error: "Utility concat failed: \{error}",
+              },
+            },
+          )
+        Ok(job) =>
+          (
+            @rabbita.none,
+            {
+              ..model,
+              utility_concat: {
+                ..model.utility_concat,
+                job_id: job.job_id,
+                phase: job.state,
+                completed: job.uploaded_count,
+                output_digest: job.output_digest,
+                output_size: job.output_size,
+                media_url: job.media_url,
+                error: job.error,
+              },
+            },
+          )
+      }
     ImportProduction => {
       guard model.production_project_id.trim().length() > 0 else {
         return (
@@ -117,7 +432,18 @@ fn update(
     }
     ProductionImported(result) =>
       match result {
-        Ok(_) => {
+        Ok(response) => {
+          if decode_api_error(response) is Some(error) {
+            return (
+              @rabbita.none,
+              {
+                ..model,
+                busy: false,
+                error: error.message,
+                status: "Production import rejected.",
+              },
+            )
+          }
           let project_id = model.production_project_id
           let generation = model.open_generation + 1
           (

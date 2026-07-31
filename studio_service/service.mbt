@@ -95,6 +95,8 @@ pub fn StudioService::new(
   service.register_animatic_routes()
   service.register_postprocess_routes()
   service.register_automated_qc_routes()
+  service.register_control_tower_routes()
+  service.register_moonflow_adapter_routes()
   service
 }
 

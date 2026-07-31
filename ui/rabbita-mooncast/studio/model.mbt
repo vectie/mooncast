@@ -3,6 +3,7 @@
 /// remains in the native Mooncast service and is replaced after every command.
 enum StudioTab {
   Overview
+  ControlTower
   NeedsStrategy
   Creative
   AssetFactory
@@ -865,6 +866,215 @@ struct CapacityBoardProjection {
 } derive(FromJson)
 
 ///|
+struct TowerSpendPlanProjection {
+  provider_cny : Double
+  labor_cny : Double
+  other_cny : Double
+  direct_cny : Double
+  contingency_cny : Double
+  revenue_cny : Double
+  gross_margin_cny : Double
+  contribution_margin_cny : Double
+  founder_hours : Double
+} derive(FromJson)
+
+///|
+struct TowerProviderCostProjection {
+  generation_attempts_cny : Double
+  asset_factory_cny : Double
+  animatic_cny : Double
+  postprocess_cny : Double
+  automated_qc_cny : Double
+  operational_total_cny : Double
+  confirmed_total_cny : Double?
+  discrepancy_cny : Double?
+  evidence_state : String
+} derive(FromJson)
+
+///|
+struct TowerSpendActualProjection {
+  provider : TowerProviderCostProjection
+  labor_cny : Double?
+  other_cny : Double?
+  direct_cny : Double?
+  revenue_cny : Double?
+  gross_margin_cny : Double?
+  contribution_margin_cny : Double?
+  founder_hours : Double?
+  completed_labor_hours : Double?
+} derive(FromJson)
+
+///|
+struct TowerSpendVarianceProjection {
+  provider_cny : Double?
+  labor_cny : Double?
+  other_cny : Double?
+  direct_cny : Double?
+  revenue_cny : Double?
+  gross_margin_cny : Double?
+  contribution_margin_cny : Double?
+  founder_hours : Double?
+} derive(FromJson)
+
+///|
+struct TowerRemainingProjection {
+  total_shots : Int
+  shots_without_output : Int
+  shots_awaiting_qc : Int
+  creative_approvals_remaining : Int
+  routing_approval_remaining : Bool
+  master_work_remaining : Bool
+  client_acceptance_remaining : Bool
+  delivery_work_remaining : Bool
+  performance_review_remaining : Bool
+  work_units_total : Int
+  work_units_complete : Int
+  completion_rate : Double
+  next_actions : Array[String]
+} derive(FromJson)
+
+///|
+struct TowerScheduleProjection {
+  as_of_date : String
+  start_date : String?
+  promised_delivery_date : String?
+  forecast_completion_date : String?
+  drift_days : Int?
+  days_to_delivery : Int?
+  risk : String
+  basis : Array[String]
+} derive(FromJson)
+
+///|
+struct TowerRevisionProjection {
+  included_rounds : Int?
+  used_rounds : Int
+  remaining_rounds : Int?
+  overage_rounds : Int?
+  state : String
+} derive(FromJson)
+
+///|
+struct TowerAssignmentProjection {
+  command_id : String
+  exception_id : String
+  exception_digest : String
+  version : Int
+  owner : String
+  owner_role : String
+  action_due_date : String
+  note : String
+  assigned_by : String
+  assigned_by_role : String
+  assigned_at : String
+  digest : String
+} derive(FromJson)
+
+///|
+struct TowerExceptionProjection {
+  exception_id : String
+  project_id : String?
+  kind : String
+  severity : String
+  summary : String
+  evidence_refs : Array[String]
+  digest : String
+  assignment : TowerAssignmentProjection?
+} derive(FromJson)
+
+///|
+struct TowerReallocationProjection {
+  resource_id : String
+  resource_name : String
+  role : String
+  available_hours : Double
+  matched_skills : Array[String]
+} derive(FromJson)
+
+///|
+struct TowerCapacityConflictProjection {
+  conflict_id : String
+  exception_id : String
+  resource_id : String
+  resource_name : String
+  role : String
+  reservation_ids : Array[String]
+  project_ids : Array[String]
+  overlap_start : String
+  overlap_end : String
+  reserved_hours : Double
+  weekly_hours : Double
+  overbooked_hours : Double
+  reallocation_candidates : Array[TowerReallocationProjection]
+  digest : String
+} derive(FromJson)
+
+///|
+struct TowerProjectProjection {
+  project_id : String
+  project_revision : Int
+  title : String
+  stage : String
+  current_gate : String?
+  quote_id : String?
+  quote_version : Int?
+  quote_digest : String?
+  actuals_version : Int?
+  actuals_digest : String?
+  actuals_observed_at : String?
+  actuals_evidence_refs : Array[String]
+  planned : TowerSpendPlanProjection?
+  actual : TowerSpendActualProjection
+  variance : TowerSpendVarianceProjection?
+  schedule : TowerScheduleProjection
+  remaining : TowerRemainingProjection
+  revisions : TowerRevisionProjection
+  accepted_minutes : Double?
+  cost_per_accepted_minute_cny : Double?
+  capacity_conflict_ids : Array[String]
+  exception_ids : Array[String]
+  missing_evidence : Array[String]
+  digest : String
+} derive(FromJson)
+
+///|
+struct TowerTotalsProjection {
+  project_count : Int
+  projects_with_accepted_quotes : Int
+  planned_revenue_cny : Double
+  planned_direct_cost_cny : Double
+  planned_contribution_margin_cny : Double
+  actual_provider_cost_cny : Double
+  actual_labor_cost_cny : Double?
+  actual_other_cost_cny : Double?
+  actual_revenue_cny : Double?
+  actual_gross_margin_cny : Double?
+  actual_contribution_margin_cny : Double?
+  planned_founder_hours : Double
+  actual_founder_hours : Double?
+  projects_at_sla_risk : Int
+  open_exception_count : Int
+  unowned_exception_count : Int
+} derive(FromJson)
+
+///|
+struct ProductionControlTowerProjection {
+  contract : String
+  pack_id : String
+  pack_version : String
+  as_of_date : String
+  projects : Array[TowerProjectProjection]
+  capacity_conflicts : Array[TowerCapacityConflictProjection]
+  exceptions : Array[TowerExceptionProjection]
+  totals : TowerTotalsProjection
+  missing_evidence : Array[String]
+  publication_authority : Bool
+  payment_effect_performed : Bool
+  external_effect_authorized : Bool
+  digest : String
+} derive(FromJson)
+
+///|
 struct CreateForm {
   project_id : String
   title : String
@@ -934,6 +1144,24 @@ struct CapacityForm {
   reservation_start : String
   reservation_end : String
   reservation_hours : String
+}
+
+///|
+struct ControlTowerActualsForm {
+  provider_cost_confirmed_cny : String
+  labor_cost_cny : String
+  other_cost_cny : String
+  recognized_revenue_cny : String
+  founder_hours : String
+  completed_labor_hours : String
+  forecast_completion_date : String
+  evidence_refs : String
+  provider_cost_reconciled : Bool
+}
+
+///|
+struct ControlTowerOwnershipForm {
+  action_due_date : String
 }
 
 ///|
@@ -1029,6 +1257,7 @@ struct Model {
   latest_client_url : String?
   commercial : CommercialDashboardProjection?
   capacity_board : CapacityBoardProjection?
+  control_tower : ProductionControlTowerProjection?
   needs_intake : NeedsIntakeWorkspaceProjection?
   asset_factory : AssetFactoryWorkspaceProjection?
   asset_plan_draft : String
@@ -1050,6 +1279,8 @@ struct Model {
   commercial_form : CommercialForm
   quote_form : QuoteForm
   capacity_form : CapacityForm
+  control_tower_actuals_form : ControlTowerActualsForm
+  control_tower_ownership_form : ControlTowerOwnershipForm
   routing_form : RoutingForm
   qc_form : QcForm
   delivery_governance_form : DeliveryGovernanceForm
@@ -1074,6 +1305,13 @@ enum Msg {
   CreatedClientPortal(Result[ClientPortalCreatedProjection, Error])
   LoadedCommercial(Result[CommercialDashboardProjection, Error])
   LoadedCapacity(Result[CapacityBoardProjection, Error])
+  LoadedControlTower(Result[ProductionControlTowerProjection, Error])
+  RefreshControlTower
+  SetControlTowerActualsField(String, String)
+  ToggleProviderCostReconciled
+  RecordControlTowerActuals
+  SetControlTowerOwnershipDue(String)
+  AssignControlTowerException(String)
   LoadedNeedsIntake(Result[NeedsIntakeWorkspaceProjection, Error])
   LoadedAssetFactory(Result[AssetFactoryWorkspaceProjection, Error])
   SetAssetPlanDraft(String)
@@ -1392,6 +1630,7 @@ fn initial_model() -> Model {
     latest_client_url: None,
     commercial: None,
     capacity_board: None,
+    control_tower: None,
     needs_intake: None,
     asset_factory: None,
     asset_plan_draft: "",
@@ -1469,6 +1708,20 @@ fn initial_model() -> Model {
       reservation_start: "2026-07-26",
       reservation_end: "2026-08-26",
       reservation_hours: "20",
+    },
+    control_tower_actuals_form: {
+      provider_cost_confirmed_cny: "",
+      labor_cost_cny: "",
+      other_cost_cny: "",
+      recognized_revenue_cny: "",
+      founder_hours: "",
+      completed_labor_hours: "",
+      forecast_completion_date: "2026-08-26",
+      evidence_refs: "",
+      provider_cost_reconciled: false,
+    },
+    control_tower_ownership_form: {
+      action_due_date: "2026-08-01",
     },
     routing_form: {
       route_id: "primary-video-route",

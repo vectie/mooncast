@@ -81,6 +81,8 @@ port.
 | `POST .../review-comments` | editor application service | Native durable, revision-bound time-range comment |
 | `POST .../media-intakes` | editor media intake | Native rights/source/digest freeze |
 | `POST .../media-intakes/{intake}/content` | editor media registry | Native raw bytes up to 64 MiB, immutable receipt and take |
+| `POST /api/editor/utility-concats`, `POST .../{job}/inputs/{index}`, `POST .../{job}/run`, `GET .../{job}` | standalone utility concat application | Native project-free ordered manifest, digest-pinned uploads, idempotent execution, and explicit no-publication/no-provider authority |
+| `GET|HEAD /api/editor/utility-concats/{job}/media` | utility concat media reader | Native verified MP4, ETag, byte ranges, and attachment filename |
 | `GET .../takes/{take}/analysis` | editor media application | Native ffprobe, thumbnail, waveform and proxy status |
 | `GET|HEAD .../takes/{take}/source|thumbnail` | editor media application | Native ETag and byte ranges |
 | `GET|HEAD /api/editor/media/{digest}` and `/thumbnail` | editor media application | Native content-addressed media |
@@ -116,6 +118,19 @@ port.
 | `POST /api/handoffs/receipt-references` | generic handoff outbox | Stores only an exact external receipt reference |
 | `GET /api/handoffs/{type}/{record}` | handoff outbox query | Reads Mooncast-owned evidence/reference payloads |
 | `/api/bookkeeper/**`, `/api/moonflow-bridge/**` | none | Retired by MC-8; canonical authority is external |
+
+## MoonFlow systematic adapter
+
+| Route | Native owner | Status |
+|---|---|---|
+| `GET /api/moonflow/adapter/v2/declaration` | Mooncast pack adapter | Exact 34-operation review-episode/control declaration |
+| `GET /api/moonflow/adapter/v2/pack-projection` | Mooncast manifest projection | Exact selected tool/schema subset; unrelated manifest tools are excluded |
+| `POST /api/moonflow/adapter/v2/invoke` | pack-local `StudioService` bridge | Durable prepared attempt, exact input digest, fixed operation dispatcher, immutable result |
+| `POST /api/moonflow/adapter/v2/reconcile` | pack-local durable state | Idempotent replay or investigate-unknown without blind external retry |
+| `GET /api/moonflow/adapter/v2/health[/evidence]` | pack-local exercise ledger | Five-minute health for successfully exercised operations only |
+
+This bridge reuses the production/editor/delivery owners listed above. It is
+not a MoonFlow runtime and cannot authorize publication.
 
 ## Intentionally removed aliases
 

@@ -599,6 +599,7 @@ pub async fn StudioService::create_editor_project(Self, EditorCreateRequest) -> 
 pub async fn StudioService::create_or_revise_quote(Self, String, String?, QuoteInput) -> QuoteProjection
 pub async fn StudioService::create_project(Self, @project.ProjectGraph, String) -> ProjectRecord
 pub async fn StudioService::create_repeat_order(Self, String, RepeatOrderInput) -> RepeatOrderResultProjection
+pub async fn StudioService::create_utility_concat(Self, UtilityConcatCreateRequest) -> UtilityConcatJob
 pub async fn StudioService::creative_view(Self, String, @creative.ArtifactKind) -> CreativeView
 pub async fn StudioService::creative_workspace_projection(Self, String, @creative.ArtifactKind) -> Json
 pub async fn StudioService::decide_commercial_quote(Self, String, String, HumanDecisionInput) -> QuoteProjection
@@ -612,6 +613,7 @@ pub async fn StudioService::get_editor_project(Self, String) -> EditorOpenView
 pub async fn StudioService::get_project(Self, String) -> ProjectRecord
 pub async fn StudioService::get_provider_job(Self, String) -> ProviderJobRecord
 pub async fn StudioService::get_routed_execution(Self, String, String) -> RoutedExecutionRecord
+pub async fn StudioService::get_utility_concat(Self, String) -> UtilityConcatJob
 pub async fn StudioService::governance_stage_projection(Self, String, String) -> Json
 pub async fn StudioService::governance_view(Self, String) -> GovernanceView
 pub async fn StudioService::import_editor_from_canonical_project(Self, String) -> EditorOpenView
@@ -642,10 +644,69 @@ pub async fn StudioService::reschedule_capacity_reservation(Self, String, Reserv
 pub async fn StudioService::resolve_editor_job_media(Self, String, String) -> Bytes
 pub async fn StudioService::resolve_editor_media(Self, String, Bool) -> (@media.MediaObjectRecord, Bytes)
 pub async fn StudioService::resolve_media(Self, String) -> ResolvedMedia
+pub async fn StudioService::resolve_utility_concat_media(Self, String) -> Bytes
 pub async fn StudioService::retry_editor_job(Self, String, String) -> EditorJobView
+pub async fn StudioService::run_utility_concat(Self, String) -> UtilityConcatJob
 pub async fn StudioService::save_project_experience(Self, String, ProjectExperienceMetadata) -> Unit
 pub async fn StudioService::seed_initial_creative_drafts(Self, String, ProjectExperienceMetadata, String, moonwiki_intake? : @vectie/mooncast/production/intake.MoonWikiNeedsPacket) -> ProjectRecord
 pub async fn StudioService::studio_project_projection(Self, ProjectRecord) -> Json
+pub async fn StudioService::upload_utility_concat_input(Self, String, Int, Bytes) -> UtilityConcatJob
+
+type UtilityConcatAudioSignature derive(Eq, @debug.Debug)
+
+pub(all) struct UtilityConcatCreateRequest {
+  contract : String
+  job_id : String
+  idempotency_key : String
+  inputs : Array[UtilityConcatInputRequest]
+  created_by : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct UtilityConcatInput {
+  index : Int
+  file_name : String
+  mime_type : String
+  size_bytes : Int
+  sha256 : String
+  uploaded : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct UtilityConcatInputRequest {
+  file_name : String
+  mime_type : String
+  size_bytes : Int
+  sha256 : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct UtilityConcatJob {
+  contract : String
+  job_id : String
+  idempotency_key : String
+  request_digest : String
+  state : String
+  inputs : Array[UtilityConcatInput]
+  uploaded_count : Int
+  expected_count : Int
+  output_digest : String
+  output_size : Int
+  media_url : String
+  error : String
+  created_by : String
+  created_at : String
+  updated_at : String
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type UtilityConcatProbe derive(Eq, @debug.Debug)
+
+type UtilityConcatProbeDocument derive(@json.FromJson)
+
+type UtilityConcatProbeFormat derive(@json.FromJson)
+
+type UtilityConcatProbeStream derive(@json.FromJson)
+
+type UtilityConcatVideoSignature derive(Eq, @debug.Debug)
 
 // Type aliases
 

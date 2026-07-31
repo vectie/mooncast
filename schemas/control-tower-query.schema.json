@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast.control-tower-query.v1",
+  "title": "Production control-tower query",
+  "type": "object",
+  "properties": {
+    "as_of_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional deterministic schedule evaluation date."
+    }
+  },
+  "additionalProperties": false
+}

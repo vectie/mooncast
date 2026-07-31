@@ -89,6 +89,59 @@ struct IntakeDraft {
 }
 
 ///|
+struct UtilityConcatInput {
+  blob : @dom.Blob
+  file_name : String
+  mime_type : String
+  size_bytes : Int
+  sha256 : String
+}
+
+///|
+#warnings("-unused_field")
+struct UtilityConcatJobInput {
+  index : Int
+  file_name : String
+  mime_type : String
+  size_bytes : Int
+  sha256 : String
+  uploaded : Bool
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct UtilityConcatJob {
+  contract : String
+  job_id : String
+  idempotency_key : String
+  state : String
+  inputs : Array[UtilityConcatJobInput]
+  uploaded_count : Int
+  expected_count : Int
+  output_digest : String
+  output_size : Int
+  media_url : String
+  error : String
+  created_by : String
+  created_at : String
+  updated_at : String
+  publication_authority : Bool
+  provider_authority : Bool
+} derive(FromJson)
+
+///|
+struct UtilityConcatState {
+  files : Array[UtilityConcatInput]
+  job_id : String
+  phase : String
+  completed : Int
+  output_digest : String
+  output_size : Int
+  media_url : String
+  error : String
+}
+
+///|
 struct ExportState {
   output_preset : String
   actor : String
@@ -311,6 +364,7 @@ struct Model {
   filters : AssetFilters
   inspector : InspectorDraft
   intake : IntakeDraft
+  utility_concat : UtilityConcatState
   pending_intake_id : String
   review_comment : String
   analysis : @api.MediaAnalysis?
@@ -426,6 +480,16 @@ fn initial_model() -> Model {
       source_kind: "local_upload",
       source_ref: "",
       pasted_content: "",
+    },
+    utility_concat: {
+      files: [],
+      job_id: "",
+      phase: "idle",
+      completed: 0,
+      output_digest: "",
+      output_size: 0,
+      media_url: "",
+      error: "",
     },
     pending_intake_id: "",
     review_comment: "",
