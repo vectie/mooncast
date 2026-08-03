@@ -1,6 +1,7 @@
 # MoonCast product contract
 
-Class: domain pack and production studio
+Class: domain pack
+Visible surface: production studio and cut editor
 Maturity: deterministic production-pipeline alpha
 Last reviewed: 2026-07-31
 

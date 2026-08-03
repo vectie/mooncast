@@ -28,39 +28,6 @@ using @html {
 type Dispatch[A] = @rabbita.Emit[A]
 
 ///|
-fn tab_label(tab : StudioTab) -> String {
-  match tab {
-    Overview => "Overview"
-    ControlTower => "Control tower"
-    NeedsStrategy => "Needs / Strategy"
-    Creative => "Creative"
-    AssetFactory => "Asset Factory"
-    StoryboardAnimatic => "Storyboard / Animatic"
-    Routing => "Routing"
-    ShotBoard => "Shot board"
-    Delivery => "Delivery"
-    Commercial => "Commercial"
-  }
-}
-
-///|
-fn tab_button(
-  dispatch : Dispatch[Msg],
-  selected : StudioTab,
-  tab : StudioTab,
-) -> @rabbita.Html {
-  button(
-    class=if selected == tab {
-      "studio-nav-item active"
-    } else {
-      "studio-nav-item"
-    },
-    on_click=dispatch(SelectTab(tab)),
-    tab_label(tab),
-  )
-}
-
-///|
 fn status_tone(status : String) -> String {
   match status {
     "passed" | "approved" | "completed" | "accepted" | "complete" | "on-track" =>
@@ -118,80 +85,6 @@ fn text_field(
       on_input=change,
       "",
     ),
-  ])
-}
-
-///|
-fn render_header(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
-  header(class="studio-header", [
-    div(class="brand", [
-      span(class="brand-mark", "M"),
-      div([strong("Mooncast"), small("AIGC production operating system")]),
-    ]),
-    nav(class="studio-tabs", [
-      tab_button(dispatch, model.tab, Overview),
-      tab_button(dispatch, model.tab, ControlTower),
-      tab_button(dispatch, model.tab, NeedsStrategy),
-      tab_button(dispatch, model.tab, Creative),
-      tab_button(dispatch, model.tab, AssetFactory),
-      tab_button(dispatch, model.tab, StoryboardAnimatic),
-      tab_button(dispatch, model.tab, Routing),
-      tab_button(dispatch, model.tab, ShotBoard),
-      tab_button(dispatch, model.tab, Delivery),
-      tab_button(dispatch, model.tab, Commercial),
-    ]),
-    div(class="header-actions", [
-      button(
-        class="secondary",
-        disabled=model.selected_project_id == "" || model.loading,
-        on_click=dispatch(RefreshProject),
-        "Refresh exact revision",
-      ),
-      a(class="primary-link", href="/editor", "Open cut editor"),
-    ]),
-  ])
-}
-
-///|
-fn render_project_rail(
-  dispatch : Dispatch[Msg],
-  model : Model,
-) -> @rabbita.Html {
-  aside(class="project-rail", [
-    div(class="rail-heading", [
-      div([small("Production ledger"), h2("Projects")]),
-      span(class="count", "\{model.projects.length()}"),
-    ]),
-    div(
-      class="project-list",
-      if model.projects.is_empty() {
-        [p(class="empty", "No project recorded yet.")]
-      } else {
-        model.projects.map(item => {
-          button(
-            class=if item.project_id == model.selected_project_id {
-              "project-item selected"
-            } else {
-              "project-item"
-            },
-            on_click=dispatch(SelectProject(item.project_id)),
-            [
-              strong(item.title),
-              span([code(item.project_id), status_chip(item.stage)]),
-              small(
-                "Revision \{item.revision} · next \{item.next_gate.unwrap_or("complete")}",
-              ),
-            ],
-          )
-        })
-      },
-    ),
-    div(class="rail-safety", [
-      strong("Authority boundary"),
-      p(
-        "This studio records plans and named reviews. It never grants publication authority, sends payments, or calls a provider implicitly.",
-      ),
-    ]),
   ])
 }
 
@@ -3390,6 +3283,7 @@ fn render_app(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
       main_(class="studio-main", [
         render_operator_bar(dispatch, model),
         render_status(model),
+        render_journey_compass(dispatch, model),
         render_keyed_surface(dispatch, model),
       ]),
     ]),
