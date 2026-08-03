@@ -1,6 +1,6 @@
 {
   "id": "mooncast",
-  "version": "0.2.0",
+  "version": "0.2.3",
   "display_name": "Mooncast Systematic AIGC Production Studio",
   "product_id": "mooncast",
   "kind": "DomainPack",

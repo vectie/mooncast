@@ -1,7 +1,7 @@
 {
   "identifier": "dev.vectie.mooncast",
   "productName": "Mooncast",
-  "version": "0.2.0",
+  "version": "0.2.3",
   "runtime": {
     "backend": "system-webview",
     "assetProtocol": "lepusa",
@@ -60,12 +60,12 @@
     },
     {
       "source": ".tools/ffmpeg/darwin_arm64/ffmpeg",
-      "path": ".tools/ffmpeg/darwin_arm64/ffmpeg",
+      "path": "tools/ffmpeg/darwin_arm64/ffmpeg",
       "executable": true
     },
     {
       "source": ".tools/ffmpeg/darwin_arm64/ffprobe",
-      "path": ".tools/ffmpeg/darwin_arm64/ffprobe",
+      "path": "tools/ffmpeg/darwin_arm64/ffprobe",
       "executable": true
     }
   ]

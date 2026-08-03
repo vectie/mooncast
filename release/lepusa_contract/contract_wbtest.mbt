@@ -23,7 +23,13 @@ let rabbita_release_source : String = "ui/rabbita-mooncast/dist"
 let ffmpeg_release_source : String = ".tools/ffmpeg/darwin_arm64/ffmpeg"
 
 ///|
+let ffmpeg_release_path : String = "tools/ffmpeg/darwin_arm64/ffmpeg"
+
+///|
 let ffprobe_release_source : String = ".tools/ffmpeg/darwin_arm64/ffprobe"
+
+///|
+let ffprobe_release_path : String = "tools/ffmpeg/darwin_arm64/ffprobe"
 
 ///|
 fn json_object(text : String, context~ : String) -> Map[String, Json] {
@@ -190,10 +196,10 @@ async test "release carries the UI and executable media tools" {
   assert_eq(required_string(rabbita, "source"), rabbita_release_source)
   assert_eq(required_string(rabbita, "path"), rabbita_release_source)
   assert_eq(required_string(ffmpeg, "source"), ffmpeg_release_source)
-  assert_eq(required_string(ffmpeg, "path"), ffmpeg_release_source)
+  assert_eq(required_string(ffmpeg, "path"), ffmpeg_release_path)
   assert_true(required_bool(ffmpeg, "executable"))
   assert_eq(required_string(ffprobe, "source"), ffprobe_release_source)
-  assert_eq(required_string(ffprobe, "path"), ffprobe_release_source)
+  assert_eq(required_string(ffprobe, "path"), ffprobe_release_path)
   assert_true(required_bool(ffprobe, "executable"))
 }
 
