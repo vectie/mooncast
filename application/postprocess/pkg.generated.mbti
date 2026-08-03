@@ -1,0 +1,55 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/application/postprocess"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/application/execution",
+  "vectie/mooncast/native_host/store",
+  "vectie/mooncast/production/project",
+}
+
+// Values
+
+// Errors
+pub suberror PostprocessApplicationError {
+  PostprocessInvalid(String)
+  PostprocessConflict(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct PostprocessBindRequest {
+  output_asset_id : String
+  output_asset_version : Int
+  destination_kind : String
+  destination_id : String
+  editor_media_digest : String?
+  actor : String
+  bound_at : String
+  human_confirmed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PostprocessRunRequest {
+  expected_task_version : Int
+  expected_task_digest : String
+  actor : String
+  human_confirmed : Bool
+  network_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct PostprocessService {
+  store : @store.AtomicStore
+  execution : @execution.ProviderExecutionService
+}
+pub async fn PostprocessService::bind(Self, String, PostprocessBindRequest) -> @vectie/mooncast/production/postprocess.PostprocessImportBinding
+pub async fn PostprocessService::list_outputs(Self, String) -> Array[@vectie/mooncast/production/postprocess.PostprocessOutput]
+pub async fn PostprocessService::list_tasks(Self, String) -> Array[@vectie/mooncast/production/postprocess.PostprocessTask]
+pub fn PostprocessService::new(String, @execution.ProviderExecutionService) -> Self
+pub async fn PostprocessService::record_task(Self, @vectie/mooncast/production/postprocess.PostprocessTask, @project.ProjectGraph) -> @vectie/mooncast/production/postprocess.PostprocessTask
+pub async fn PostprocessService::run(Self, String, PostprocessRunRequest) -> @vectie/mooncast/production/postprocess.PostprocessOutput
+pub async fn PostprocessService::workspace(Self, String) -> @vectie/mooncast/production/postprocess.PostprocessWorkspace
+
+// Type aliases
+
+// Traits
+

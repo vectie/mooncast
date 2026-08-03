@@ -1,0 +1,89 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/production/postprocess"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/production/project",
+}
+
+// Values
+pub fn task_digest(PostprocessTask) -> String
+
+pub fn task_errors(PostprocessTask, @project.ProjectGraph) -> Array[String]
+
+// Errors
+
+// Types and methods
+pub(all) struct PostprocessImportBinding {
+  contract : String
+  binding_id : String
+  output : @project.Asset
+  destination_kind : String
+  destination_id : String
+  editor_media_digest : String?
+  bound_at : String
+  actor : String
+  human_confirmed : Bool
+  publication_authority : Bool
+  immutable : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PostprocessOutput {
+  contract : String
+  reference : @project.Asset
+  task : @project.VersionRef
+  provider_job_id : String
+  provider_artifact_id : String
+  operation : String
+  source_assets : Array[@project.Asset]
+  rights_refs : Array[String]
+  cost_cny : Double
+  provenance_digest : String
+  created_at : String
+  network_effect_performed : Bool
+  publication_authority : Bool
+  immutable : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PostprocessTask {
+  contract : String
+  reference : @project.VersionRef
+  project_id : String
+  project_revision : Int
+  operation : String
+  source_assets : Array[@project.Asset]
+  prompt_digest : String
+  rights_refs : Array[String]
+  shot_ids : Array[String]
+  editor_project_id : String?
+  delivery_output_id : String?
+  target_locale : String?
+  terminology_refs : Array[String]
+  claims_ledger_digest : String?
+  target_width : Int?
+  target_height : Int?
+  provider_adapter_id : String
+  provider : String
+  model : String
+  permitted_data_class : String
+  cost_ceiling_cny : Double
+  retry_limit : Int
+  created_at : String
+  provider_execution_authority : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PostprocessWorkspace {
+  tasks : Array[PostprocessTask]
+  outputs : Array[PostprocessOutput]
+  bindings : Array[PostprocessImportBinding]
+  total_cost_cny : Double
+  publication_authority : Bool
+  provider_execution_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

@@ -1,0 +1,57 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/application/intake"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/native_host/store",
+}
+
+// Values
+
+// Errors
+pub suberror IntakeApplicationError {
+  IntakeInvalid(String)
+  IntakeConflict(String)
+  IntakeNotFound(String)
+  IntakeApprovalRequired(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct IntakeDecisionRequest {
+  packet_version : Int
+  expected_provenance_digest : String
+  decision : String
+  actor : String
+  actor_role : String
+  note : String
+  decided_at : String
+  human_confirmed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct NeedsIntakeService {
+  store : @store.AtomicStore
+}
+pub async fn NeedsIntakeService::approved_decision(Self, @vectie/mooncast/production/intake.ImportedIntake) -> @vectie/mooncast/production/intake.IntakeDecision?
+pub async fn NeedsIntakeService::bind_intake_to_project(Self, String, ProjectBindingRequest) -> @vectie/mooncast/production/intake.ProjectIntakeBinding
+pub async fn NeedsIntakeService::get_intake(Self, String, packet_version? : Int) -> @vectie/mooncast/production/intake.ImportedIntake?
+pub async fn NeedsIntakeService::import_packet(Self, @vectie/mooncast/production/intake.MoonWikiNeedsPacket, String) -> @vectie/mooncast/production/intake.ImportedIntake
+pub async fn NeedsIntakeService::list_bindings(Self) -> Array[@vectie/mooncast/production/intake.ProjectIntakeBinding]
+pub async fn NeedsIntakeService::list_decisions(Self) -> Array[@vectie/mooncast/production/intake.IntakeDecision]
+pub async fn NeedsIntakeService::list_intakes(Self) -> Array[@vectie/mooncast/production/intake.ImportedIntake]
+pub fn NeedsIntakeService::new(String) -> Self
+pub async fn NeedsIntakeService::record_decision(Self, String, IntakeDecisionRequest) -> @vectie/mooncast/production/intake.IntakeDecision
+pub async fn NeedsIntakeService::workspace(Self) -> @vectie/mooncast/production/intake.IntakeWorkspace
+
+pub(all) struct ProjectBindingRequest {
+  packet_version : Int
+  expected_provenance_digest : String
+  project_id : String
+  project_revision : Int
+  bound_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

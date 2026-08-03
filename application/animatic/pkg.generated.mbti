@@ -1,0 +1,62 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/application/animatic"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/native_host/store",
+  "vectie/mooncast/production/creative",
+  "vectie/mooncast/production/project",
+}
+
+// Values
+
+// Errors
+pub suberror AnimaticApplicationError {
+  AnimaticInvalid(String)
+  AnimaticConflict(String)
+  AnimaticRenderFailed(String)
+  AnimaticNotFound(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct AnimaticApprovalRequest {
+  expected_render_version : Int
+  expected_render_digest : String
+  actor : String
+  actor_role : String
+  note : String
+  approved_at : String
+  human_confirmed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct AnimaticRenderRequest {
+  expected_plan_version : Int
+  expected_plan_digest : String
+  actor : String
+  rendered_at : String
+  human_confirmed : Bool
+  process_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct AnimaticService {
+  state : @store.AtomicStore
+  media : @store.AtomicStore
+  ffmpeg : String
+}
+pub async fn AnimaticService::approve(Self, String, AnimaticApprovalRequest) -> @vectie/mooncast/production/animatic.RenderedAnimaticApproval
+pub async fn AnimaticService::current_plan(Self, String) -> @vectie/mooncast/production/animatic.AnimaticPlan?
+pub async fn AnimaticService::list_approvals(Self, String) -> Array[@vectie/mooncast/production/animatic.RenderedAnimaticApproval]
+pub async fn AnimaticService::list_attempts(Self, String) -> Array[@vectie/mooncast/production/animatic.AnimaticRenderAttempt]
+pub async fn AnimaticService::list_plans(Self, String) -> Array[@vectie/mooncast/production/animatic.AnimaticPlan]
+pub async fn AnimaticService::list_renders(Self, String) -> Array[@vectie/mooncast/production/animatic.RenderedAnimatic]
+pub async fn AnimaticService::media(Self, String, Int, String) -> @store.StoredBlob
+pub fn AnimaticService::new(String, String, ffmpeg? : String) -> Self
+pub async fn AnimaticService::record_plan(Self, @vectie/mooncast/production/animatic.AnimaticPlan, @project.ProjectGraph, Array[@creative.CreativeArtifact]) -> @vectie/mooncast/production/animatic.AnimaticPlan
+pub async fn AnimaticService::render(Self, String, AnimaticRenderRequest) -> @vectie/mooncast/production/animatic.RenderedAnimatic
+pub async fn AnimaticService::workspace(Self, String) -> @vectie/mooncast/production/animatic.AnimaticWorkspace
+
+// Type aliases
+
+// Traits
+

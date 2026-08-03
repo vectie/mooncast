@@ -1,0 +1,53 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/application/automated_qc"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/application/execution",
+  "vectie/mooncast/native_host/store",
+}
+
+// Values
+
+// Errors
+pub suberror AnalyzerApplicationError {
+  AnalyzerInvalid(String)
+  AnalyzerConflict(String)
+  AnalyzerSourceInvalid(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct AnalyzerRunRequest {
+  expected_task_version : Int
+  expected_task_digest : String
+  actor : String
+  human_confirmed : Bool
+  network_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct AnalyzerService {
+  store : @store.AtomicStore
+  media : @store.AtomicStore
+  execution : @execution.ProviderExecutionService
+  ffmpeg_executable : String
+  ffprobe_executable : String
+}
+pub async fn AnalyzerService::list_tasks(Self, String) -> Array[@vectie/mooncast/production/automated_qc.AnalyzerTask]
+pub fn AnalyzerService::new(String, @execution.ProviderExecutionService, String, String) -> Self
+pub async fn AnalyzerService::record_task(Self, @vectie/mooncast/production/automated_qc.AnalyzerTask) -> @vectie/mooncast/production/automated_qc.AnalyzerTask
+pub async fn AnalyzerService::run(Self, @vectie/mooncast/production/automated_qc.AnalyzerTask, Bytes?, AnalyzerRunRequest) -> @vectie/mooncast/production/automated_qc.AnalyzerReceipt
+pub async fn AnalyzerService::workspace(Self, String) -> @vectie/mooncast/production/automated_qc.AnalyzerWorkspace
+
+type ProbeDocument derive(@debug.Debug, @json.FromJson)
+
+type ProbeFormat derive(@debug.Debug, @json.FromJson)
+
+type ProbeStream derive(@debug.Debug, @json.FromJson)
+
+type SemanticResult derive(@debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

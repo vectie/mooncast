@@ -1,0 +1,88 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/application/asset_factory"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/application/execution",
+  "vectie/mooncast/native_host/store",
+  "vectie/mooncast/production/project",
+}
+
+// Values
+
+// Errors
+pub suberror AssetFactoryApplicationError {
+  FactoryInvalid(String)
+  FactoryConflict(String)
+  FactoryAuthorityRequired(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub(all) struct AssetApprovalRequest {
+  asset_id : String
+  asset_version : Int
+  variant_id : String
+  actor : String
+  actor_role : String
+  approved_at : String
+  human_confirmed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct AssetFactoryService {
+  store : @store.AtomicStore
+  execution : @execution.ProviderExecutionService
+}
+pub async fn AssetFactoryService::approve_asset(Self, AssetApprovalRequest) -> @vectie/mooncast/production/asset_factory.ApprovedReusableAsset
+pub async fn AssetFactoryService::authorize_variants(Self, String, FactoryExecutionRequest) -> Array[@vectie/mooncast/production/asset_factory.AssetGenerationVariant]
+pub async fn AssetFactoryService::bind_approved_assets(Self, String, Int, ArrayView[String], String) -> Array[@vectie/mooncast/production/asset_factory.ShotAssetBinding]
+pub async fn AssetFactoryService::current_plan(Self, String) -> @vectie/mooncast/production/asset_factory.AssetFactoryPlan?
+pub async fn AssetFactoryService::decide_plan(Self, String, PlanDecisionRequest) -> @vectie/mooncast/production/asset_factory.AssetFactoryPlanDecision
+pub async fn AssetFactoryService::list_approved_assets(Self) -> Array[@vectie/mooncast/production/asset_factory.ApprovedReusableAsset]
+pub async fn AssetFactoryService::list_bindings(Self) -> Array[@vectie/mooncast/production/asset_factory.ShotAssetBinding]
+pub async fn AssetFactoryService::list_findings(Self) -> Array[@vectie/mooncast/production/asset_factory.AssetQcFinding]
+pub async fn AssetFactoryService::list_plan_decisions(Self) -> Array[@vectie/mooncast/production/asset_factory.AssetFactoryPlanDecision]
+pub async fn AssetFactoryService::list_plans(Self, String) -> Array[@vectie/mooncast/production/asset_factory.AssetFactoryPlan]
+pub async fn AssetFactoryService::list_variants(Self) -> Array[@vectie/mooncast/production/asset_factory.AssetGenerationVariant]
+pub fn AssetFactoryService::new(String, @execution.ProviderExecutionService) -> Self
+pub async fn AssetFactoryService::record_finding(Self, FindingRequest) -> @vectie/mooncast/production/asset_factory.AssetQcFinding
+pub async fn AssetFactoryService::record_plan(Self, @vectie/mooncast/production/asset_factory.AssetFactoryPlan, @project.ProjectGraph, Int) -> @vectie/mooncast/production/asset_factory.AssetFactoryPlan
+pub async fn AssetFactoryService::run_pending(Self, String, FactoryExecutionRequest) -> Array[@vectie/mooncast/production/asset_factory.AssetGenerationVariant]
+pub async fn AssetFactoryService::shot_assets(Self, String, Int, String) -> Array[@project.Asset]?
+pub async fn AssetFactoryService::variant(Self, String) -> @vectie/mooncast/production/asset_factory.AssetGenerationVariant?
+pub async fn AssetFactoryService::workspace(Self, String) -> @vectie/mooncast/production/asset_factory.AssetFactoryWorkspace
+
+pub(all) struct FactoryExecutionRequest {
+  expected_plan_version : Int
+  expected_plan_digest : String
+  actor : String
+  human_confirmed : Bool
+  network_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct FindingRequest {
+  variant_id : String
+  dimension : String
+  status : String
+  evidence_digest : String
+  reviewer : String
+  reviewer_role : String
+  reviewed_at : String
+  human_confirmed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PlanDecisionRequest {
+  expected_plan_version : Int
+  expected_plan_digest : String
+  decision : String
+  actor : String
+  actor_role : String
+  note : String
+  decided_at : String
+  human_confirmed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+
