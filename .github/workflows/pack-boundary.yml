@@ -26,6 +26,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes ffmpeg
+          mkdir -p .tools/ffmpeg/darwin_arm64
+          ln -s /usr/bin/ffmpeg .tools/ffmpeg/darwin_arm64/ffmpeg
+          ln -s /usr/bin/ffprobe .tools/ffmpeg/darwin_arm64/ffprobe
 
       - name: Resolve pinned MoonBit dependencies
         run: moon update
