@@ -237,7 +237,7 @@ async test "utility concat canonicalizes manifest entries for a relative data ro
     "gray",
   )
   let (_, completed) = utility_concat_run_fixture_job(
-    "../../../../tmp/mooncast-utility-concat-relative-" + nonce,
+    "_build/test-data/mooncast-utility-concat-relative-" + nonce,
     "utility-concat-relative-" + nonce,
     [("first.mp4", first), ("second.mp4", second)],
   )

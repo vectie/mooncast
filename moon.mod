@@ -1,6 +1,6 @@
 name = "vectie/mooncast"
 
-version = "0.2.1"
+version = "0.2.2"
 
 import {
   "moonbitlang/async@0.19.4",
