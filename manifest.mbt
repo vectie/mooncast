@@ -181,6 +181,7 @@ pub fn manifest() -> @pack.MoonPackManifest {
       schema("host-authority-grant"),
       schema("pack-town-projection"),
       schema("town-pack-candidate"),
+      schema("pack-candidate-acknowledgement"),
     ],
     tools: [
       tool(

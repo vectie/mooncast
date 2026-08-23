@@ -146,7 +146,8 @@
     {"id":"control-tower-exception-assignment","version":"1.0.0","path":"schemas/control-tower-exception-assignment.schema.json"},
     {"id":"host-authority-grant","version":"1.0.0","path":"schemas/host-authority-grant.schema.json"},
     {"id":"pack-town-projection","version":"1.0.0","path":"schemas/pack-town-projection.schema.json"},
-    {"id":"town-pack-candidate","version":"1.0.0","path":"schemas/town-pack-candidate.schema.json"}
+    {"id":"town-pack-candidate","version":"1.0.0","path":"schemas/town-pack-candidate.schema.json"},
+    {"id":"pack-candidate-acknowledgement","version":"1.0.0","path":"schemas/pack-candidate-acknowledgement.schema.json"}
   ],
   "tools": [
     {"id":"brief.validate","owner_product":"mooncast","input_schema_id":"creative-brief","output_schema_id":"creative-brief","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["records/briefs"],"review_required":false},
