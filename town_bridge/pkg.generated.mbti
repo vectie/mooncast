@@ -9,6 +9,8 @@ import {
 // Values
 pub fn intake_creative_candidate(TownPackCandidate, String, Array[String], Array[String], Array[String]) -> CreativeBrief raise
 
+pub async fn prepare_creative_candidate(String, TownPackCandidate, String, Array[String], Array[String], Array[String], String) -> PackTownProjection
+
 pub fn project_creative_brief(TownPackCandidate, CreativeBrief, String) -> PackTownProjection
 
 // Errors
