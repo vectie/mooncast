@@ -144,7 +144,9 @@
     {"id":"control-tower-operating-actuals","version":"1.0.0","path":"schemas/control-tower-operating-actuals.schema.json"},
     {"id":"control-tower-exception-assignment-input","version":"1.0.0","path":"schemas/control-tower-exception-assignment-input.schema.json"},
     {"id":"control-tower-exception-assignment","version":"1.0.0","path":"schemas/control-tower-exception-assignment.schema.json"},
-    {"id":"host-authority-grant","version":"1.0.0","path":"schemas/host-authority-grant.schema.json"}
+    {"id":"host-authority-grant","version":"1.0.0","path":"schemas/host-authority-grant.schema.json"},
+    {"id":"pack-town-projection","version":"1.0.0","path":"schemas/pack-town-projection.schema.json"},
+    {"id":"town-pack-candidate","version":"1.0.0","path":"schemas/town-pack-candidate.schema.json"}
   ],
   "tools": [
     {"id":"brief.validate","owner_product":"mooncast","input_schema_id":"creative-brief","output_schema_id":"creative-brief","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["records/briefs"],"review_required":false},
@@ -231,7 +233,8 @@
     {"id":"handoff.receipt-reference.record","owner_product":"mooncast","input_schema_id":"external-handoff-receipt-reference","output_schema_id":"external-handoff-receipt-reference","authority":"Observe","idempotent":true,"evidence_outputs":["handoff-outbox/external-handoff-receipt-reference"],"review_required":false},
     {"id":"control-tower.observe","owner_product":"mooncast","input_schema_id":"control-tower-query","output_schema_id":"production-control-tower","authority":"Observe","idempotent":true,"evidence_outputs":[],"review_required":false},
     {"id":"control-tower.actuals.record","owner_product":"mooncast","input_schema_id":"control-tower-actuals-input","output_schema_id":"control-tower-operating-actuals","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["control-tower/actuals"],"review_required":true},
-    {"id":"control-tower.exception.assign","owner_product":"mooncast","input_schema_id":"control-tower-exception-assignment-input","output_schema_id":"control-tower-exception-assignment","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["control-tower/assignments"],"review_required":true}
+    {"id":"control-tower.exception.assign","owner_product":"mooncast","input_schema_id":"control-tower-exception-assignment-input","output_schema_id":"control-tower-exception-assignment","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["control-tower/assignments"],"review_required":true},
+    {"id":"creative.candidate.intake","owner_product":"mooncast","input_schema_id":"town-pack-candidate","output_schema_id":"creative-brief","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["production/candidate-intake"],"review_required":true}
   ],
   "workflows": [
     {"id":"brief-to-delivery","version":"1.0.0","path":"workflows/brief-to-delivery.md"},
@@ -272,7 +275,8 @@
     {"id":"semantic-qc","version":"1.0.0","path":"providers/semantic-qc.port.md"},
     {"id":"timeline-compositor","version":"1.0.0","path":"providers/timeline-compositor.port.md"},
     {"id":"analytics","version":"1.0.0","path":"providers/analytics.port.md"},
-    {"id":"economics","version":"1.0.0","path":"providers/economics.port.md"}
+    {"id":"economics","version":"1.0.0","path":"providers/economics.port.md"},
+    {"id":"moontown-pack-projection","version":"1.0.0","path":"providers/moontown-pack-projection.port.md"}
   ],
   "schedules": [
     {"id":"performance-feedback-daily","cadence":"0 9 * * *","timezone":"Asia/Shanghai","workflow_id":"performance-feedback"}

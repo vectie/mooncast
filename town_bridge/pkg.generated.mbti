@@ -1,0 +1,68 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/town_bridge"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn intake_creative_candidate(TownPackCandidate, String, Array[String], Array[String], Array[String]) -> CreativeBrief raise
+
+pub fn project_creative_brief(TownPackCandidate, CreativeBrief, String) -> PackTownProjection
+
+// Errors
+
+// Types and methods
+pub(all) struct CreativeBrief {
+  campaign_id : String
+  objective : String
+  audience : String
+  channels : Array[String]
+  deliverables : Array[String]
+  rights_constraints : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PackTownProjection {
+  contract_id : String
+  pack_id : String
+  product_id : String
+  version : String
+  generated_at : String
+  subjects : Array[PackTownSubject]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PackTownSubject {
+  subject_ref : String
+  schema_id : String
+  title : String
+  summary : String
+  lifecycle_state : String
+  attention : String
+  place_refs : Array[String]
+  related_refs : Array[String]
+  workflow_refs : Array[String]
+  run_refs : Array[String]
+  evidence_refs : Array[String]
+  operation_ids : Array[String]
+  domain_payload : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct TownPackCandidate {
+  contract_id : String
+  candidate_ref : String
+  origin_ref : String
+  target_pack_id : String
+  intake_operation_id : String
+  submitted_by : String
+  submitted_at : String
+  title : String
+  rationale : String
+  claim_ceiling : String
+  evidence_refs : Array[String]
+  domain_payload : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

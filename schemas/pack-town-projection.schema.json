@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "moontown.pack-projection.v1",
+  "title": "MoonTown domain-pack projection", "type": "object", "additionalProperties": false,
+  "required": ["contract_id", "pack_id", "product_id", "version", "generated_at", "subjects"],
+  "properties": {
+    "contract_id": {"const": "moontown.pack-projection.v1"}, "pack_id": {"$ref": "#/$defs/identifier"},
+    "product_id": {"$ref": "#/$defs/identifier"}, "version": {"type": "string", "minLength": 1},
+    "generated_at": {"type": "string", "minLength": 1}, "subjects": {"type": "array", "items": {"$ref": "#/$defs/subject"}}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "minLength": 1, "pattern": "^(?!.*(?:/|\\\\|\\.\\.)).+$"},
+    "relativeRef": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"},
+    "uniqueRefs": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/relativeRef"}},
+    "uniqueIdentifiers": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
+    "subject": {"type": "object", "additionalProperties": false,
+      "required": ["subject_ref", "schema_id", "title", "summary", "lifecycle_state", "attention", "place_refs", "related_refs", "workflow_refs", "run_refs", "evidence_refs", "operation_ids", "domain_payload"],
+      "properties": {
+        "subject_ref": {"$ref": "#/$defs/relativeRef"}, "schema_id": {"$ref": "#/$defs/identifier"},
+        "title": {"type": "string", "minLength": 1}, "summary": {"type": "string", "minLength": 1},
+        "lifecycle_state": {"$ref": "#/$defs/identifier"}, "attention": {"$ref": "#/$defs/identifier"},
+        "place_refs": {"$ref": "#/$defs/uniqueRefs"}, "related_refs": {"$ref": "#/$defs/uniqueRefs"},
+        "workflow_refs": {"$ref": "#/$defs/uniqueRefs"}, "run_refs": {"$ref": "#/$defs/uniqueRefs"},
+        "evidence_refs": {"$ref": "#/$defs/uniqueRefs"}, "operation_ids": {"$ref": "#/$defs/uniqueIdentifiers"},
+        "domain_payload": {"type": "object"}
+      }}
+  }
+}

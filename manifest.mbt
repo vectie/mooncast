@@ -34,7 +34,7 @@ fn tool(
 pub fn manifest() -> @pack.MoonPackManifest {
   {
     id: "mooncast",
-    version: "0.2.0",
+    version: "0.2.3",
     display_name: "Mooncast Systematic AIGC Production Studio",
     product_id: "mooncast",
     kind: DomainPack,
@@ -179,6 +179,8 @@ pub fn manifest() -> @pack.MoonPackManifest {
       schema("control-tower-exception-assignment-input"),
       schema("control-tower-exception-assignment"),
       schema("host-authority-grant"),
+      schema("pack-town-projection"),
+      schema("town-pack-candidate"),
     ],
     tools: [
       tool(
@@ -865,6 +867,14 @@ pub fn manifest() -> @pack.MoonPackManifest {
         ["control-tower/assignments"],
         review_required=true,
       ),
+      tool(
+        "creative.candidate.intake",
+        "town-pack-candidate",
+        "creative-brief",
+        WorkspaceMutation,
+        ["production/candidate-intake"],
+        review_required=true,
+      ),
     ],
     workflows: [
       contract("brief-to-delivery", "workflows/brief-to-delivery.md"),
@@ -910,6 +920,9 @@ pub fn manifest() -> @pack.MoonPackManifest {
       contract("timeline-compositor", "providers/timeline-compositor.port.md"),
       contract("analytics", "providers/analytics.port.md"),
       contract("economics", "providers/economics.port.md"),
+      contract(
+        "moontown-pack-projection", "providers/moontown-pack-projection.port.md",
+      ),
     ],
     schedules: [
       @pack.schedule_declaration(

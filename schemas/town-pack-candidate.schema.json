@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "moontown.pack-candidate-intake.v1",
+  "title": "MoonTown bottom-up pack candidate", "type": "object", "additionalProperties": false,
+  "required": ["contract_id", "candidate_ref", "origin_ref", "target_pack_id", "intake_operation_id", "submitted_by", "submitted_at", "title", "rationale", "claim_ceiling", "evidence_refs", "domain_payload"],
+  "properties": {
+    "contract_id": {"const": "moontown.pack-candidate-intake.v1"}, "candidate_ref": {"$ref": "#/$defs/relativeRef"},
+    "origin_ref": {"$ref": "#/$defs/relativeRef"}, "target_pack_id": {"$ref": "#/$defs/identifier"},
+    "intake_operation_id": {"$ref": "#/$defs/identifier"}, "submitted_by": {"$ref": "#/$defs/identifier"},
+    "submitted_at": {"type": "string", "minLength": 1}, "title": {"type": "string", "minLength": 1},
+    "rationale": {"type": "string", "minLength": 1},
+    "claim_ceiling": {"enum": ["observation", "research-evidence", "execution-result", "accepted-knowledge"]},
+    "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/relativeRef"}}, "domain_payload": {"type": "object"}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "minLength": 1, "pattern": "^(?!.*(?:/|\\\\|\\.\\.)).+$"},
+    "relativeRef": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"}
+  }
+}
