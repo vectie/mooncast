@@ -304,6 +304,7 @@ pub(all) struct CreativeCapsule {
 ///|
 pub(all) struct GraphDiff {
   contract : String
+  changed_graph_fields : Array[String]
   added_node_ids : Array[String]
   removed_node_ids : Array[String]
   modified_node_ids : Array[String]

@@ -1167,7 +1167,10 @@ pub async fn StudioService::workspace_features(
       let value : @workspace.WorkspacePresence? = load_value(self.store, key)
       if value is Some(item) &&
         item.project_id == project_id &&
-        (item.lease_expires_at.length() != now.length() || item.lease_expires_at > now) {
+        (
+          item.lease_expires_at.length() != now.length() ||
+          item.lease_expires_at > now
+        ) {
         presence.push(item)
       }
     } else if key.has_prefix("workspace-promotion-") {

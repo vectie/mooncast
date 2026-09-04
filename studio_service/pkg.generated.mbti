@@ -597,19 +597,27 @@ pub struct StudioService {
   automated_qc : @automated_qc.AnalyzerService
   route_extensions : Array[RouteExtension]
 }
+pub async fn StudioService::access_workspace_share(Self, String, String) -> WorkspaceShareAccessProjection
 pub async fn StudioService::adopt_pipeline_result(Self, String, @pipeline.RoutedIngestResult) -> ProjectRecord
 pub async fn StudioService::advance_gate(Self, String, GateCommandRequest) -> ProjectCommandResponse
 pub async fn StudioService::advance_ready_gates(Self, String, String, String, String) -> ProjectRecord
 pub async fn StudioService::analyze_editor_media(Self, String) -> EditorMediaAnalysisView
 pub async fn StudioService::apply_project_command(Self, String, ProjectCommandRequest) -> ProjectCommandResponse
 pub async fn StudioService::apply_provider_command(Self, String, @vectie/mooncast/execution.ProviderExecutionCommand) -> ProviderCommandResponse
+pub async fn StudioService::apply_saved_workspace_proposal(Self, String, String, WorkspaceProposalApplyByIdRequest) -> @workspace.WorkspaceGraph
+pub async fn StudioService::apply_workspace_dispatch_receipt(Self, String, @workspace.WorkspaceDispatchReceipt) -> @workspace.WorkspaceDispatch
 pub async fn StudioService::apply_workspace_proposal(Self, WorkspaceProposalApplyRequest) -> @workspace.WorkspaceGraph
+pub async fn StudioService::apply_workspace_run_action(Self, String, String, WorkspaceRunActionRequest) -> @workspace.RunRecord
 pub async fn StudioService::apply_workspace_run_command(Self, String, WorkspaceRunCommand) -> @workspace.RunRecord
 pub async fn StudioService::authorize_provider_job(Self, ProviderAuthorizationRequest) -> ProviderJobRecord
+pub async fn StudioService::branch_workspace_artifact(Self, WorkspaceArtifactBranchRequest) -> @workspace.WorkspaceArtifact
 pub async fn StudioService::capacity_board_projection(Self, String) -> CapacityBoardProjection
+pub async fn StudioService::claim_workspace_run_node(Self, String, WorkspaceRunClaimRequest) -> @workspace.WorkspaceDispatch
 pub async fn StudioService::commercial_dashboard_projection(Self) -> CommercialDashboardProjection
 pub async fn StudioService::commercial_lead_projection(Self, String) -> LeadProjection
 pub async fn StudioService::commercial_quote_projection(Self, String) -> QuoteProjection
+pub async fn StudioService::compare_workspace_artifacts(Self, WorkspaceArtifactCompareRequest) -> @workspace.ArtifactComparison
+pub fn StudioService::compare_workspace_graphs(Self, WorkspaceGraphDiffRequest) -> @workspace.GraphDiff raise
 pub async fn StudioService::complete_editor_intake(Self, String, String, Bytes) -> @media.CompletedIntake
 pub async fn StudioService::convert_commercial_quote(Self, String, QuoteConversionInput) -> ConversionResultProjection
 pub async fn StudioService::create_capacity_reservation(Self, ReservationInput) -> ReservationProjection
@@ -621,16 +629,20 @@ pub async fn StudioService::create_editor_project(Self, EditorCreateRequest) -> 
 pub async fn StudioService::create_or_revise_quote(Self, String, String?, QuoteInput) -> QuoteProjection
 pub async fn StudioService::create_project(Self, @project.ProjectGraph, String) -> ProjectRecord
 pub async fn StudioService::create_repeat_order(Self, String, RepeatOrderInput) -> RepeatOrderResultProjection
+pub async fn StudioService::create_secure_workspace_share(Self, WorkspaceSecureShareRequest) -> WorkspaceShareCreatedProjection
 pub async fn StudioService::create_utility_concat(Self, UtilityConcatCreateRequest) -> UtilityConcatJob
 pub async fn StudioService::create_workspace_run(Self, WorkspaceRunCreateRequest) -> @workspace.RunRecord
+pub async fn StudioService::create_workspace_share(Self, WorkspaceShareCreateRequest) -> @workspace.WorkspaceShare
 pub async fn StudioService::creative_view(Self, String, @creative.ArtifactKind) -> CreativeView
 pub async fn StudioService::creative_workspace_projection(Self, String, @creative.ArtifactKind) -> Json
 pub async fn StudioService::decide_commercial_quote(Self, String, String, HumanDecisionInput) -> QuoteProjection
 pub async fn StudioService::delete_project(Self, String, Int) -> Unit
+pub async fn StudioService::delete_workspace_asset(Self, String, Int, WorkspaceAssetDeleteRequest) -> @workspace.WorkspaceAssetEntry
 pub async fn StudioService::dispatch_application_http(Self, @http.Request) -> @http.Response?
 pub async fn StudioService::dispatch_editor_command(Self, String, @domain.EditCommand, String) -> EditorOpenView
 pub async fn StudioService::dispatch_http(Self, @http.Request) -> @http.Response
 pub async fn StudioService::editor_export_path_for_digest(Self, String, String) -> String
+pub async fn StudioService::fork_workspace_graph(Self, String, String, WorkspaceGraphForkRequest) -> @workspace.WorkspaceGraph
 pub fn StudioService::freeze_workspace_plan(Self, WorkspacePlanRequest) -> @workspace.ExecutionPlan raise
 pub async fn StudioService::get_editor_job(Self, String, String) -> EditorJobView
 pub async fn StudioService::get_editor_project(Self, String) -> EditorOpenView
@@ -644,21 +656,32 @@ pub async fn StudioService::governance_stage_projection(Self, String, String) ->
 pub async fn StudioService::governance_view(Self, String) -> GovernanceView
 pub async fn StudioService::import_editor_from_canonical_project(Self, String) -> EditorOpenView
 pub async fn StudioService::import_editor_production(Self, EditorProductionImportRequest) -> EditorOpenView
+pub async fn StudioService::install_workspace_capsule(Self, String, String, WorkspaceCapsuleInstallRequest) -> @workspace.WorkspaceGraph
 pub async fn StudioService::list_editor_projects(Self) -> Array[EditorProjectSummary]
 pub async fn StudioService::list_projects(Self) -> Array[ProjectSummary]
 pub async fn StudioService::list_provider_jobs(Self) -> Array[ProviderJobRecord]
 pub async fn StudioService::list_routed_executions(Self, String) -> Array[RoutedExecutionRecord]
-pub async fn StudioService::list_workspace_artifacts(Self) -> WorkspaceArtifactProjection
+pub async fn StudioService::list_workspace_artifacts(Self, project_id? : String) -> WorkspaceArtifactProjection
+pub async fn StudioService::list_workspace_asset_library(Self, String, String, String, String, Int, Int, Bool) -> WorkspaceAssetLibraryProjection
+pub async fn StudioService::list_workspace_proposals(Self, String) -> WorkspaceProposalProjection
+pub async fn StudioService::list_workspace_runs(Self, String, String, Int, Int) -> WorkspaceRunListProjection
 pub fn StudioService::new(String, provider_catalog? : @vectie/mooncast/application/execution.ProviderCatalog) -> Self
 pub async fn StudioService::plan_routed_execution(Self, String, RoutedPlanRequest) -> RoutedExecutionRecord
 pub async fn StudioService::prepare_editor_intake(Self, String, EditorPrepareIntakeRequest) -> EditorPreparedIntake
+pub async fn StudioService::prepare_workspace_dispatch(Self, String, String, WorkspaceDispatchPrepareRequest) -> @workspace.WorkspaceDispatch
 pub async fn StudioService::production_control_tower(Self, as_of_date? : String) -> @control_tower.ControlTower
 pub async fn StudioService::promote_editor_master(Self, String, String, EditorMasterPromotionEnvelope) -> @integration.MasterPromotionReceipt
+pub async fn StudioService::promote_workspace_artifact(Self, WorkspaceArtifactPromoteRequest) -> @workspace.ArtifactPromotion
+pub async fn StudioService::promote_workspace_run_to_template(Self, String, WorkspaceRunTemplateRequest) -> @workspace.WorkspaceTemplatePromotion
+pub async fn StudioService::publish_builtin_workspace_capsule(Self, String, WorkspaceBuiltinCapsulePublishRequest) -> @workspace.CapsulePublication
+pub async fn StudioService::publish_workspace_capsule(Self, WorkspaceCapsulePublishRequest) -> @workspace.CapsulePublication
 pub async fn StudioService::qualify_commercial_lead(Self, String, HumanDecisionInput) -> LeadProjection
 pub async fn StudioService::record_creative_artifact(Self, String, CreativeArtifactRequest) -> ProjectCommandResponse
 pub async fn StudioService::record_creative_decision(Self, String, CreativeDecisionRequest) -> ProjectCommandResponse
 pub async fn StudioService::record_editor_review_comment(Self, String, EditorReviewCommentRequest) -> @integration.ReviewComment
 pub async fn StudioService::record_project_qualification(Self, String, ProjectExperienceMetadata, String, moonwiki_intake? : @vectie/mooncast/production/intake.MoonWikiNeedsPacket) -> ProjectCommandResponse
+pub async fn StudioService::record_workspace_comment(Self, WorkspaceCommentCreateRequest) -> @workspace.WorkspaceComment
+pub async fn StudioService::record_workspace_comment_draft(Self, WorkspaceCommentDraftRequest) -> @workspace.WorkspaceComment
 pub fn StudioService::register_animatic_routes(Self) -> Unit
 pub fn StudioService::register_asset_factory_routes(Self) -> Unit
 pub fn StudioService::register_automated_qc_routes(Self) -> Unit
@@ -670,23 +693,37 @@ pub fn StudioService::register_postprocess_routes(Self) -> Unit
 pub fn StudioService::register_production_coordinator_routes(Self) -> Unit
 pub fn StudioService::register_route_extension(Self, RouteExtension) -> Unit
 pub fn StudioService::register_standard_application_routes(Self) -> Unit
+pub async fn StudioService::register_utility_concat_workspace_artifact(Self, String, String, WorkspaceUtilityArtifactRegisterRequest) -> @workspace.WorkspaceArtifact
+pub async fn StudioService::renew_workspace_presence(Self, WorkspacePresenceRequest) -> @workspace.WorkspacePresence
+pub async fn StudioService::renew_workspace_presence_lease(Self, WorkspacePresenceLeaseRequest) -> @workspace.WorkspacePresence
 pub async fn StudioService::reschedule_capacity_reservation(Self, String, ReservationRescheduleInput) -> ReservationProjection
 pub async fn StudioService::resolve_editor_job_media(Self, String, String) -> Bytes
 pub async fn StudioService::resolve_editor_media(Self, String, Bool) -> (@media.MediaObjectRecord, Bytes)
 pub async fn StudioService::resolve_media(Self, String) -> ResolvedMedia
 pub async fn StudioService::resolve_utility_concat_media(Self, String) -> Bytes
 pub async fn StudioService::retry_editor_job(Self, String, String) -> EditorJobView
+pub async fn StudioService::review_saved_workspace_proposal(Self, String, String) -> WorkspaceProposalReviewProjection
+pub async fn StudioService::revise_workspace_graph(Self, String, String, WorkspaceGraphRevisionRequest) -> @workspace.WorkspaceGraph
+pub async fn StudioService::revoke_workspace_share(Self, String, WorkspaceShareRevokeRequest) -> @workspace.WorkspaceShare
 pub async fn StudioService::run_utility_concat(Self, String) -> UtilityConcatJob
 pub async fn StudioService::save_project_experience(Self, String, ProjectExperienceMetadata) -> Unit
 pub async fn StudioService::save_workspace_artifact(Self, @workspace.WorkspaceArtifact) -> @workspace.WorkspaceArtifact
 pub async fn StudioService::save_workspace_graph(Self, @workspace.WorkspaceGraph) -> @workspace.WorkspaceGraph
+pub async fn StudioService::save_workspace_proposal(Self, @workspace.AgentGraphProposal) -> @workspace.AgentGraphProposal
+pub async fn StudioService::search_workspace(Self, String, String) -> WorkspaceSearchProjection
 pub async fn StudioService::seed_initial_creative_drafts(Self, String, ProjectExperienceMetadata, String, moonwiki_intake? : @vectie/mooncast/production/intake.MoonWikiNeedsPacket) -> ProjectRecord
+pub async fn StudioService::start_workspace_graph_run(Self, String, String, WorkspaceGraphRunRequest) -> @workspace.RunRecord
+pub async fn StudioService::start_workspace_recipe(Self, String, WorkspaceRecipeRunRequest) -> @workspace.RunRecord
 pub async fn StudioService::studio_project_projection(Self, ProjectRecord) -> Json
+pub async fn StudioService::tag_workspace_asset(Self, String, Int, WorkspaceAssetTagsRequest) -> @workspace.WorkspaceAssetEntry
 pub async fn StudioService::upload_utility_concat_input(Self, String, Int, Bytes) -> UtilityConcatJob
 pub fn StudioService::validate_workspace_graph(Self, @workspace.WorkspaceGraph) -> @workspace.GraphValidation
 pub fn StudioService::workspace_capsules(Self, String) -> WorkspaceCapsuleProjection raise
 pub fn StudioService::workspace_catalog(Self) -> WorkspaceCatalogProjection
+pub async fn StudioService::workspace_features(Self, String) -> WorkspaceFeatureProjection
 pub async fn StudioService::workspace_graph_history(Self, String, String) -> WorkspaceGraphHistoryProjection
+pub async fn StudioService::workspace_run_events(Self, String, String) -> WorkspaceRunEventProjection
+pub async fn StudioService::workspace_run_events_sse(Self, String, String) -> String
 
 type UtilityConcatAudioSignature derive(Eq, @debug.Debug)
 
@@ -744,10 +781,69 @@ type UtilityConcatProbeStream derive(@json.FromJson)
 
 type UtilityConcatVideoSignature derive(Eq, @debug.Debug)
 
+pub(all) struct WorkspaceArtifactBranchRequest {
+  project_id : String
+  source_artifact_id : String
+  source_version : Int
+  artifact_id : String
+  actor : String
+  branched_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceArtifactCompareRequest {
+  project_id : String
+  artifact_ids : Array[String]
+  baseline_artifact_id : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct WorkspaceArtifactProjection {
   contract : String
   artifacts : Array[@workspace.WorkspaceArtifact]
   publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceArtifactPromoteRequest {
+  project_id : String
+  artifact_id : String
+  artifact_version : Int
+  channel : String
+  actor : String
+  note : String
+  promoted_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceAssetDeleteRequest {
+  actor : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceAssetLibraryProjection {
+  contract : String
+  project_id : String
+  entries : Array[@workspace.WorkspaceAssetEntry]
+  total : Int
+  offset : Int
+  limit : Int
+  has_more : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceAssetTagsRequest {
+  tags : Array[String]
+  actor : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceBuiltinCapsulePublishRequest {
+  publication_id : String
+  project_id : String
+  visibility : String
+  actor : String
+  published_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceCapsuleInstallRequest {
+  graph_id : String
+  title : String
+  actor : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct WorkspaceCapsuleProjection {
@@ -756,10 +852,70 @@ pub(all) struct WorkspaceCapsuleProjection {
   publication_authority : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct WorkspaceCapsulePublishRequest {
+  publication_id : String
+  capsule : @workspace.CreativeCapsule
+  visibility : String
+  actor : String
+  published_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct WorkspaceCatalogProjection {
   contract : String
   definitions : Array[@workspace.NodeDefinition]
   publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceCommentCreateRequest {
+  comment_id : String
+  project_id : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  body : String
+  actor : String
+  start_tick : Int?
+  end_tick : Int?
+  created_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceCommentDraftRequest {
+  project_id : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  body : String
+  actor : String
+  start_tick : Int?
+  end_tick : Int?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceDispatchPrepareRequest {
+  input_refs : Array[String]
+  created_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceFeatureProjection {
+  contract : String
+  project_id : String
+  comments : Array[@workspace.WorkspaceComment]
+  presence : Array[@workspace.WorkspacePresence]
+  promotions : Array[@workspace.ArtifactPromotion]
+  shares : Array[@workspace.WorkspaceShare]
+  activities : Array[@workspace.WorkspaceActivity]
+  publications : Array[@workspace.CapsulePublication]
+  dispatches : Array[@workspace.WorkspaceDispatch]
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceGraphDiffRequest {
+  base : @workspace.WorkspaceGraph
+  proposed : @workspace.WorkspaceGraph
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceGraphForkRequest {
+  graph_id : String
+  title : String
+  created_by : String
+  created_at : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct WorkspaceGraphHistoryProjection {
@@ -769,6 +925,26 @@ pub(all) struct WorkspaceGraphHistoryProjection {
   publication_authority : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct WorkspaceGraphRevisionRequest {
+  expected_revision : Int
+  title : String
+  nodes : Array[@workspace.WorkflowNode]
+  edges : Array[@workspace.WorkflowEdge]
+  output_node_ids : Array[String]
+  actor : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceGraphRunRequest {
+  expected_revision : Int
+  run_id : String
+  created_by : String
+  provider : String
+  model : String
+  policy_digest : String
+  maximum_retries : Int
+  requested_output_node_ids : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct WorkspacePlanRequest {
   graph : @workspace.WorkspaceGraph
   requested_output_node_ids : Array[String]
@@ -776,9 +952,77 @@ pub(all) struct WorkspacePlanRequest {
   frozen_at : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct WorkspacePresenceLeaseRequest {
+  project_id : String
+  actor_id : String
+  display_name : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  lifetime_seconds : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspacePresenceRequest {
+  project_id : String
+  actor_id : String
+  display_name : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  lease_expires_at : String
+  updated_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceProposalApplyByIdRequest {
+  actor : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct WorkspaceProposalApplyRequest {
   base : @workspace.WorkspaceGraph
   proposal : @workspace.AgentGraphProposal
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceProposalProjection {
+  contract : String
+  project_id : String
+  proposals : Array[@workspace.AgentGraphProposal]
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceProposalReviewProjection {
+  contract : String
+  proposal : @workspace.AgentGraphProposal
+  current_graph_revision : Int
+  stale : Bool
+  diff : @workspace.GraphDiff
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspacePublicInputValue {
+  port_id : String
+  value : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceRecipeRunRequest {
+  project_id : String
+  run_id : String
+  created_by : String
+  created_at : String
+  provider : String
+  model : String
+  policy_digest : String
+  maximum_retries : Int
+  public_inputs : Array[WorkspacePublicInputValue]
+  requested_output_node_ids : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceRunActionRequest {
+  node_id : String
+  actor : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceRunClaimRequest {
+  worker_id : String
+  execution_owner : String
+  input_refs : Array[String]
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct WorkspaceRunCommand {
@@ -799,6 +1043,96 @@ pub(all) struct WorkspaceRunCreateRequest {
   created_by : String
   created_at : String
   maximum_retries : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceRunEventProjection {
+  contract : String
+  run_id : String
+  events : Array[@workspace.WorkspaceRunEvent]
+  last_event_id : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceRunListProjection {
+  contract : String
+  project_id : String
+  runs : Array[@workspace.RunRecord]
+  total : Int
+  offset : Int
+  limit : Int
+  has_more : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceRunTemplateRequest {
+  promotion_id : String
+  capsule_id : String
+  title : String
+  summary : String
+  actor : String
+  promoted_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceSearchProjection {
+  contract : String
+  project_id : String
+  query : String
+  matches : Array[@workspace.WorkspaceSearchMatch]
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceSearchRequest {
+  project_id : String
+  query : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceSecureShareRequest {
+  project_id : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  mode : String
+  created_by : String
+  lifetime_seconds : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceShareAccessProjection {
+  contract : String
+  share_id : String
+  project_id : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  mode : String
+  expires_at : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceShareCreateRequest {
+  share_id : String
+  project_id : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  mode : String
+  token : String
+  expires_at : String
+  created_by : String
+  created_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceShareCreatedProjection {
+  contract : String
+  share : @workspace.WorkspaceShare
+  access_path : String
+  token : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceShareRevokeRequest {
+  actor : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceUtilityArtifactRegisterRequest {
+  actor : String
+  recorded_at : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases

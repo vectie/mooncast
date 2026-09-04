@@ -33,6 +33,13 @@ pub fn graph_diff(
   base : WorkspaceGraph,
   proposed : WorkspaceGraph,
 ) -> GraphDiff {
+  let changed_graph_fields : Array[String] = []
+  if base.title != proposed.title {
+    changed_graph_fields.push("title")
+  }
+  if base.output_node_ids != proposed.output_node_ids {
+    changed_graph_fields.push("output_node_ids")
+  }
   let added_nodes : Array[String] = []
   let removed_nodes : Array[String] = []
   let modified_nodes : Array[String] = []
@@ -73,6 +80,7 @@ pub fn graph_diff(
   modified_edges.sort()
   {
     contract: "mooncast.workspace-graph-diff.v1",
+    changed_graph_fields,
     added_node_ids: added_nodes,
     removed_node_ids: removed_nodes,
     modified_node_ids: modified_nodes,

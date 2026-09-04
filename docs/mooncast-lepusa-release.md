@@ -1,6 +1,6 @@
 # Mooncast Lepusa release baseline
 
-Mooncast's checked-in `lepusa.json` targets Lepusa 0.1.4. It opens Mooncast
+Mooncast's checked-in `lepusa.json` is verified against Lepusa 0.1.6. It opens Mooncast
 Studio at `http://127.0.0.1:4302/apps/mooncast/studio`, waits on `/health`, and
 supervises the native `mooncast-studio` sidecar.
 
@@ -17,6 +17,13 @@ media tools from the macOS app directory and writes durable state under
 `LEPUSA_APP_DATA_DIR/mooncast`. No absolute workspace path or local Lepusa
 checkout is part of the application manifest.
 
+The cfy reference tree does not provide a Lepusa application manifest. Mooncast
+therefore borrows graph-workspace behavior from cfy, but keeps packaging on the
+native Lepusa contract below instead of importing cfy's Python/server launch
+model. Workspace graph, asset, scheduler, share and event routes all remain
+behind the same supervised loopback Studio sidecar and require no additional
+Lepusa capability grant.
+
 ## Local verification and UI handoff
 
 Build Mooncast's native sidecar first:
@@ -25,7 +32,7 @@ Build Mooncast's native sidecar first:
 moon build --target native --release cmd/studio
 ```
 
-Use Lepusa 0.1.4 from an installed package or checkout. For a checkout, run its
+Use Lepusa 0.1.6 from an installed package or checkout. For a checkout, run its
 MoonBit CLI while keeping Mooncast's release binary on `PATH`:
 
 ```sh

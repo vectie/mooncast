@@ -17,7 +17,11 @@ async fn StudioService::record_workspace_run_event(
     ..base,
     event_id: @runtime.new_id(prefix="workspace-run-event"),
   }
-  save_value(self.store, workspace_run_event_key(run.run_id, event.event_id), event)
+  save_value(
+    self.store,
+    workspace_run_event_key(run.run_id, event.event_id),
+    event,
+  )
   event
 }
 
@@ -37,7 +41,11 @@ pub async fn StudioService::workspace_run_events(
   }
   all.sort_by((left, right) => {
     let time = left.recorded_at.compare(right.recorded_at)
-    if time == 0 { left.event_id.compare(right.event_id) } else { time }
+    if time == 0 {
+      left.event_id.compare(right.event_id)
+    } else {
+      time
+    }
   })
   let events : Array[@workspace.WorkspaceRunEvent] = []
   let mut accepting = after.is_blank()
@@ -90,7 +98,10 @@ pub async fn StudioService::list_workspace_runs(
     let value : @workspace.RunRecord? = load_value(self.store, key)
     if value is Some(run) &&
       run.plan.frozen_graph.project_id == project_id &&
-      (state.is_blank() || run.state.to_json().stringify() == "\"" + state + "\"") {
+      (
+        state.is_blank() ||
+        run.state.to_json().stringify() == "\"" + state + "\""
+      ) {
       matching.push(run)
     }
   }
@@ -130,13 +141,14 @@ pub async fn StudioService::claim_workspace_run_node(
     if node.state == @workspace.Ready &&
       run.plan.nodes.iter().find_first(plan => plan.node_id == node.node_id)
       is Some(plan) &&
-      (request.execution_owner.is_blank() ||
-      plan.execution_owner == request.execution_owner) {
-      return self.prepare_workspace_dispatch(
-        run_id,
-        node.node_id,
-        { input_refs: request.input_refs, created_at: now_string() },
-      )
+      (
+        request.execution_owner.is_blank() ||
+        plan.execution_owner == request.execution_owner
+      ) {
+      return self.prepare_workspace_dispatch(run_id, node.node_id, {
+        input_refs: request.input_refs,
+        created_at: now_string(),
+      })
     }
   }
   raise Conflict(
@@ -164,18 +176,15 @@ pub async fn StudioService::apply_workspace_run_action(
       message="supported run actions are cancel and retry",
     )
   }
-  self.apply_workspace_run_command(
-    run_id,
-    {
-      command: action,
-      node_id: request.node_id,
-      numerator: 0,
-      denominator: 1,
-      output_digest: "",
-      output_ref: "",
-      error_code: "",
-      error_message: "",
-      recorded_at: now_string(),
-    },
-  )
+  self.apply_workspace_run_command(run_id, {
+    command: action,
+    node_id: request.node_id,
+    numerator: 0,
+    denominator: 1,
+    output_digest: "",
+    output_ref: "",
+    error_code: "",
+    error_message: "",
+    recorded_at: now_string(),
+  })
 }

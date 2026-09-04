@@ -13,15 +13,25 @@ pub fn add_graph_node(@workspace.WorkspaceGraph, @workspace.WorkflowNode) -> @wo
 
 pub fn apply_agent_proposal(@workspace.WorkspaceGraph, @workspace.AgentGraphProposal) -> (@workspace.WorkspaceGraph, @workspace.AgentGraphProposal) raise @workspace.WorkspaceError
 
+pub fn apply_dispatch_receipt(@workspace.WorkspaceDispatch, @workspace.WorkspaceDispatchReceipt) -> @workspace.WorkspaceDispatch raise @workspace.WorkspaceError
+
 pub fn bounded_control_catalog() -> Array[@workspace.NodeDefinition]
+
+pub fn branch_workspace_artifact(@workspace.WorkspaceArtifact, String, String, String, String, String, String, String) -> @workspace.WorkspaceArtifact raise @workspace.WorkspaceError
 
 pub fn brief_to_delivery_capsule(String, String, String) -> @workspace.CreativeCapsule
 
 pub fn builtin_workspace_catalog() -> Array[@workspace.NodeDefinition]
 
+pub fn capsule_from_graph(@workspace.WorkspaceGraph, Array[@workspace.NodeDefinition], String, String, String, String, String) -> @workspace.CreativeCapsule raise @workspace.WorkspaceError
+
 pub fn combine_videos_capsule(String, String, String) -> @workspace.CreativeCapsule
 
+pub fn compare_artifacts(String, Array[@workspace.WorkspaceArtifact], String) -> @workspace.ArtifactComparison raise @workspace.WorkspaceError
+
 pub fn connect_graph_nodes(@workspace.WorkspaceGraph, @workspace.WorkflowEdge, Array[@workspace.NodeDefinition]) -> @workspace.WorkspaceGraph raise @workspace.WorkspaceError
+
+pub fn create_workspace_share(String, String, @workspace.WorkspaceTargetKind, String, String, String, String, String, String) -> @workspace.WorkspaceShare raise @workspace.WorkspaceError
 
 pub fn delivery_ready(DeliveryGate) -> Bool
 
@@ -43,27 +53,43 @@ pub fn move_graph_node(@workspace.WorkspaceGraph, String, Int, Int) -> @workspac
 
 pub fn new_run(@workspace.ExecutionPlan, String, String, String, maximum_retries? : Int) -> @workspace.RunRecord
 
-pub fn new_workspace_artifact(String, Int, @workspace.ArtifactKind, String, String, String, Array[String], String, String, String, String, String, String, Json, String, String, Array[String], Double, Double, String) -> @workspace.WorkspaceArtifact raise @workspace.WorkspaceError
+pub fn new_workspace_artifact(String, Int, String, @workspace.ArtifactKind, String, String, String, Array[String], String, String, String, String, String, String, Json, String, String, Array[String], Double, Double, String) -> @workspace.WorkspaceArtifact raise @workspace.WorkspaceError
+
+pub fn new_workspace_comment(String, String, @workspace.WorkspaceTargetKind, String, String, String, String, Int?, Int?) -> @workspace.WorkspaceComment raise @workspace.WorkspaceError
 
 pub fn next_production_gate(Array[GateReceipt]) -> ProductionGate?
+
+pub fn prepare_workspace_dispatch(@workspace.RunRecord, String, Array[String], String) -> @workspace.WorkspaceDispatch raise @workspace.WorkspaceError
 
 pub fn production_gate_ready(ProductionGate, ProductionReadiness) -> Bool
 
 pub fn production_gate_sequence() -> Array[ProductionGate]
 
+pub fn promote_artifact(String, @workspace.WorkspaceArtifact, String, String, String, String) -> @workspace.ArtifactPromotion raise @workspace.WorkspaceError
+
 pub fn publication_ready(CampaignStage, DeliveryGate) -> Bool
+
+pub fn publish_capsule(String, @workspace.CreativeCapsule, String, String, String) -> @workspace.CapsulePublication raise @workspace.WorkspaceError
 
 pub fn recover_run_after_restart(@workspace.RunRecord, String) -> @workspace.RunRecord
 
 pub fn remove_graph_node(@workspace.WorkspaceGraph, String) -> @workspace.WorkspaceGraph raise @workspace.WorkspaceError
 
+pub fn renew_workspace_presence(String, String, String, @workspace.WorkspaceTargetKind, String, String, String) -> @workspace.WorkspacePresence raise @workspace.WorkspaceError
+
 pub fn set_graph_node_parameter(@workspace.WorkspaceGraph, String, @workspace.NodeParameter) -> @workspace.WorkspaceGraph raise @workspace.WorkspaceError
+
+pub fn specialized_lens_for(@workspace.ArtifactKind) -> @workspace.SpecializedLens
 
 pub fn systematic_delivery_ready(ProductionProjectSummary, ProductionReadiness) -> Bool
 
 pub fn validate_graph(@workspace.WorkspaceGraph, Array[@workspace.NodeDefinition]) -> @workspace.GraphValidation
 
 pub fn workspace_node_catalog() -> Array[@workspace.NodeDefinition]
+
+pub fn workspace_run_event(@workspace.RunRecord, String) -> @workspace.WorkspaceRunEvent
+
+pub fn workspace_sse(@workspace.WorkspaceRunEvent) -> String
 
 // Errors
 
@@ -150,13 +176,19 @@ pub using @workspace {type AgentGraphProposal}
 
 pub using @workspace {type ArtifactAnnotation}
 
+pub using @workspace {type ArtifactComparison}
+
 pub using @workspace {type ArtifactKind}
+
+pub using @workspace {type ArtifactPromotion}
 
 pub using @workspace {type CachedNodeOutput}
 
 pub using @workspace {type CapsuleParameter}
 
 pub using @workspace {type CapsulePort}
+
+pub using @workspace {type CapsulePublication}
 
 pub using @workspace {type CreativeCapsule}
 
@@ -186,11 +218,23 @@ pub using @workspace {type PortDefinition}
 
 pub using @workspace {type RunRecord}
 
+pub using @workspace {type SpecializedLens}
+
 pub using @workspace {type WorkflowEdge}
 
 pub using @workspace {type WorkflowNode}
 
+pub using @workspace {type WorkspaceActivity}
+
 pub using @workspace {type WorkspaceArtifact}
+
+pub using @workspace {type WorkspaceComment}
+
+pub using @workspace {type WorkspaceDispatch}
+
+pub using @workspace {type WorkspaceDispatchReceipt}
+
+pub using @workspace {type WorkspaceDispatchState}
 
 pub using @workspace {type WorkspaceError}
 
@@ -198,6 +242,18 @@ pub using @workspace {type WorkspaceGraph}
 
 pub using @workspace {type WorkspaceNodeKind}
 
+pub using @workspace {type WorkspacePresence}
+
+pub using @workspace {type WorkspaceRunEvent}
+
 pub using @workspace {type WorkspaceRunState}
+
+pub using @workspace {type WorkspaceSearchMatch}
+
+pub using @workspace {type WorkspaceShare}
+
+pub using @workspace {type WorkspaceTargetKind}
+
+pub using @workspace {type WorkspaceTemplatePromotion}
 
 // Traits

@@ -61,16 +61,16 @@ fn update(
             dispatch(WorkspaceCatalogLoaded(value))
           })
           let graph = @http.post(
-            "/api/workspace/projects/" +
-            project_id +
-            "/capsules/combine-videos/install",
-          )
-          .with_json({
-            "graph_id": "combine-videos",
-            "title": "Combine videos",
-            "actor": "Mooncast operator",
-          })
-          .expect_json(value => dispatch(WorkspaceGraphLoaded(value)))
+              "/api/workspace/projects/" +
+              project_id +
+              "/capsules/combine-videos/install",
+            )
+            .with_json({
+              "graph_id": "combine-videos",
+              "title": "Combine videos",
+              "actor": "Mooncast operator",
+            })
+            .expect_json(value => dispatch(WorkspaceGraphLoaded(value)))
           let assets = @http.get(
             "/api/workspace/projects/" + project_id + "/assets?limit=50",
           ).expect_json(value => dispatch(WorkspaceAssetsLoaded(value)))
@@ -104,7 +104,10 @@ fn update(
     WorkspaceCatalogLoaded(result) =>
       match result {
         Err(_) =>
-          (@rabbita.none, { ..model, error: "Could not load the governed node catalog." })
+          (
+            @rabbita.none,
+            { ..model, error: "Could not load the governed node catalog." },
+          )
         Ok(response) => {
           let decoded : WorkspaceCatalogPayload? = Some(
             @json.from_json(response),
@@ -119,11 +122,16 @@ fn update(
                   ..model,
                   workspace_catalog: value.definitions,
                   workspace_activity: model.workspace_activity +
-                  ["\{value.definitions.length()} governed node definitions loaded"],
+                  [
+                    "\{value.definitions.length()} governed node definitions loaded",
+                  ],
                 },
               )
             None =>
-              (@rabbita.none, { ..model, error: "Node catalog response was invalid." })
+              (
+                @rabbita.none,
+                { ..model, error: "Node catalog response was invalid." },
+              )
           }
         }
       }
@@ -132,7 +140,11 @@ fn update(
         Err(_) =>
           (
             @rabbita.none,
-            { ..model, loading: false, error: "Could not install or load the workspace graph." },
+            {
+              ..model,
+              loading: false,
+              error: "Could not install or load the workspace graph.",
+            },
           )
         Ok(response) => {
           let decoded : WorkspaceGraphSummary? = Some(@json.from_json(response)) catch {
@@ -161,7 +173,11 @@ fn update(
             None =>
               (
                 @rabbita.none,
-                { ..model, loading: false, error: "Workspace graph response was invalid." },
+                {
+                  ..model,
+                  loading: false,
+                  error: "Workspace graph response was invalid.",
+                },
               )
           }
         }
@@ -191,10 +207,12 @@ fn update(
                   ..model,
                   workspace_assets: library.entries,
                   workspace_asset_total: library.total,
-                  selected_workspace_asset_ids: model.selected_workspace_asset_ids
-                  .filter(id => library.entries.any(entry => {
-                    entry.artifact.artifact_id == id
-                  })),
+                  selected_workspace_asset_ids: model.selected_workspace_asset_ids.filter(id => {
+                      library.entries.any(entry => {
+                        entry.artifact.artifact_id == id
+                      })
+                    },
+                  ),
                 },
               )
             None => (@rabbita.none, model)
@@ -288,7 +306,10 @@ fn update(
         Some(definition) =>
           (@rabbita.none, workspace_graph_add_node(model, definition))
         None =>
-          (@rabbita.none, { ..model, error: "That node definition is unavailable." })
+          (
+            @rabbita.none,
+            { ..model, error: "That node definition is unavailable." },
+          )
       }
     DeleteSelectedWorkspaceNode =>
       (@rabbita.none, workspace_graph_delete_selected(model))
@@ -319,7 +340,7 @@ fn update(
               workspace_graph_redo: model.workspace_graph
               .map(value => model.workspace_graph_redo + [value])
               .unwrap_or(model.workspace_graph_redo),
-              workspace_graph_dirty: true,
+              workspace_graph_dirty: !undo.is_empty(),
               status: "Undid graph edit.",
               error: "",
             },
@@ -390,21 +411,33 @@ fn update(
           guard decoded is Some(graph) else {
             return (
               @rabbita.none,
-              { ..model, workspace_graph_saving: false, error: "Saved graph response was invalid." },
+              {
+                ..model,
+                workspace_graph_saving: false,
+                error: "Saved graph response was invalid.",
+              },
             )
           }
           let saved = {
             ..model,
             workspace_graph: Some(graph),
+            workspace_graph_undo: [],
+            workspace_graph_redo: [],
             workspace_graph_dirty: false,
             workspace_graph_saving: false,
             status: "Saved graph revision \{graph.revision}.",
             error: "",
           }
           if continuation == "all" {
-            (start_workspace_graph_http(dispatch, saved, false), { ..saved, busy: true })
+            (
+              start_workspace_graph_http(dispatch, saved, false),
+              { ..saved, busy: true },
+            )
           } else if continuation == "selected" {
-            (start_workspace_graph_http(dispatch, saved, true), { ..saved, busy: true })
+            (
+              start_workspace_graph_http(dispatch, saved, true),
+              { ..saved, busy: true },
+            )
           } else {
             (@rabbita.none, saved)
           }
@@ -539,7 +572,9 @@ fn update(
       let target_kind = visible_workspace_nodes(model)
         .iter()
         .find_first(value => value.node_id == node_id)
-        .bind(value => value.inputs.iter().find_first(port => port.port_id == port_id))
+        .bind(value => {
+          value.inputs.iter().find_first(port => port.port_id == port_id)
+        })
         .map(port => port.artifact_kind)
       if source_kind is None ||
         target_kind is None ||
@@ -555,11 +590,7 @@ fn update(
         )
       }
       let connected = workspace_graph_connect(
-        model,
-        source,
-        source_port_id,
-        node_id,
-        port_id,
+        model, source, source_port_id, node_id, port_id,
       )
       (
         @rabbita.none,
@@ -602,13 +633,14 @@ fn update(
       } else {
         model.selected_workspace_asset_ids + [artifact_id]
       }
-      (@rabbita.none, { ..model, selected_workspace_asset_ids: selected, })
+      (@rabbita.none, { ..model, selected_workspace_asset_ids: selected })
     }
     TagSelectedWorkspaceAsset => {
       guard model.selected_workspace_asset_ids.last() is Some(artifact_id) &&
-        model.workspace_assets.iter().find_first(entry => {
-          entry.artifact.artifact_id == artifact_id
-        }) is Some(entry) else {
+        model.workspace_assets
+        .iter()
+        .find_first(entry => entry.artifact.artifact_id == artifact_id)
+        is Some(entry) else {
         return (@rabbita.none, { ..model, error: "Select an asset to tag." })
       }
       let tags = if entry.tags.contains("review") {
@@ -634,9 +666,10 @@ fn update(
     }
     DeleteSelectedWorkspaceAsset => {
       guard model.selected_workspace_asset_ids.last() is Some(artifact_id) &&
-        model.workspace_assets.iter().find_first(entry => {
-          entry.artifact.artifact_id == artifact_id
-        }) is Some(entry) else {
+        model.workspace_assets
+        .iter()
+        .find_first(entry => entry.artifact.artifact_id == artifact_id)
+        is Some(entry) else {
         return (@rabbita.none, { ..model, error: "Select an asset to hide." })
       }
       (
@@ -783,15 +816,13 @@ fn update(
     }
     PromoteWorkspaceAsset => {
       guard model.selected_workspace_asset_ids.last() is Some(artifact_id) &&
-        model.workspace_assets.iter().find_first(entry => {
-          entry.artifact.artifact_id == artifact_id
-        }) is Some(entry) else {
+        model.workspace_assets
+        .iter()
+        .find_first(entry => entry.artifact.artifact_id == artifact_id)
+        is Some(entry) else {
         return (
           @rabbita.none,
-          {
-            ..model,
-            error: "Select a registered asset to promote.",
-          },
+          { ..model, error: "Select a registered asset to promote." },
         )
       }
       let action_id = fresh_key(model, "promotion")
@@ -820,15 +851,13 @@ fn update(
     }
     BranchWorkspaceAsset => {
       guard model.selected_workspace_asset_ids.last() is Some(artifact_id) &&
-        model.workspace_assets.iter().find_first(entry => {
-          entry.artifact.artifact_id == artifact_id
-        }) is Some(entry) else {
+        model.workspace_assets
+        .iter()
+        .find_first(entry => entry.artifact.artifact_id == artifact_id)
+        is Some(entry) else {
         return (
           @rabbita.none,
-          {
-            ..model,
-            error: "Select a registered asset before branching it.",
-          },
+          { ..model, error: "Select a registered asset before branching it." },
         )
       }
       let branch_id = fresh_key(model, "artifact-branch")
@@ -884,19 +913,23 @@ fn update(
       )
     }
     ShareWorkspaceRun => {
-      let target_id = if model.utility_concat.job_id.is_blank() {
+      let has_workspace_run = !model.workspace_run_id.is_blank()
+      let has_utility_run = !model.utility_concat.job_id.is_blank()
+      let target_id = if has_workspace_run {
+        model.workspace_run_id
+      } else if has_utility_run {
+        model.utility_concat.job_id
+      } else {
         model.workspace_graph
         .map(graph => graph.graph_id)
         .unwrap_or("workspace-draft")
-      } else {
-        model.utility_concat.job_id
       }
       let body : Json = {
         "project_id": model.project_id,
-        "target_kind": if model.utility_concat.job_id.is_blank() {
-          "GraphTarget"
-        } else {
+        "target_kind": if has_workspace_run || has_utility_run {
           "RunTarget"
+        } else {
+          "GraphTarget"
         },
         "target_id": target_id,
         "mode": "client-review",
@@ -921,7 +954,11 @@ fn update(
         Err(_) =>
           (
             @rabbita.none,
-            { ..model, busy: false, error: "Secure review link could not be created." },
+            {
+              ..model,
+              busy: false,
+              error: "Secure review link could not be created.",
+            },
           )
         Ok(response) => {
           let decoded : WorkspaceShareCreatedPayload? = Some(
@@ -932,7 +969,11 @@ fn update(
           guard decoded is Some(created) else {
             return (
               @rabbita.none,
-              { ..model, busy: false, error: "Secure share response was invalid." },
+              {
+                ..model,
+                busy: false,
+                error: "Secure share response was invalid.",
+              },
             )
           }
           (
@@ -966,7 +1007,10 @@ fn update(
     WorkspaceShareRevoked(result) =>
       match result {
         Err(_) =>
-          (@rabbita.none, { ..model, busy: false, error: "Share revocation failed." })
+          (
+            @rabbita.none,
+            { ..model, busy: false, error: "Share revocation failed." },
+          )
         Ok(_) =>
           (
             @rabbita.none,
@@ -976,7 +1020,8 @@ fn update(
               workspace_share_url: "",
               workspace_share_id: "",
               status: "Review link revoked.",
-              workspace_activity: model.workspace_activity + ["Review share revoked"],
+              workspace_activity: model.workspace_activity +
+              ["Review share revoked"],
               error: "",
             },
           )
@@ -1011,7 +1056,11 @@ fn update(
       )
     WorkspaceProposalReviewLoaded(result) =>
       match result {
-        Err(_) => (@rabbita.none, { ..model, error: "Proposal diff could not be loaded." })
+        Err(_) =>
+          (
+            @rabbita.none,
+            { ..model, error: "Proposal diff could not be loaded." },
+          )
         Ok(response) => {
           let decoded : WorkspaceProposalReviewPayload? = Some(
             @json.from_json(response),
@@ -1032,7 +1081,8 @@ fn update(
                   },
                 },
               )
-            None => (@rabbita.none, { ..model, error: "Proposal diff was invalid." })
+            None =>
+              (@rabbita.none, { ..model, error: "Proposal diff was invalid." })
           }
         }
       }
@@ -1054,7 +1104,11 @@ fn update(
           guard decoded is Some(graph) else {
             return (
               @rabbita.none,
-              { ..model, busy: false, error: "Applied proposal response was invalid." },
+              {
+                ..model,
+                busy: false,
+                error: "Applied proposal response was invalid.",
+              },
             )
           }
           let proposals = @http.get(
@@ -1150,6 +1204,7 @@ fn update(
             busy: false,
             workspace_run_id: run.run_id,
             workspace_run_state: run.state.stringify(),
+            workspace_run_nodes: run.nodes,
             workspace_run_last_event_id: "",
             status: "Run queued from the exact saved graph revision.",
             workspace_activity: model.workspace_activity +
@@ -1187,7 +1242,8 @@ fn update(
     }
     WorkspaceRunEventsLoaded(result) =>
       match result {
-        Err(_) => (@rabbita.none, { ..model, error: "Run event replay failed." })
+        Err(_) =>
+          (@rabbita.none, { ..model, error: "Run event replay failed." })
         Ok(response) => {
           let decoded : WorkspaceRunEventPayload? = Some(
             @json.from_json(response),
@@ -1199,7 +1255,7 @@ fn update(
             None =>
               (
                 @rabbita.none,
-                { ..model, workspace_run_last_event_id: feed.last_event_id, },
+                { ..model, workspace_run_last_event_id: feed.last_event_id },
               )
             Some(event) => {
               let next_state = event.run.state.stringify()
@@ -1208,6 +1264,7 @@ fn update(
                 {
                   ..model,
                   workspace_run_state: next_state,
+                  workspace_run_nodes: event.run.nodes,
                   workspace_run_last_event_id: feed.last_event_id,
                   workspace_activity: model.workspace_activity +
                   feed.events.map(item => {
@@ -1223,13 +1280,16 @@ fn update(
       }
     ClaimWorkspaceNode => {
       guard !model.workspace_run_id.is_blank() else {
-        return (@rabbita.none, { ..model, error: "Start a run before claiming work." })
+        return (
+          @rabbita.none,
+          { ..model, error: "Start a run before claiming work." },
+        )
       }
       (
         @http.post("/api/workspace/runs/" + model.workspace_run_id + "/claim")
         .with_json({
           "worker_id": "mooncast-ui",
-          "execution_owner": "Mooncast",
+          "execution_owner": "mooncast",
           "input_refs": [],
         })
         .expect_json(result => {
@@ -1270,7 +1330,11 @@ fn update(
     }
     WorkspaceRunPolled(result) =>
       match result {
-        Err(_) => (@rabbita.none, model)
+        Err(_) =>
+          (
+            @rabbita.none,
+            { ..model, busy: false, error: "Workspace run operation failed." },
+          )
         Ok(response) => {
           let decoded : WorkspaceRunPayload? = Some(@json.from_json(response)) catch {
             _ => None
@@ -1290,6 +1354,7 @@ fn update(
                   ..model,
                   busy: false,
                   workspace_run_state: next_state,
+                  workspace_run_nodes: run.nodes,
                   workspace_activity: activity,
                 },
               )
@@ -1300,7 +1365,8 @@ fn update(
     WorkspaceActionFinished(action, result) =>
       match result {
         Ok(_) => {
-          let refresh = if action == "artifact registration" || action == "branch" {
+          let refresh = if action == "artifact registration" ||
+            action == "branch" {
             @http.get(
               "/api/workspace/projects/" + model.project_id + "/assets?limit=50",
             ).expect_json(value => dispatch(WorkspaceAssetsLoaded(value)))
@@ -1348,18 +1414,18 @@ fn update(
       })
       let capsule_id = workspace_recipe_id(model.selected_workspace_recipe)
       let graph = @http.post(
-        "/api/workspace/projects/" +
-        model.project_id +
-        "/capsules/" +
-        capsule_id +
-        "/install",
-      )
-      .with_json({
-        "graph_id": capsule_id,
-        "title": workspace_recipe_title(model.selected_workspace_recipe),
-        "actor": "Mooncast operator",
-      })
-      .expect_json(result => dispatch(WorkspaceGraphLoaded(result)))
+          "/api/workspace/projects/" +
+          model.project_id +
+          "/capsules/" +
+          capsule_id +
+          "/install",
+        )
+        .with_json({
+          "graph_id": capsule_id,
+          "title": workspace_recipe_title(model.selected_workspace_recipe),
+          "actor": "Mooncast operator",
+        })
+        .expect_json(result => dispatch(WorkspaceGraphLoaded(result)))
       let assets = @http.get(
         "/api/workspace/projects/" + model.project_id + "/assets?limit=50",
       ).expect_json(result => dispatch(WorkspaceAssetsLoaded(result)))

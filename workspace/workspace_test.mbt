@@ -184,6 +184,7 @@ test "agent proposals are revision checked and auditable" {
   }
   let diff = graph_diff(capsule.graph, proposed_graph)
   assert_true(diff.added_node_ids.is_empty())
+  assert_eq(diff.changed_graph_fields, ["title"])
   let (applied, receipt) = apply_agent_proposal(capsule.graph, proposal)
   assert_eq(applied.revision, 2)
   assert_true(receipt.applied)
@@ -472,6 +473,7 @@ test "collaboration shares and capsule publishing are least-authority" {
     "now",
   )
   assert_true(publication.immutable_digest.has_prefix("sha256:"))
+  assert_false(publication.immutable_digest.has_prefix("sha256:sha256:"))
   assert_false(publication.publication_authority)
   let promoted = capsule_from_graph(
     test_capsule().graph,

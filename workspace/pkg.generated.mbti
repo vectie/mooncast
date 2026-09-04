@@ -12,19 +12,29 @@ pub fn add_graph_node(WorkspaceGraph, WorkflowNode) -> WorkspaceGraph raise Work
 
 pub fn apply_agent_proposal(WorkspaceGraph, AgentGraphProposal) -> (WorkspaceGraph, AgentGraphProposal) raise WorkspaceError
 
+pub fn apply_dispatch_receipt(WorkspaceDispatch, WorkspaceDispatchReceipt) -> WorkspaceDispatch raise WorkspaceError
+
 pub fn bounded_control_catalog() -> Array[NodeDefinition]
+
+pub fn branch_workspace_artifact(WorkspaceArtifact, String, String, String, String, String, String, String) -> WorkspaceArtifact raise WorkspaceError
 
 pub fn brief_to_delivery_capsule(String, String, String) -> CreativeCapsule
 
 pub fn builtin_workspace_catalog() -> Array[NodeDefinition]
 
+pub fn capsule_from_graph(WorkspaceGraph, Array[NodeDefinition], String, String, String, String, String) -> CreativeCapsule raise WorkspaceError
+
 pub fn catalog_from_tools(Array[@pack.ToolDeclaration]) -> Array[NodeDefinition]
 
 pub fn combine_videos_capsule(String, String, String) -> CreativeCapsule
 
+pub fn compare_artifacts(String, Array[WorkspaceArtifact], String) -> ArtifactComparison raise WorkspaceError
+
 pub fn complete_node_catalog(Array[@pack.ToolDeclaration]) -> Array[NodeDefinition]
 
 pub fn connect_graph_nodes(WorkspaceGraph, WorkflowEdge, Array[NodeDefinition]) -> WorkspaceGraph raise WorkspaceError
+
+pub fn create_workspace_share(String, String, WorkspaceTargetKind, String, String, String, String, String, String) -> WorkspaceShare raise WorkspaceError
 
 pub fn disconnect_graph_edge(WorkspaceGraph, String) -> WorkspaceGraph raise WorkspaceError
 
@@ -42,15 +52,31 @@ pub fn move_graph_node(WorkspaceGraph, String, Int, Int) -> WorkspaceGraph raise
 
 pub fn new_run(ExecutionPlan, String, String, String, maximum_retries? : Int) -> RunRecord
 
-pub fn new_workspace_artifact(String, Int, ArtifactKind, String, String, String, Array[String], String, String, String, String, String, String, Json, String, String, Array[String], Double, Double, String) -> WorkspaceArtifact raise WorkspaceError
+pub fn new_workspace_artifact(String, Int, String, ArtifactKind, String, String, String, Array[String], String, String, String, String, String, String, Json, String, String, Array[String], Double, Double, String) -> WorkspaceArtifact raise WorkspaceError
+
+pub fn new_workspace_comment(String, String, WorkspaceTargetKind, String, String, String, String, Int?, Int?) -> WorkspaceComment raise WorkspaceError
+
+pub fn prepare_workspace_dispatch(RunRecord, String, Array[String], String) -> WorkspaceDispatch raise WorkspaceError
+
+pub fn promote_artifact(String, WorkspaceArtifact, String, String, String, String) -> ArtifactPromotion raise WorkspaceError
+
+pub fn publish_capsule(String, CreativeCapsule, String, String, String) -> CapsulePublication raise WorkspaceError
 
 pub fn recover_run_after_restart(RunRecord, String) -> RunRecord
 
 pub fn remove_graph_node(WorkspaceGraph, String) -> WorkspaceGraph raise WorkspaceError
 
+pub fn renew_workspace_presence(String, String, String, WorkspaceTargetKind, String, String, String) -> WorkspacePresence raise WorkspaceError
+
 pub fn set_graph_node_parameter(WorkspaceGraph, String, NodeParameter) -> WorkspaceGraph raise WorkspaceError
 
+pub fn specialized_lens_for(ArtifactKind) -> SpecializedLens
+
 pub fn validate_graph(WorkspaceGraph, Array[NodeDefinition]) -> GraphValidation
+
+pub fn workspace_run_event(RunRecord, String) -> WorkspaceRunEvent
+
+pub fn workspace_sse(WorkspaceRunEvent) -> String
 
 // Errors
 pub(all) suberror WorkspaceError {
@@ -88,6 +114,15 @@ pub(all) struct ArtifactAnnotation {
   created_at : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct ArtifactComparison {
+  contract : String
+  project_id : String
+  artifact_ids : Array[String]
+  baseline_artifact_id : String
+  comparable : Bool
+  differences : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum ArtifactKind {
   TextArtifact
   ImageArtifact
@@ -102,6 +137,19 @@ pub(all) enum ArtifactKind {
   AnyArtifact
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn ArtifactKind::accepts(Self, Self) -> Bool
+
+pub(all) struct ArtifactPromotion {
+  contract : String
+  promotion_id : String
+  project_id : String
+  artifact_id : String
+  artifact_version : Int
+  channel : String
+  actor : String
+  note : String
+  promoted_at : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct CachedNodeOutput {
   node_id : String
@@ -124,6 +172,17 @@ pub(all) struct CapsulePort {
   node_port_id : String
   label : String
   artifact_kind : ArtifactKind
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CapsulePublication {
+  contract : String
+  publication_id : String
+  capsule : CreativeCapsule
+  visibility : String
+  actor : String
+  published_at : String
+  immutable_digest : String
+  publication_authority : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct CreativeCapsule {
@@ -170,6 +229,7 @@ pub(all) struct ExecutionPlan {
 
 pub(all) struct GraphDiff {
   contract : String
+  changed_graph_fields : Array[String]
   added_node_ids : Array[String]
   removed_node_ids : Array[String]
   modified_node_ids : Array[String]
@@ -283,6 +343,17 @@ pub fn RunRecord::retry_node(Self, String, String) -> Self raise WorkspaceError
 pub fn RunRecord::start_node(Self, String, String) -> Self raise WorkspaceError
 pub fn RunRecord::succeed_node(Self, String, String, String, String) -> Self raise WorkspaceError
 
+pub(all) enum SpecializedLens {
+  ScriptLens
+  StoryboardLens
+  ImageCompareLens
+  AudioTranscriptLens
+  TimelineLens
+  ReviewLens
+  DeliveryLens
+  DataLens
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct WorkflowEdge {
   edge_id : String
   source_node_id : String
@@ -301,10 +372,23 @@ pub(all) struct WorkflowNode {
   collapsed : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct WorkspaceActivity {
+  contract : String
+  activity_id : String
+  project_id : String
+  actor : String
+  action : String
+  target_kind : WorkspaceTargetKind
+  target_id : String
+  detail : String
+  recorded_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct WorkspaceArtifact {
   contract : String
   artifact_id : String
   version : Int
+  project_id : String
   kind : ArtifactKind
   digest : String
   uri : String
@@ -328,6 +412,71 @@ pub(all) struct WorkspaceArtifact {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn WorkspaceArtifact::annotate(Self, ArtifactAnnotation) -> Self raise WorkspaceError
 
+pub(all) struct WorkspaceAssetEntry {
+  contract : String
+  artifact : WorkspaceArtifact
+  tags : Array[String]
+  deleted : Bool
+  indexed_at : String
+  updated_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceComment {
+  contract : String
+  comment_id : String
+  project_id : String
+  target_kind : WorkspaceTargetKind
+  target_id : String
+  body : String
+  actor : String
+  start_tick : Int?
+  end_tick : Int?
+  created_at : String
+  resolved : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceDispatch {
+  contract : String
+  dispatch_id : String
+  run_id : String
+  node_id : String
+  execution_owner : String
+  operation : String
+  input_digest : String
+  input_refs : Array[String]
+  idempotency_key : String
+  state : WorkspaceDispatchState
+  output_digest : String
+  output_ref : String
+  provider_receipt : Json
+  error_code : String
+  error_message : String
+  created_at : String
+  updated_at : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceDispatchReceipt {
+  contract : String
+  dispatch_id : String
+  idempotency_key : String
+  state : WorkspaceDispatchState
+  output_digest : String
+  output_ref : String
+  provider_receipt : Json
+  error_code : String
+  error_message : String
+  recorded_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum WorkspaceDispatchState {
+  PreparedDispatch
+  AcceptedDispatch
+  SucceededDispatch
+  FailedDispatch
+  CancelledDispatch
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct WorkspaceGraph {
   contract : String
   graph_id : String
@@ -350,12 +499,75 @@ pub(all) enum WorkspaceNodeKind {
   CapsuleNode
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct WorkspacePresence {
+  contract : String
+  project_id : String
+  actor_id : String
+  display_name : String
+  target_kind : WorkspaceTargetKind
+  target_id : String
+  lease_expires_at : String
+  updated_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceRunEvent {
+  contract : String
+  event_id : String
+  event_name : String
+  run_id : String
+  run : RunRecord
+  recorded_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) enum WorkspaceRunState {
   Queued
   RunningRun
   SucceededRun
   FailedRun
   CancelledRun
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceSearchMatch {
+  contract : String
+  project_id : String
+  target_kind : WorkspaceTargetKind
+  target_id : String
+  title : String
+  detail : String
+  score : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceShare {
+  contract : String
+  share_id : String
+  project_id : String
+  target_kind : WorkspaceTargetKind
+  target_id : String
+  mode : String
+  token_digest : String
+  expires_at : String
+  created_by : String
+  created_at : String
+  revoked : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum WorkspaceTargetKind {
+  GraphTarget
+  NodeTarget
+  RunTarget
+  ArtifactTarget
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceTemplatePromotion {
+  contract : String
+  promotion_id : String
+  project_id : String
+  run_id : String
+  capsule : CreativeCapsule
+  actor : String
+  promoted_at : String
+  publication_authority : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases

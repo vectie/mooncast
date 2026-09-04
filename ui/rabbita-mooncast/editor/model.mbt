@@ -161,9 +161,32 @@ struct WorkspaceCanvasDrag {
 
 ///|
 #warnings("-unused_field")
+enum WorkspaceNodeRunState {
+  Blocked
+  Ready
+  Running
+  Cached
+  Succeeded
+  Failed
+  Cancelled
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceNodeRunSummary {
+  node_id : String
+  state : WorkspaceNodeRunState
+  progress_numerator : Int
+  progress_denominator : Int
+  retry_count : Int
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
 struct WorkspaceRunPayload {
   run_id : String
   state : Json
+  nodes : Array[WorkspaceNodeRunSummary]
   updated_at : String
 } derive(FromJson)
 
@@ -283,6 +306,7 @@ struct WorkspaceProposalPayload {
 ///|
 #warnings("-unused_field")
 struct WorkspaceGraphDiffSummary {
+  changed_graph_fields : Array[String]
   added_node_ids : Array[String]
   removed_node_ids : Array[String]
   modified_node_ids : Array[String]
@@ -674,6 +698,7 @@ struct Model {
   workspace_presence : Array[WorkspacePresenceSummary]
   workspace_run_id : String
   workspace_run_state : String
+  workspace_run_nodes : Array[WorkspaceNodeRunSummary]
   workspace_run_last_event_id : String
   workspace_proposals : Array[WorkspaceProposalSummary]
   workspace_proposal_review : WorkspaceProposalReviewPayload?
@@ -805,6 +830,7 @@ fn initial_model() -> Model {
     workspace_presence: [],
     workspace_run_id: "",
     workspace_run_state: "idle",
+    workspace_run_nodes: [],
     workspace_run_last_event_id: "",
     workspace_proposals: [],
     workspace_proposal_review: None,

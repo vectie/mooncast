@@ -1,5 +1,5 @@
 ///|
-let supported_lepusa_version : String = "0.1.4"
+let supported_lepusa_version : String = "0.1.6"
 
 ///|
 let studio_port : Int = 4302
@@ -125,7 +125,7 @@ async test "Lepusa release version is locked to the Mooncast pack" {
     required_string(release, "version"),
     required_string(pack, "version"),
   )
-  assert_eq(supported_lepusa_version, "0.1.4")
+  assert_eq(supported_lepusa_version, "0.1.6")
   assert_eq(required_string(release, "identifier"), "dev.vectie.mooncast")
 }
 

@@ -41,7 +41,11 @@ pub async fn StudioService::install_workspace_capsule(
     capsule,
     graph_id,
     project_id,
-    if request.title.is_blank() { capsule.title } else { request.title },
+    if request.title.is_blank() {
+      capsule.title
+    } else {
+      request.title
+    },
     request.actor,
     now_string(),
   ) catch {
@@ -54,7 +58,8 @@ pub async fn StudioService::install_workspace_capsule(
       )
   }
   self.save_workspace_graph(graph) catch {
-    Conflict(code=_, message=_) => self.get_workspace_graph(project_id, graph_id)
+    Conflict(code=_, message=_) =>
+      self.get_workspace_graph(project_id, graph_id)
     error => raise error
   }
 }
@@ -82,7 +87,11 @@ pub async fn StudioService::revise_workspace_graph(
   let revised : @workspace.WorkspaceGraph = {
     ..current,
     revision: current.revision + 1,
-    title: if request.title.is_blank() { current.title } else { request.title },
+    title: if request.title.is_blank() {
+      current.title
+    } else {
+      request.title
+    },
     nodes: request.nodes.copy(),
     edges: request.edges.copy(),
     output_node_ids: request.output_node_ids.copy(),

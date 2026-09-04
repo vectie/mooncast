@@ -361,7 +361,7 @@ pub fn publish_capsule(
     visibility,
     actor,
     published_at,
-    immutable_digest: "sha256:" + sha256_text(capsule.to_json().stringify()),
+    immutable_digest: sha256_text(capsule.to_json().stringify()),
     publication_authority: false,
   }
 }

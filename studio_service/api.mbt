@@ -478,15 +478,7 @@ async fn StudioService::dispatch_unsafe(
     }
     (
       Post,
-      [
-        "api",
-        "workspace",
-        "projects",
-        project_id,
-        "graphs",
-        graph_id,
-        "runs",
-      ],
+      ["api", "workspace", "projects", project_id, "graphs", graph_id, "runs"],
     ) => {
       let input : WorkspaceGraphRunRequest = decode_body(request)
       json_value_response(
@@ -524,7 +516,10 @@ async fn StudioService::dispatch_unsafe(
     }
     (Post, ["api", "workspace", "runs", run_id, "actions", action]) => {
       let input : WorkspaceRunActionRequest = decode_body(request)
-      json_value_response(200, self.apply_workspace_run_action(run_id, action, input))
+      json_value_response(
+        200,
+        self.apply_workspace_run_action(run_id, action, input),
+      )
     }
     (Post, ["api", "workspace", "runs", run_id, "promote-template"]) => {
       let input : WorkspaceRunTemplateRequest = decode_body(request)
@@ -587,7 +582,8 @@ async fn StudioService::dispatch_unsafe(
           control_tower_query_value(request.query, "limit")
           .map(value => @string.parse_int(value) catch { _ => 50 })
           .unwrap_or(50),
-          control_tower_query_value(request.query, "include_deleted") == Some("true"),
+          control_tower_query_value(request.query, "include_deleted") ==
+          Some("true"),
         ),
       )
     (Post, ["api", "workspace", "artifacts"]) => {
@@ -609,12 +605,18 @@ async fn StudioService::dispatch_unsafe(
     (Post, ["api", "workspace", "assets", artifact_id, version, "tags"]) => {
       let input : WorkspaceAssetTagsRequest = decode_body(request)
       let parsed = @string.parse_int(version) catch { _ => -1 }
-      json_value_response(200, self.tag_workspace_asset(artifact_id, parsed, input))
+      json_value_response(
+        200,
+        self.tag_workspace_asset(artifact_id, parsed, input),
+      )
     }
     (Post, ["api", "workspace", "assets", artifact_id, version, "delete"]) => {
       let input : WorkspaceAssetDeleteRequest = decode_body(request)
       let parsed = @string.parse_int(version) catch { _ => -1 }
-      json_value_response(200, self.delete_workspace_asset(artifact_id, parsed, input))
+      json_value_response(
+        200,
+        self.delete_workspace_asset(artifact_id, parsed, input),
+      )
     }
     (
       Post,
@@ -728,9 +730,7 @@ async fn StudioService::dispatch_unsafe(
     }
     (Get, ["api", "workspace", "projects", project_id, "proposals"]) =>
       json_value_response(200, self.list_workspace_proposals(project_id))
-    (
-      Get,
-      ["api", "workspace", "projects", project_id, "proposals", proposal_id],
+    (Get, ["api", "workspace", "projects", project_id, "proposals", proposal_id]
     ) =>
       json_value_response(
         200,

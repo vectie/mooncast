@@ -158,19 +158,25 @@ fn workspace_nodes(recipe : WorkspaceRecipe) -> Array[WorkspaceNodeView] {
 ///|
 fn selected_workspace_node(model : Model) -> WorkspaceNodeView {
   let nodes = visible_workspace_nodes(model)
-  match nodes.iter().find_first(node => node.node_id == model.selected_workspace_node) {
+  match
+    nodes
+    .iter()
+    .find_first(node => node.node_id == model.selected_workspace_node) {
     Some(node) => node
-    None => nodes.get(0).unwrap_or({
-      node_id: "",
-      definition_id: "",
-      title: "No node selected",
-      detail: "Add a manifest-backed node from the palette.",
-      owner: "none",
-      authority: "None",
-      inputs: [],
-      outputs: [],
-      collapsed: false,
-    })
+    None =>
+      nodes
+      .get(0)
+      .unwrap_or({
+        node_id: "",
+        definition_id: "",
+        title: "No node selected",
+        detail: "Add a manifest-backed node from the palette.",
+        owner: "none",
+        authority: "None",
+        inputs: [],
+        outputs: [],
+        collapsed: false,
+      })
   }
 }
 
@@ -187,6 +193,22 @@ fn workspace_node_position(
 
 ///|
 fn workspace_node_state(model : Model, node_id : String) -> String {
+  let utility_is_active = model.selected_workspace_recipe == CombineVideosRecipe &&
+    model.utility_concat.phase != "idle" &&
+    model.utility_concat.phase != "selected"
+  if !utility_is_active &&
+    model.workspace_run_nodes.iter().find_first(node => node.node_id == node_id)
+    is Some(node) {
+    return match node.state {
+      Blocked => "blocked"
+      Ready => "ready"
+      Running => "running"
+      Cached => "cached"
+      Succeeded => "succeeded"
+      Failed => "failed"
+      Cancelled => "cancelled"
+    }
+  }
   if workspace_graph_node(model, node_id) is Some(node) &&
     node.node_id.has_prefix("node-") {
     return "ready"
@@ -304,8 +326,9 @@ fn workspace_recipe_rail(
         on_input=dispatch.map(value => WorkspaceNodePaletteChanged(value)),
       ),
     ],
-    @html.div(class="workspace-node-palette") <| workspace_palette_definitions(model)
-    .map(definition => {
+    @html.div(class="workspace-node-palette") <| workspace_palette_definitions(
+      model,
+    ).map(definition => {
       @html.button(
         type_="button",
         on_click=dispatch(AddWorkspaceNode(definition.definition_id)),
@@ -313,7 +336,9 @@ fn workspace_recipe_rail(
       ) <| [
         @html.strong(definition.display_name),
         @html.small(
-          definition.category + " · " + workspace_authority_label(definition.authority),
+          definition.category +
+          " · " +
+          workspace_authority_label(definition.authority),
         ),
       ]
     }),
@@ -489,9 +514,9 @@ fn workspace_node_card(
   }
   @html.div(
     class="workspace-node state-" +
-    state +
-    selection_class +
-    (if node.collapsed { " is-collapsed" } else { "" }),
+      state +
+      selection_class +
+      (if node.collapsed { " is-collapsed" } else { "" }),
     style=["left: \{position.x}px", "top: \{position.y}px"],
     on_mousedown=mouse => {
       dispatch(WorkspaceCanvasPointerDown(node.node_id, mouse))
@@ -513,8 +538,12 @@ fn workspace_node_card(
       @html.button(
         class="node-port input-port",
         type_="button",
-        title="Connect " + workspace_artifact_kind_label(port.artifact_kind) + " input",
-        on_click=dispatch(WorkspacePortActivated(node.node_id, port.port_id, false)),
+        title="Connect " +
+          workspace_artifact_kind_label(port.artifact_kind) +
+          " input",
+        on_click=dispatch(
+          WorkspacePortActivated(node.node_id, port.port_id, false),
+        ),
         attrs=@html.Attrs::build().aria_label(
           "Connect " + port.label + " input to " + node.title,
         ),
@@ -524,15 +553,19 @@ fn workspace_node_card(
     @html.div(class="workspace-node-outputs") <| node.outputs.map(port => {
       @html.button(
         class="node-port output-port" +
-        (if model.workspace_connect_from == node.node_id &&
-          model.workspace_connect_port == port.port_id {
-          " is-connecting"
-        } else {
-          ""
-        }),
+          (if model.workspace_connect_from == node.node_id &&
+            model.workspace_connect_port == port.port_id {
+            " is-connecting"
+          } else {
+            ""
+          }),
         type_="button",
-        title="Start " + workspace_artifact_kind_label(port.artifact_kind) + " connection",
-        on_click=dispatch(WorkspacePortActivated(node.node_id, port.port_id, true)),
+        title="Start " +
+          workspace_artifact_kind_label(port.artifact_kind) +
+          " connection",
+        on_click=dispatch(
+          WorkspacePortActivated(node.node_id, port.port_id, true),
+        ),
         attrs=@html.Attrs::build().aria_label(
           "Start connection from " + node.title + " " + port.label,
         ),
@@ -632,9 +665,9 @@ fn workspace_canvas(
   model : Model,
 ) -> @rabbita.Html {
   let graph = model.workspace_graph
-  let title = graph.map(value => value.title).unwrap_or(
-    workspace_recipe_title(model.selected_workspace_recipe),
-  )
+  let title = graph
+    .map(value => value.title)
+    .unwrap_or(workspace_recipe_title(model.selected_workspace_recipe))
   let locality = if graph.map(value => value.graph_id).unwrap_or("") ==
     "combine-videos" {
     "Local provider"
@@ -650,7 +683,8 @@ fn workspace_canvas(
         edge.target_node_id,
         false,
       )
-    }) + nodes.map(node => workspace_node_card(dispatch, model, node))
+    }) +
+    nodes.map(node => workspace_node_card(dispatch, model, node))
   @html.section(class="workspace-canvas") <| [
     @html.header(class="canvas-toolbar") <| [
       @html.div <| [
@@ -658,14 +692,26 @@ fn workspace_canvas(
         @html.small(
           "Graph r" +
           graph.map(value => value.revision.to_string()).unwrap_or("—") +
-          (if model.workspace_graph_dirty { " · unsaved edits" } else { " · saved" }),
+          (if model.workspace_graph_dirty {
+            " · unsaved edits"
+          } else {
+            " · saved"
+          }),
         ),
       ],
       @html.div(class="tag-row") <| [
         status_tag("pass", "Typed ports"),
         status_tag(
-          if model.workspace_graph_dirty { "hold" } else { "pass" },
-          if model.workspace_graph_dirty { "Validate on save" } else { "Validated" },
+          if model.workspace_graph_dirty {
+            "hold"
+          } else {
+            "pass"
+          },
+          if model.workspace_graph_dirty {
+            "Validate on save"
+          } else {
+            "Validated"
+          },
         ),
         status_tag("neutral", locality),
         status_tag("hold", "No publication authority"),
@@ -675,7 +721,7 @@ fn workspace_canvas(
           attrs=@html.Attrs::build().aria_label("Zoom out canvas"),
           "−",
         ),
-        @html.span("{(model.workspace_canvas_zoom * 100.0).to_int()}%"),
+        @html.span("\{(model.workspace_canvas_zoom * 100.0).to_int()}%"),
         @html.button(
           type_="button",
           on_click=dispatch(WorkspaceZoomChanged(0.1)),
@@ -752,7 +798,11 @@ fn workspace_specialized_editor(
       @html.div(class="specialized-editor image-lens") <| [
         @html.span(class="eyebrow", "Artifact compare lens"),
         @html.div(class="variant-grid") <| (if selected.is_empty() {
-          [@html.p("Select two indexed assets in the library to compare evidence.")]
+          [
+            @html.p(
+              "Select two indexed assets in the library to compare evidence.",
+            ),
+          ]
         } else {
           selected.map(entry => {
             @html.div <| [
@@ -778,21 +828,27 @@ fn workspace_specialized_editor(
         status_tag("hold", "Awaiting reviewer"),
       ]
     "delivery" | "register" => {
-      let selected = model.selected_workspace_asset_ids.last().bind(id => {
-        model.workspace_assets.iter().find_first(entry => {
-          entry.artifact.artifact_id == id
+      let selected = model.selected_workspace_asset_ids
+        .last()
+        .bind(id => {
+          model.workspace_assets
+          .iter()
+          .find_first(entry => entry.artifact.artifact_id == id)
         })
-      })
       @html.div(class="specialized-editor delivery-lens") <| [
         @html.span(class="eyebrow", "Delivery inspector"),
         @html.dl(class="inspector-data") <| [
           @html.dt("Artifact"),
           @html.dd(
-            selected.map(entry => entry.artifact.digest).unwrap_or("Select an asset"),
+            selected
+            .map(entry => entry.artifact.digest)
+            .unwrap_or("Select an asset"),
           ),
           @html.dt("Rights"),
           @html.dd(
-            selected.map(entry => entry.artifact.rights_state).unwrap_or("Unknown"),
+            selected
+            .map(entry => entry.artifact.rights_state)
+            .unwrap_or("Unknown"),
           ),
           @html.dt("QC"),
           @html.dd(
@@ -829,7 +885,7 @@ fn workspace_inspector(
     ],
     @html.dl(class="inspector-data") <| [
       @html.dt("Definition"),
-      @html.dd("workspace." + node.node_id),
+      @html.dd(node.definition_id),
       @html.dt("Owner"),
       @html.dd(node.owner),
       @html.dt("Authority"),
@@ -880,7 +936,8 @@ fn workspace_inspector(
           model.workspace_presence
           .filter(value => value.target_id == node.node_id)
           .map(value => value.display_name)
-          .join(", ") + " viewing this node"
+          .join(", ") +
+          " viewing this node"
         } else {
           "No active collaborator lease on this node"
         },
@@ -956,6 +1013,12 @@ fn workspace_inspector(
                 "Current r" +
                 review.current_graph_revision.to_string() +
                 (if review.stale { " · stale" } else { " · current" }) +
+                " · graph " +
+                (if review.diff.changed_graph_fields.is_empty() {
+                  "unchanged"
+                } else {
+                  review.diff.changed_graph_fields.join(", ")
+                }) +
                 " · nodes +" +
                 review.diff.added_node_ids.length().to_string() +
                 " / -" +

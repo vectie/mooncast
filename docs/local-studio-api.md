@@ -611,6 +611,37 @@ derived object is content addressed and revalidated against its digest before it
 is served. Loading or playing source media does not invoke a paid model provider
 and does not mutate the timeline.
 
+## Governed creative workspace
+
+The workspace API is served by the same native loopback process. Important
+operational routes are:
+
+- `GET /api/workspace/catalog`
+- `POST /api/workspace/projects/{project_id}/capsules/{capsule_id}/install`
+- `POST /api/workspace/projects/{project_id}/graphs/{graph_id}/revisions`
+- `POST /api/workspace/projects/{project_id}/graphs/{graph_id}/runs`
+- `GET /api/workspace/projects/{project_id}/runs?state=&offset=&limit=`
+- `POST /api/workspace/runs/{run_id}/claim`
+- `POST /api/workspace/runs/{run_id}/actions/{cancel|retry}`
+- `GET /api/workspace/runs/{run_id}/events?after={event_id}` (SSE)
+- `GET /api/workspace/runs/{run_id}/events/replay?after={event_id}` (JSON)
+- `GET /api/workspace/projects/{project_id}/assets?q=&kind=&tag=&offset=&limit=`
+- `POST /api/workspace/assets/{artifact_id}/{version}/tags`
+- `POST /api/workspace/assets/{artifact_id}/{version}/delete`
+- `GET /api/workspace/projects/{project_id}/proposals/{proposal_id}`
+- `POST /api/workspace/projects/{project_id}/proposals/{proposal_id}/apply`
+- `POST /api/workspace/comments/drafts`
+- `POST /api/workspace/presence/leases`
+- `POST /api/workspace/shares/secure`
+- `GET /api/workspace/shares/{share_id}/access?token={token}`
+- `POST /api/workspace/shares/{share_id}/revoke`
+
+Graph writes are revision checked. Run requests freeze the exact saved graph,
+and the host owns ids and timestamps for runs, comments, presence and shares.
+Share creation returns the raw capability token once; storage retains only its
+SHA-256 digest. Asset deletion is a reference-checked soft deletion of library
+metadata and never erases immutable artifact evidence.
+
 ## External Bookkeeper handoff (MC-8)
 
 MoonBook owns Bookkeeper. Mooncast records only its immutable production

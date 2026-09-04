@@ -251,6 +251,7 @@ async test "workspace recipes dispatch collaboration sharing and publishing are 
     },
   )
   assert_true(publication.immutable_digest.has_prefix("sha256:"))
+  assert_false(publication.immutable_digest.has_prefix("sha256:sha256:"))
   let features = service.workspace_features("workspace-features")
   assert_eq(features.comments.length(), 1)
   assert_eq(features.shares.length(), 1)
@@ -329,18 +330,20 @@ async test "saved graph revisions drive runs cache claims and replay" {
     input_refs: ["inline://inputs"],
   })
   assert_eq(claimed.node_id, "intake")
-  ignore(service.apply_workspace_dispatch_receipt(claimed.dispatch_id, {
-    contract: "mooncast.workspace-dispatch-receipt.v1",
-    dispatch_id: claimed.dispatch_id,
-    idempotency_key: claimed.idempotency_key,
-    state: @workspace.SucceededDispatch,
-    output_digest: "sha256:cached-intake",
-    output_ref: "workspace://artifact/cached-intake",
-    provider_receipt: { "worker": "worker-1" }.to_json(),
-    error_code: "",
-    error_message: "",
-    recorded_at: "finished",
-  }))
+  ignore(
+    service.apply_workspace_dispatch_receipt(claimed.dispatch_id, {
+      contract: "mooncast.workspace-dispatch-receipt.v1",
+      dispatch_id: claimed.dispatch_id,
+      idempotency_key: claimed.idempotency_key,
+      state: @workspace.SucceededDispatch,
+      output_digest: "sha256:cached-intake",
+      output_ref: "workspace://artifact/cached-intake",
+      provider_receipt: { "worker": "worker-1" }.to_json(),
+      error_code: "",
+      error_message: "",
+      recorded_at: "finished",
+    }),
+  )
   let replay = service.workspace_run_events(first.run_id, "")
   assert_true(replay.events.length() >= 3)
   let after_first = service.workspace_run_events(
@@ -399,21 +402,18 @@ async test "asset library metadata is mutable while artifacts remain immutable" 
     "asset-project", "library", "VideoArtifact", "", 0, 10, false,
   )
   assert_eq(initial.total, 1)
-  let tagged = service.tag_workspace_asset(
-    "library-video",
-    1,
-    { tags: ["Review", "review", "hero"], actor: "operator" },
-  )
+  let tagged = service.tag_workspace_asset("library-video", 1, {
+    tags: ["Review", "review", "hero"],
+    actor: "operator",
+  })
   assert_eq(tagged.tags, ["review", "hero"])
   let filtered = service.list_workspace_asset_library(
     "asset-project", "", "", "hero", 0, 1, false,
   )
   assert_eq(filtered.entries.length(), 1)
-  let hidden = service.delete_workspace_asset(
-    "library-video",
-    1,
-    { actor: "operator" },
-  )
+  let hidden = service.delete_workspace_asset("library-video", 1, {
+    actor: "operator",
+  })
   assert_true(hidden.deleted)
   assert_eq(
     service.list_workspace_asset_library(
@@ -421,7 +421,53 @@ async test "asset library metadata is mutable while artifacts remain immutable" 
     ).total,
     0,
   )
-  assert_eq(service.list_workspace_artifacts(project_id="asset-project").artifacts, [artifact])
+  assert_eq(
+    service.list_workspace_artifacts(project_id="asset-project").artifacts,
+    [artifact],
+  )
+}
+
+///|
+async test "asset library lazily indexes artifacts created before the library" {
+  let root = "/tmp/mooncast-workspace-legacy-asset-" + @async.now().to_string()
+  let service = StudioService::new(root)
+  let artifact = @workspace.new_workspace_artifact(
+    "legacy-library-video",
+    1,
+    "legacy-asset-project",
+    @workspace.VideoArtifact,
+    "sha256:legacy-library-video",
+    "workspace://artifact/legacy-library-video/1",
+    "/api/workspace/artifacts/legacy-library-video/1/preview",
+    [],
+    "legacy-graph",
+    "legacy-run",
+    "legacy-node",
+    "",
+    "local",
+    "ffmpeg-bundled",
+    Json::empty_object(),
+    "cleared",
+    "passed",
+    [],
+    0.0,
+    1.0,
+    "created",
+  )
+  save_value(
+    service.store,
+    workspace_artifact_key(artifact.artifact_id, artifact.version),
+    artifact,
+  )
+  let migrated = service.list_workspace_asset_library(
+    "legacy-asset-project", "legacy-library", "VideoArtifact", "", 0, 10, false,
+  )
+  assert_eq(migrated.entries.length(), 1)
+  assert_eq(migrated.entries[0].artifact, artifact)
+  assert_eq(
+    service.workspace_asset_entry(artifact.artifact_id, artifact.version).artifact,
+    artifact,
+  )
 }
 
 ///|
@@ -441,12 +487,14 @@ async test "secure shares revoke and stored proposals apply once" {
     created_by: "operator",
     lifetime_seconds: 600,
   })
-  let access = service.access_workspace_share(created.share.share_id, created.token)
-  assert_eq(access.target_id, installed.graph_id)
-  let revoked = service.revoke_workspace_share(
+  let access = service.access_workspace_share(
     created.share.share_id,
-    { actor: "operator" },
+    created.token,
   )
+  assert_eq(access.target_id, installed.graph_id)
+  let revoked = service.revoke_workspace_share(created.share.share_id, {
+    actor: "operator",
+  })
   assert_true(revoked.revoked)
 
   let proposed = { ..installed, revision: 2, title: "Reviewed proposal" }
@@ -467,6 +515,13 @@ async test "secure shares revoke and stored proposals apply once" {
     applied: false,
   }
   ignore(service.save_workspace_proposal(proposal))
+  let review = service.review_saved_workspace_proposal(
+    "governed-project",
+    proposal.proposal_id,
+  )
+  assert_false(review.stale)
+  assert_eq(review.current_graph_revision, 1)
+  assert_eq(review.diff.changed_graph_fields, ["title"])
   let applied = service.apply_saved_workspace_proposal(
     "governed-project",
     proposal.proposal_id,

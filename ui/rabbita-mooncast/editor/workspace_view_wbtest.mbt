@@ -34,6 +34,38 @@ test "concat activity projects onto inspectable node states" {
 }
 
 ///|
+test "persisted run state drives generic nodes without masking active concat progress" {
+  let base = initial_model()
+  let run_node : WorkspaceNodeRunSummary = {
+    node_id: "generate",
+    state: Running,
+    progress_numerator: 1,
+    progress_denominator: 3,
+    retry_count: 0,
+  }
+  let generic = {
+    ..base,
+    selected_workspace_recipe: BriefToDeliveryRecipe,
+    workspace_run_nodes: [run_node],
+  }
+  assert_eq(workspace_node_state(generic, "generate"), "running")
+  let concat = {
+    ..base,
+    utility_concat: { ..base.utility_concat, phase: "succeeded" },
+    workspace_run_nodes: [
+      {
+        node_id: "concat",
+        state: Ready,
+        progress_numerator: 0,
+        progress_denominator: 1,
+        retry_count: 0,
+      },
+    ],
+  }
+  assert_eq(workspace_node_state(concat, "concat"), "succeeded")
+}
+
+///|
 test "recipe selection changes the visible graph and inspector focus" {
   let (_, model) = update(
     _ => @rabbita.none,
@@ -133,8 +165,10 @@ test "graph edits use persisted graph state with reversible history" {
   assert_eq(added.workspace_graph.unwrap().nodes.length(), 1)
   let (_, undone) = update(_ => @rabbita.none, WorkspaceGraphUndo, added)
   assert_eq(undone.workspace_graph, Some(graph))
+  assert_false(undone.workspace_graph_dirty)
   let (_, redone) = update(_ => @rabbita.none, WorkspaceGraphRedo, undone)
   assert_eq(redone.workspace_graph.unwrap().nodes.length(), 1)
+  assert_true(redone.workspace_graph_dirty)
 }
 
 ///|

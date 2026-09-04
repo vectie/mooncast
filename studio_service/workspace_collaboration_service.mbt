@@ -65,11 +65,11 @@ pub async fn StudioService::create_secure_workspace_share(
     )
   }
   let share_id = @runtime.new_id(prefix="workspace-share")
-  let token = @runtime.new_id(prefix="workspace-token") + @runtime.new_id(prefix="secret")
+  let token = @runtime.new_id(prefix="workspace-token") +
+    @runtime.new_id(prefix="secret")
   let created_at = (@runtime.wall_clock_ms() / 1000L).to_string()
-  let expires_at = (
-    @runtime.wall_clock_ms() / 1000L + Int64::from_int(request.lifetime_seconds)
-  ).to_string()
+  let expires_at = (@runtime.wall_clock_ms() / 1000L +
+  Int64::from_int(request.lifetime_seconds)).to_string()
   let share = self.create_workspace_share({
     share_id,
     project_id: request.project_id,

@@ -34,8 +34,58 @@ async fn StudioService::workspace_asset_entry(
   )
   match value {
     Some(entry) => entry
-    None => raise NotFound(entity="workspace_asset", id=artifact_id)
+    None => {
+      let artifact : @workspace.WorkspaceArtifact? = load_value(
+        self.store,
+        workspace_artifact_key(artifact_id, version),
+      )
+      guard artifact is Some(artifact) else {
+        raise NotFound(entity="workspace_asset", id=artifact_id)
+      }
+      let entry : @workspace.WorkspaceAssetEntry = {
+        contract: "mooncast.workspace-asset-entry.v1",
+        artifact,
+        tags: [],
+        deleted: false,
+        indexed_at: artifact.created_at,
+        updated_at: artifact.created_at,
+      }
+      save_value(
+        self.store,
+        workspace_asset_entry_key(artifact_id, version),
+        entry,
+      )
+      entry
+    }
   }
+}
+
+///|
+fn workspace_asset_matches(
+  entry : @workspace.WorkspaceAssetEntry,
+  project_id : String,
+  normalized : StringView,
+  kind : String,
+  tag : String,
+  include_deleted : Bool,
+) -> Bool {
+  guard entry.artifact.project_id == project_id &&
+    (include_deleted || !entry.deleted) &&
+    (
+      kind.is_blank() ||
+      workspace_artifact_kind_name(entry.artifact.kind) == kind
+    ) &&
+    (tag.is_blank() || entry.tags.contains(tag)) else {
+    return false
+  }
+  let searchable = (entry.artifact.artifact_id +
+  " " +
+  entry.artifact.node_id +
+  " " +
+  entry.artifact.provider +
+  " " +
+  entry.tags.join(" ")).to_lower()
+  normalized.is_blank() || searchable.contains(normalized)
 }
 
 ///|
@@ -57,21 +107,42 @@ pub async fn StudioService::list_workspace_asset_library(
   }
   let normalized = query.trim().to_lower()
   let matching : Array[@workspace.WorkspaceAssetEntry] = []
-  for key in self.store.list_keys(prefix="workspace-asset-entry-", suffix=".json") {
+  let indexed : Array[String] = []
+  for
+    key in self.store.list_keys(prefix="workspace-asset-entry-", suffix=".json") {
     let value : @workspace.WorkspaceAssetEntry? = load_value(self.store, key)
-    if value is Some(entry) &&
-      entry.artifact.project_id == project_id &&
-      (include_deleted || !entry.deleted) &&
-      (kind.is_blank() || workspace_artifact_kind_name(entry.artifact.kind) == kind) &&
-      (tag.is_blank() || entry.tags.contains(tag)) {
-      let searchable = (entry.artifact.artifact_id +
-      " " +
-      entry.artifact.node_id +
-      " " +
-      entry.artifact.provider +
-      " " +
-      entry.tags.join(" ")).to_lower()
-      if normalized.is_blank() || searchable.contains(normalized) {
+    if value is Some(entry) {
+      indexed.push(
+        entry.artifact.artifact_id + ":" + entry.artifact.version.to_string(),
+      )
+      if workspace_asset_matches(
+          entry, project_id, normalized, kind, tag, include_deleted,
+        ) {
+        matching.push(entry)
+      }
+    }
+  }
+  // Existing installations may predate the asset index. Migrate those
+  // immutable artifact versions lazily without changing their evidence.
+  for artifact in self.list_workspace_artifacts(project_id~).artifacts {
+    let identity = artifact.artifact_id + ":" + artifact.version.to_string()
+    if !indexed.contains(identity) {
+      let entry : @workspace.WorkspaceAssetEntry = {
+        contract: "mooncast.workspace-asset-entry.v1",
+        artifact,
+        tags: [],
+        deleted: false,
+        indexed_at: artifact.created_at,
+        updated_at: artifact.created_at,
+      }
+      save_value(
+        self.store,
+        workspace_asset_entry_key(artifact.artifact_id, artifact.version),
+        entry,
+      )
+      if workspace_asset_matches(
+          entry, project_id, normalized, kind, tag, include_deleted,
+        ) {
         matching.push(entry)
       }
     }
@@ -104,10 +175,13 @@ pub async fn StudioService::tag_workspace_asset(
   version : Int,
   request : WorkspaceAssetTagsRequest,
 ) -> @workspace.WorkspaceAssetEntry {
-  guard request.tags.length() <= 32 && request.tags.all(tag => {
-    let trimmed = tag.trim()
-    !trimmed.is_blank() && trimmed.length() <= 48 && !trimmed.contains("\u{0000}")
-  }) else {
+  guard request.tags.length() <= 32 &&
+    request.tags.all(tag => {
+      let trimmed = tag.trim()
+      !trimmed.is_blank() &&
+      trimmed.length() <= 48 &&
+      !trimmed.contains("\u{0000}")
+    }) else {
     raise Invalid(
       code="workspace_asset_tags_invalid",
       message="asset tags must be non-empty, at most 48 characters, and limited to 32",
@@ -123,7 +197,11 @@ pub async fn StudioService::tag_workspace_asset(
       }
     }
     let updated = { ..current, tags, updated_at: now_string() }
-    save_value(self.store, workspace_asset_entry_key(artifact_id, version), updated)
+    save_value(
+      self.store,
+      workspace_asset_entry_key(artifact_id, version),
+      updated,
+    )
     self.save_workspace_activity(
       workspace_activity(
         current.artifact.project_id,
@@ -154,7 +232,11 @@ async fn StudioService::workspace_asset_is_referenced(
       return true
     }
   }
-  for key in self.store.list_keys(prefix="workspace-graph-", suffix="-latest.json") {
+  for
+    key in self.store.list_keys(
+      prefix="workspace-graph-",
+      suffix="-latest.json",
+    ) {
     let graph : @workspace.WorkspaceGraph? = load_value(self.store, key)
     if graph is Some(value) &&
       value.project_id == entry.artifact.project_id &&
@@ -172,25 +254,31 @@ pub async fn StudioService::delete_workspace_asset(
   version : Int,
   request : WorkspaceAssetDeleteRequest,
 ) -> @workspace.WorkspaceAssetEntry {
-  let current = self.workspace_asset_entry(artifact_id, version)
-  guard !self.workspace_asset_is_referenced(current) else {
-    raise Conflict(
-      code="workspace_asset_in_use",
-      message="asset is referenced by an active graph or share",
+  self.with_mutation_lock(() => {
+    let current = self.workspace_asset_entry(artifact_id, version)
+    guard !self.workspace_asset_is_referenced(current) else {
+      raise Conflict(
+        code="workspace_asset_in_use",
+        message="asset is referenced by an active graph or share",
+      )
+    }
+    let updated = { ..current, deleted: true, updated_at: now_string() }
+    save_value(
+      self.store,
+      workspace_asset_entry_key(artifact_id, version),
+      updated,
     )
-  }
-  let updated = { ..current, deleted: true, updated_at: now_string() }
-  save_value(self.store, workspace_asset_entry_key(artifact_id, version), updated)
-  self.save_workspace_activity(
-    workspace_activity(
-      current.artifact.project_id,
-      request.actor,
-      "asset-hidden",
-      @workspace.ArtifactTarget,
-      artifact_id,
-      "immutable evidence retained",
-      updated.updated_at,
-    ),
-  )
-  updated
+    self.save_workspace_activity(
+      workspace_activity(
+        current.artifact.project_id,
+        request.actor,
+        "asset-hidden",
+        @workspace.ArtifactTarget,
+        artifact_id,
+        "immutable evidence retained",
+        updated.updated_at,
+      ),
+    )
+    updated
+  })
 }

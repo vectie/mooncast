@@ -54,7 +54,10 @@ fn workspace_definition(
 }
 
 ///|
-fn workspace_graph_node(model : Model, node_id : String) -> WorkspaceGraphNodeSummary? {
+fn workspace_graph_node(
+  model : Model,
+  node_id : String,
+) -> WorkspaceGraphNodeSummary? {
   model.workspace_graph.bind(graph => {
     graph.nodes.iter().find_first(value => value.node_id == node_id)
   })
@@ -66,35 +69,38 @@ fn workspace_node_view_from_graph(
   node : WorkspaceGraphNodeSummary,
 ) -> WorkspaceNodeView {
   match workspace_definition(model, node.definition_id) {
-    Some(definition) => {
-      node_id: node.node_id,
-      definition_id: node.definition_id,
-      title: node.title,
-      detail: definition.category + " · " + definition.tool_id,
-      owner: definition.execution_owner,
-      authority: workspace_authority_label(definition.authority),
-      inputs: definition.inputs,
-      outputs: definition.outputs,
-      collapsed: node.collapsed,
-    }
-    None => {
-      node_id: node.node_id,
-      definition_id: node.definition_id,
-      title: node.title,
-      detail: "Unavailable definition",
-      owner: "unavailable",
-      authority: "Unavailable",
-      inputs: [],
-      outputs: [],
-      collapsed: node.collapsed,
-    }
+    Some(definition) =>
+      {
+        node_id: node.node_id,
+        definition_id: node.definition_id,
+        title: node.title,
+        detail: definition.category + " · " + definition.tool_id,
+        owner: definition.execution_owner,
+        authority: workspace_authority_label(definition.authority),
+        inputs: definition.inputs,
+        outputs: definition.outputs,
+        collapsed: node.collapsed,
+      }
+    None =>
+      {
+        node_id: node.node_id,
+        definition_id: node.definition_id,
+        title: node.title,
+        detail: "Unavailable definition",
+        owner: "unavailable",
+        authority: "Unavailable",
+        inputs: [],
+        outputs: [],
+        collapsed: node.collapsed,
+      }
   }
 }
 
 ///|
 fn visible_workspace_nodes(model : Model) -> Array[WorkspaceNodeView] {
   match model.workspace_graph {
-    Some(graph) => graph.nodes.map(node => workspace_node_view_from_graph(model, node))
+    Some(graph) =>
+      graph.nodes.map(node => workspace_node_view_from_graph(model, node))
     None => workspace_nodes(model.selected_workspace_recipe)
   }
 }
@@ -105,7 +111,11 @@ fn workspace_graph_with_node(
   node : WorkspaceGraphNodeSummary,
 ) -> WorkspaceGraphSummary {
   let nodes = graph.nodes.map(value => {
-    if value.node_id == node.node_id { node } else { value }
+    if value.node_id == node.node_id {
+      node
+    } else {
+      value
+    }
   })
   { ..graph, nodes, }
 }
@@ -114,17 +124,21 @@ fn workspace_graph_with_node(
 fn begin_workspace_graph_edit(model : Model) -> Model {
   match model.workspace_graph {
     None => model
-    Some(graph) => {
-      ..model,
-      workspace_graph_undo: model.workspace_graph_undo + [graph],
-      workspace_graph_redo: [],
-      workspace_graph_dirty: true,
-    }
+    Some(graph) =>
+      {
+        ..model,
+        workspace_graph_undo: model.workspace_graph_undo + [graph],
+        workspace_graph_redo: [],
+        workspace_graph_dirty: true,
+      }
   }
 }
 
 ///|
-fn replace_workspace_graph(model : Model, graph : WorkspaceGraphSummary) -> Model {
+fn replace_workspace_graph(
+  model : Model,
+  graph : WorkspaceGraphSummary,
+) -> Model {
   { ..model, workspace_graph: Some(graph), workspace_graph_dirty: true }
 }
 
@@ -133,7 +147,8 @@ fn workspace_graph_unique_id(
   graph : WorkspaceGraphSummary,
   prefix : String,
 ) -> String {
-  for index = graph.nodes.length() + graph.edges.length() + 1; ; index = index + 1 {
+  for index = graph.nodes.length() + graph.edges.length() + 1; ; index = index +
+        1 {
     let candidate = prefix + "-" + index.to_string()
     if !graph.nodes.any(node => node.node_id == candidate) &&
       !graph.edges.any(edge => edge.edge_id == candidate) {
@@ -166,7 +181,9 @@ fn workspace_graph_add_node(
     ..replace_workspace_graph(prepared, updated),
     selected_workspace_node: node_id,
     workspace_node_palette_search: "",
-    status: "Added " + definition.display_name + ". Connect required inputs before saving.",
+    status: "Added " +
+    definition.display_name +
+    ". Connect required inputs before saving.",
     error: "",
   }
 }
@@ -174,7 +191,10 @@ fn workspace_graph_add_node(
 ///|
 fn workspace_graph_add_asset_node(model : Model, title : String) -> Model {
   guard workspace_definition(model, "workspace.asset-input") is Some(definition) else {
-    return { ..model, error: "The governed asset-input definition is unavailable." }
+    return {
+      ..model,
+      error: "The governed asset-input definition is unavailable.",
+    }
   }
   let added = workspace_graph_add_node(model, definition)
   guard added.workspace_graph is Some(graph) &&
@@ -188,10 +208,11 @@ fn workspace_graph_add_asset_node(model : Model, title : String) -> Model {
   {
     ..replace_workspace_graph(
       added,
-      workspace_graph_with_node(
-        graph,
-        { ..node, title, parameters: [parameter] },
-      ),
+      workspace_graph_with_node(graph, {
+        ..node,
+        title,
+        parameters: [parameter],
+      }),
     ),
     status: "Created a versioned asset input node. Bind the durable artifact before running.",
   }
@@ -205,7 +226,9 @@ fn workspace_graph_bind_public_input(model : Model) -> Model {
   }
   let key = "public-input:brief"
   let value = model.workspace_public_input.to_json()
-  if node.parameters.any(parameter => parameter.key == key && parameter.value == value) {
+  if node.parameters.any(parameter => {
+      parameter.key == key && parameter.value == value
+    }) {
     return model
   }
   let parameters = node.parameters.filter(parameter => parameter.key != key)
@@ -235,7 +258,10 @@ fn workspace_graph_delete_selected(model : Model) -> Model {
   }
   {
     ..replace_workspace_graph(prepared, updated),
-    selected_workspace_node: updated.nodes.get(0).map(node => node.node_id).unwrap_or(""),
+    selected_workspace_node: updated.nodes
+    .get(0)
+    .map(node => node.node_id)
+    .unwrap_or(""),
     status: "Deleted node and its connections.",
     error: "",
   }
@@ -244,9 +270,10 @@ fn workspace_graph_delete_selected(model : Model) -> Model {
 ///|
 fn workspace_graph_duplicate_selected(model : Model) -> Model {
   guard model.workspace_graph is Some(graph) &&
-    graph.nodes.iter().find_first(node => {
-      node.node_id == model.selected_workspace_node
-    }) is Some(source) else {
+    graph.nodes
+    .iter()
+    .find_first(node => node.node_id == model.selected_workspace_node)
+    is Some(source) else {
     return model
   }
   let prepared = begin_workspace_graph_edit(model)
@@ -312,13 +339,10 @@ fn workspace_graph_delete_parameter(model : Model, key : String) -> Model {
   {
     ..replace_workspace_graph(
       prepared,
-      workspace_graph_with_node(
-        graph,
-        {
-          ..node,
-          parameters: node.parameters.filter(parameter => parameter.key != key),
-        },
-      ),
+      workspace_graph_with_node(graph, {
+        ..node,
+        parameters: node.parameters.filter(parameter => parameter.key != key),
+      }),
     ),
     status: "Removed node parameter. Save a revision before running.",
     error: "",
@@ -338,10 +362,11 @@ fn workspace_graph_move_node(
   }
   replace_workspace_graph(
     model,
-    workspace_graph_with_node(
-      graph,
-      { ..node, x: Int::max(0, x), y: Int::max(0, y) },
-    ),
+    workspace_graph_with_node(graph, {
+      ..node,
+      x: Int::max(0, x),
+      y: Int::max(0, y),
+    }),
   )
 }
 
@@ -361,7 +386,10 @@ fn workspace_graph_connect(
       edge.target_node_id == target_node_id &&
       edge.target_port_id == target_port_id
     }) {
-    return { ..model, error: "That connection already exists or targets the same node." }
+    return {
+      ..model,
+      error: "That connection already exists or targets the same node.",
+    }
   }
   let edge_id = workspace_graph_unique_id(graph, "edge")
   let edge : WorkspaceGraphEdgeSummary = {
@@ -396,8 +424,16 @@ fn workspace_graph_run_body(
     "expected_revision": graph.revision,
     "run_id": "",
     "created_by": "Mooncast operator",
-    "provider": if graph.graph_id == "combine-videos" { "local" } else { "moonflow" },
-    "model": if graph.graph_id == "combine-videos" { "ffmpeg" } else { "policy-routed" },
+    "provider": if graph.graph_id == "combine-videos" {
+      "local"
+    } else {
+      "moonflow"
+    },
+    "model": if graph.graph_id == "combine-videos" {
+      "ffmpeg"
+    } else {
+      "policy-routed"
+    },
     "policy_digest": "sha256:workspace-default-policy",
     "maximum_retries": 2,
     "requested_output_node_ids": if !selected_node_id.is_blank() {
@@ -417,7 +453,9 @@ fn workspace_port_accepts(
 }
 
 ///|
-fn workspace_palette_definitions(model : Model) -> Array[WorkspaceDefinitionSummary] {
+fn workspace_palette_definitions(
+  model : Model,
+) -> Array[WorkspaceDefinitionSummary] {
   let query = model.workspace_node_palette_search.trim().to_lower()
   let values : Array[WorkspaceDefinitionSummary] = []
   for definition in model.workspace_catalog {
@@ -456,7 +494,11 @@ fn start_workspace_graph_http(
       .with_json(
         workspace_graph_run_body(
           graph,
-          if selected_only { model.selected_workspace_node } else { "" },
+          if selected_only {
+            model.selected_workspace_node
+          } else {
+            ""
+          },
         ),
       )
       .expect_json(result => dispatch(WorkspaceRecipeStarted(result)))
