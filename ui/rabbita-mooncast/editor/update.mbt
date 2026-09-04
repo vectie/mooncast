@@ -1,4 +1,43 @@
 ///|
+fn workspace_bootstrap_http(
+  dispatch : @rabbita.Emit[Msg],
+  model : Model,
+  project_id : String,
+) -> @rabbita.Cmd {
+  let proposals = @http.get(
+    "/api/workspace/projects/" + project_id + "/proposals",
+  ).expect_json(value => dispatch(WorkspaceProposalsLoaded(value)))
+  let catalog = @http.get("/api/workspace/catalog").expect_json(value => {
+    dispatch(WorkspaceCatalogLoaded(value))
+  })
+  let capsules = @http.get(
+    "/api/workspace/projects/" + project_id + "/capsules",
+  ).expect_json(value => dispatch(WorkspaceCapsulesLoaded(value)))
+  let graph = @http.post(
+      "/api/workspace/projects/" +
+      project_id +
+      "/capsules/combine-videos/install",
+    )
+    .with_json({
+      "graph_id": "combine-videos",
+      "title": "Combine videos",
+      "actor": model.workspace_actor_name,
+    })
+    .expect_json(value => dispatch(WorkspaceGraphLoaded(value)))
+  let scoped = { ..model, project_id, }
+  let assets = @http.get(workspace_asset_library_url(scoped)).expect_json(value => {
+    dispatch(WorkspaceAssetsLoaded(value))
+  })
+  let features = @http.get(
+    "/api/workspace/projects/" + project_id + "/features",
+  ).expect_json(value => dispatch(WorkspaceFeaturesLoaded(value)))
+  let runs = @http.get(
+    "/api/workspace/projects/" + project_id + "/runs?limit=20",
+  ).expect_json(value => dispatch(WorkspaceRunHistoryLoaded(value)))
+  @rabbita.batch([proposals, catalog, capsules, graph, assets, features, runs])
+}
+
+///|
 fn update(
   dispatch : @rabbita.Emit[Msg],
   msg : Msg,
@@ -34,12 +73,12 @@ fn update(
           }
           if projects.is_empty() {
             return (
-              @rabbita.none,
+              workspace_bootstrap_http(dispatch, model, model.project_id),
               {
                 ..model,
                 projects,
-                loading: false,
-                status: "No governed editor project. Quick combine is ready.",
+                loading: true,
+                status: "No editor project. Loading the project-free creative workspace…",
                 error: "",
               },
             )
@@ -54,38 +93,10 @@ fn update(
               dispatch(WorkspaceOpened(model.open_generation + 1, value))
             },
           )
-          let proposals = @http.get(
-            "/api/workspace/projects/" + project_id + "/proposals",
-          ).expect_json(value => dispatch(WorkspaceProposalsLoaded(value)))
-          let catalog = @http.get("/api/workspace/catalog").expect_json(value => {
-            dispatch(WorkspaceCatalogLoaded(value))
-          })
-          let capsules = @http.get(
-            "/api/workspace/projects/" + project_id + "/capsules",
-          ).expect_json(value => dispatch(WorkspaceCapsulesLoaded(value)))
-          let graph = @http.post(
-              "/api/workspace/projects/" +
-              project_id +
-              "/capsules/combine-videos/install",
-            )
-            .with_json({
-              "graph_id": "combine-videos",
-              "title": "Combine videos",
-              "actor": model.workspace_actor_name,
-            })
-            .expect_json(value => dispatch(WorkspaceGraphLoaded(value)))
-          let assets = @http.get(
-            workspace_asset_library_url({ ..model, project_id, }),
-          ).expect_json(value => dispatch(WorkspaceAssetsLoaded(value)))
-          let features = @http.get(
-            "/api/workspace/projects/" + project_id + "/features",
-          ).expect_json(value => dispatch(WorkspaceFeaturesLoaded(value)))
-          let runs = @http.get(
-            "/api/workspace/projects/" + project_id + "/runs?limit=20",
-          ).expect_json(value => dispatch(WorkspaceRunHistoryLoaded(value)))
           (
             @rabbita.batch([
-              opened, proposals, catalog, capsules, graph, assets, features, runs,
+              opened,
+              workspace_bootstrap_http(dispatch, model, project_id),
             ]),
             {
               ..model,
@@ -117,29 +128,41 @@ fn update(
             { ..model, error: "Could not load the governed node catalog." },
           )
         Ok(response) => {
-          let decoded : WorkspaceCatalogPayload? = Some(
-            @json.from_json(response),
-          ) catch {
-            _ => None
-          }
-          match decoded {
-            Some(value) =>
-              (
-                @rabbita.none,
-                {
-                  ..model,
-                  workspace_catalog: value.definitions,
-                  workspace_activity: model.workspace_activity +
-                  [
-                    "\{value.definitions.length()} governed node definitions loaded",
-                  ],
-                },
-              )
-            None =>
-              (
-                @rabbita.none,
-                { ..model, error: "Node catalog response was invalid." },
-              )
+          let (definitions, rejected) = decode_workspace_catalog(response)
+          if rejected < 0 || definitions.is_empty() {
+            (
+              @rabbita.none,
+              {
+                ..model,
+                workspace_activity: model.workspace_activity +
+                [
+                  if rejected < 0 {
+                    "Node catalog envelope could not be decoded"
+                  } else {
+                    "Node catalog rejected all \{rejected} definitions"
+                  },
+                ],
+                error: "Node catalog response was invalid.",
+              },
+            )
+          } else {
+            let rejected_note = if rejected == 0 {
+              ""
+            } else {
+              " · skipped \{rejected} incompatible definitions"
+            }
+            (
+              @rabbita.none,
+              {
+                ..model,
+                workspace_catalog: definitions,
+                workspace_activity: model.workspace_activity +
+                [
+                  "\{definitions.length()} governed node definitions loaded" +
+                  rejected_note,
+                ],
+              },
+            )
           }
         }
       }
@@ -475,6 +498,16 @@ fn update(
       (@rabbita.none, { ..model, workspace_parameter_type, })
     SetWorkspaceNodeParameter =>
       (@rabbita.none, workspace_graph_set_parameter(model))
+    SetWorkspaceDeclaredParameter(node_id, key, value) =>
+      (
+        @rabbita.none,
+        workspace_graph_set_declared_parameter(model, node_id, key, value),
+      )
+    ToggleWorkspaceDeclaredBoolean(node_id, key) =>
+      (
+        @rabbita.none,
+        workspace_graph_toggle_declared_boolean(model, node_id, key),
+      )
     DeleteWorkspaceNodeParameter(key) =>
       (@rabbita.none, workspace_graph_delete_parameter(model, key))
     WorkspaceGraphUndo =>

@@ -54,6 +54,27 @@ fn workspace_definition(
 }
 
 ///|
+fn decode_workspace_catalog(
+  response : Json,
+) -> (Array[WorkspaceDefinitionSummary], Int) {
+  let envelope : WorkspaceCatalogRawPayload = @json.from_json(response) catch {
+    _ => return ([], -1)
+  }
+  let definitions : Array[WorkspaceDefinitionSummary] = []
+  let mut rejected = 0
+  for value in envelope.definitions {
+    let decoded : WorkspaceDefinitionSummary? = Some(@json.from_json(value)) catch {
+      _ => None
+    }
+    match decoded {
+      Some(definition) => definitions.push(definition)
+      None => rejected = rejected + 1
+    }
+  }
+  (definitions, rejected)
+}
+
+///|
 fn workspace_graph_node(
   model : Model,
   node_id : String,
@@ -173,7 +194,12 @@ fn workspace_graph_add_node(
     title: definition.display_name,
     x: 48 + column * 280,
     y: 96 + row * 190,
-    parameters: [],
+    parameters: definition.parameters.filter_map(parameter => {
+      parameter.default_value.map(value => {
+        key: parameter.parameter_id,
+        value,
+      })
+    }),
     collapsed: false,
   }
   let updated = { ..graph, nodes: graph.nodes + [node] }
@@ -521,19 +547,178 @@ fn workspace_graph_set_parameter(model : Model) -> Model {
       }
     _ => model.workspace_parameter_value.to_json()
   }
+  {
+    ..workspace_graph_write_parameter(model, graph, node, key, value),
+    workspace_parameter_key: "",
+    workspace_parameter_value: "",
+  }
+}
+
+///|
+fn workspace_graph_write_parameter(
+  model : Model,
+  graph : WorkspaceGraphSummary,
+  node : WorkspaceGraphNodeSummary,
+  key : String,
+  value : Json,
+) -> Model {
   let parameters = node.parameters.filter(parameter => parameter.key != key)
   parameters.push({ key, value })
+  parameters.sort_by((left, right) => left.key.compare(right.key))
   let prepared = begin_workspace_graph_edit(model)
   {
     ..replace_workspace_graph(
       prepared,
       workspace_graph_with_node(graph, { ..node, parameters, }),
     ),
-    workspace_parameter_key: "",
-    workspace_parameter_value: "",
     status: "Updated node parameter. Save a revision before running.",
     error: "",
   }
+}
+
+///|
+fn workspace_declared_parameter(
+  model : Model,
+  node : WorkspaceGraphNodeSummary,
+  key : String,
+) -> WorkspaceParameterDefinition? {
+  workspace_definition(model, node.definition_id).bind(definition => {
+    definition.parameters
+    .iter()
+    .find_first(parameter => parameter.parameter_id == key)
+  })
+}
+
+///|
+fn workspace_parameter_value(
+  node : WorkspaceGraphNodeSummary,
+  definition : WorkspaceParameterDefinition,
+) -> Json? {
+  match
+    node.parameters
+    .iter()
+    .find_first(parameter => parameter.key == definition.parameter_id)
+    .map(parameter => parameter.value) {
+    Some(value) => Some(value)
+    None => definition.default_value
+  }
+}
+
+///|
+fn workspace_parameter_text(
+  node : WorkspaceGraphNodeSummary,
+  definition : WorkspaceParameterDefinition,
+) -> String {
+  match workspace_parameter_value(node, definition) {
+    Some(Json::String(value)) => value
+    Some(value) => value.stringify()
+    None => ""
+  }
+}
+
+///|
+fn workspace_parameter_boolean(
+  node : WorkspaceGraphNodeSummary,
+  definition : WorkspaceParameterDefinition,
+) -> Bool {
+  match workspace_parameter_value(node, definition) {
+    Some(Json::True) => true
+    _ => false
+  }
+}
+
+///|
+fn workspace_parameter_number(value : Json) -> Double? {
+  match value {
+    Json::Number(number, ..) => Some(number)
+    _ => None
+  }
+}
+
+///|
+fn workspace_declared_parameter_value(
+  definition : WorkspaceParameterDefinition,
+  raw : String,
+) -> Result[Json, String] {
+  let parsed : Json = match definition.value_kind {
+    TextValue | AssetReferenceValue | ProviderValue | ModelValue =>
+      raw.to_json()
+    BooleanValue => (raw.trim().to_lower() == "true").to_json()
+    IntegerValue | NumberValue | JsonValue =>
+      @json.parse(raw) catch {
+        _ => return Err("Enter valid " + definition.label.to_lower() + ".")
+      }
+  }
+  let type_valid = match (definition.value_kind, parsed) {
+    (
+      TextValue
+      | AssetReferenceValue
+      | ProviderValue
+      | ModelValue,
+      Json::String(_),
+    ) => true
+    (IntegerValue | NumberValue, Json::Number(_, ..)) => true
+    (BooleanValue, Json::True | Json::False) => true
+    (JsonValue, _) => true
+    _ => false
+  }
+  if !type_valid {
+    return Err(definition.label + " has the wrong value type.")
+  }
+  if !definition.options.is_empty() {
+    guard parsed is Json::String(value) &&
+      definition.options.any(option => option.value == value) else {
+      return Err(definition.label + " is not an allowed option.")
+    }
+  }
+  match workspace_parameter_number(parsed) {
+    Some(number) =>
+      if definition.minimum.map(value => number < value).unwrap_or(false) ||
+        definition.maximum.map(value => number > value).unwrap_or(false) {
+        return Err(definition.label + " is outside its allowed range.")
+      }
+    None => ()
+  }
+  Ok(parsed)
+}
+
+///|
+fn workspace_graph_set_declared_parameter(
+  model : Model,
+  node_id : String,
+  key : String,
+  raw : String,
+) -> Model {
+  guard model.workspace_graph is Some(graph) &&
+    workspace_graph_node(model, node_id) is Some(node) &&
+    workspace_declared_parameter(model, node, key) is Some(definition) else {
+    return { ..model, error: "The declared parameter is unavailable." }
+  }
+  match workspace_declared_parameter_value(definition, raw) {
+    Err(message) => { ..model, error: message }
+    Ok(value) => workspace_graph_write_parameter(model, graph, node, key, value)
+  }
+}
+
+///|
+fn workspace_graph_toggle_declared_boolean(
+  model : Model,
+  node_id : String,
+  key : String,
+) -> Model {
+  guard model.workspace_graph is Some(graph) &&
+    workspace_graph_node(model, node_id) is Some(node) &&
+    workspace_declared_parameter(model, node, key) is Some(definition) &&
+    definition.value_kind == BooleanValue else {
+    return { ..model, error: "The boolean parameter is unavailable." }
+  }
+  workspace_graph_write_parameter(
+    model,
+    graph,
+    node,
+    key,
+    (!workspace_parameter_boolean(node, definition)).to_json(),
+  )
 }
 
 ///|

@@ -84,6 +84,54 @@ struct WorkspacePortSummary {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+enum WorkspaceParameterValueKind {
+  TextValue
+  IntegerValue
+  NumberValue
+  BooleanValue
+  JsonValue
+  AssetReferenceValue
+  ProviderValue
+  ModelValue
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+enum WorkspaceParameterControl {
+  TextFieldControl
+  TextAreaControl
+  NumberFieldControl
+  SliderControl
+  SelectControl
+  CheckboxControl
+  JsonEditorControl
+  AssetPickerControl
+  ProviderPickerControl
+  ModelPickerControl
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+struct WorkspaceParameterOption {
+  value : String
+  label : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+struct WorkspaceParameterDefinition {
+  parameter_id : String
+  label : String
+  description : String
+  value_kind : WorkspaceParameterValueKind
+  control : WorkspaceParameterControl
+  default_value : Json?
+  required : Bool
+  advanced : Bool
+  minimum : Double?
+  maximum : Double?
+  step : Double?
+  options : Array[WorkspaceParameterOption]
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 struct WorkspaceDefinitionSummary {
   definition_id : String
   display_name : String
@@ -92,6 +140,7 @@ struct WorkspaceDefinitionSummary {
   tool_id : String
   inputs : Array[WorkspacePortSummary]
   outputs : Array[WorkspacePortSummary]
+  parameters : Array[WorkspaceParameterDefinition]
   authority : WorkspaceAuthoritySummary
   execution_owner : String
   idempotent : Bool
@@ -140,8 +189,10 @@ struct WorkspaceGraphSummary {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
-struct WorkspaceCatalogPayload {
-  definitions : Array[WorkspaceDefinitionSummary]
+/// Decode the catalog envelope separately from contributed definitions so one
+/// future or malformed extension cannot hide every usable workspace node.
+struct WorkspaceCatalogRawPayload {
+  definitions : Array[Json]
 } derive(FromJson)
 
 ///|

@@ -135,12 +135,168 @@ fn test_workspace_definition(
         required: true,
       },
     ],
+    parameters: [],
     authority: SandboxExecution,
     execution_owner: "mooncast",
     idempotent: true,
     review_required: false,
     evidence_outputs: ["workspace/artifacts"],
   }
+}
+
+///|
+fn test_workspace_parameter(
+  id : String,
+  kind : WorkspaceParameterValueKind,
+  control : WorkspaceParameterControl,
+  default_value : Json,
+) -> WorkspaceParameterDefinition {
+  {
+    parameter_id: id,
+    label: id,
+    description: "test parameter",
+    value_kind: kind,
+    control,
+    default_value: Some(default_value),
+    required: false,
+    advanced: false,
+    minimum: if kind == IntegerValue {
+      Some(1.0)
+    } else {
+      None
+    },
+    maximum: if kind == IntegerValue {
+      Some(8.0)
+    } else {
+      None
+    },
+    step: if kind == IntegerValue {
+      Some(1.0)
+    } else {
+      None
+    },
+    options: [],
+  }
+}
+
+///|
+test "declared controls initialize defaults and persist typed values" {
+  let base = test_workspace_definition("test.generate", false)
+  let definition = {
+    ..base,
+    parameters: [
+      test_workspace_parameter(
+        "variant_count",
+        IntegerValue,
+        SliderControl,
+        (4).to_json(),
+      ),
+      test_workspace_parameter(
+        "fast_start",
+        BooleanValue,
+        CheckboxControl,
+        true.to_json(),
+      ),
+    ],
+  }
+  let graph : WorkspaceGraphSummary = {
+    contract: "mooncast.workspace-graph.v1",
+    graph_id: "test-parameters",
+    project_id: "test-project",
+    revision: 1,
+    title: "Parameters",
+    nodes: [],
+    edges: [],
+    output_node_ids: [],
+    created_by: "operator",
+    created_at: "created",
+  }
+  let added = workspace_graph_add_node(
+    {
+      ..initial_model(),
+      workspace_catalog: [definition],
+      workspace_graph: Some(graph),
+    },
+    definition,
+  )
+  let node = workspace_graph_node(added, added.selected_workspace_node).unwrap()
+  assert_eq(node.parameters.length(), 2)
+  assert_true(
+    node.parameters.any(parameter => {
+      parameter.key == "variant_count" && parameter.value == (4).to_json()
+    }),
+  )
+  let changed = workspace_graph_set_declared_parameter(
+    added,
+    added.selected_workspace_node,
+    "variant_count",
+    "6",
+  )
+  assert_true(changed.error.is_blank())
+  assert_eq(changed.workspace_graph_undo.length(), 2)
+  assert_true(
+    workspace_graph_node(changed, changed.selected_workspace_node).unwrap().parameters.any(parameter => {
+        parameter.key == "variant_count" && parameter.value == (6).to_json()
+      },
+    ),
+  )
+  let toggled = workspace_graph_toggle_declared_boolean(
+    changed,
+    changed.selected_workspace_node,
+    "fast_start",
+  )
+  assert_true(
+    workspace_graph_node(toggled, toggled.selected_workspace_node).unwrap().parameters.any(parameter => {
+        parameter.key == "fast_start" && parameter.value == false.to_json()
+      },
+    ),
+  )
+  let invalid = workspace_graph_set_declared_parameter(
+    toggled,
+    toggled.selected_workspace_node,
+    "variant_count",
+    "12",
+  )
+  assert_true(invalid.error.contains("outside"))
+  assert_eq(invalid.workspace_graph, toggled.workspace_graph)
+}
+
+///|
+test "parameter metadata decodes omitted optional bounds" {
+  let value = @json.parse(
+    (
+      #|{"parameter_id":"brief","label":"Creative brief","description":"Describe the goal.","value_kind":"TextValue","control":"TextAreaControl","default_value":"","required":false,"advanced":false,"options":[]}
+    ),
+  )
+  let parameter : WorkspaceParameterDefinition = @json.from_json(value)
+  assert_eq(parameter.parameter_id, "brief")
+  assert_eq(parameter.default_value, Some("".to_json()))
+  assert_eq(parameter.minimum, None)
+}
+
+///|
+test "catalog decoding preserves valid contributed definitions" {
+  let definition = test_workspace_definition("test.valid", false)
+  let values : Array[Json] = [
+    definition.to_json(),
+    "future-definition".to_json(),
+  ]
+  let response = Json::object({
+    "contract": "mooncast.workspace-catalog.v1".to_json(),
+    "definitions": Json::array(values),
+  })
+  let (definitions, rejected) = decode_workspace_catalog(response)
+  assert_eq(definitions, [definition])
+  assert_eq(rejected, 1)
+}
+
+///|
+test "catalog decoder accepts the native workspace wire shape" {
+  let source =
+    #|{"definitions":[{"definition_id":"workspace.brief-input","display_name":"Creative brief","category":"input","node_kind":"InputNode","tool_id":"workspace.brief-input","inputs":[],"outputs":[{"port_id":"brief","label":"Creative brief","schema_id":"creative-brief","artifact_kind":"TextArtifact","cardinality":"One","required":true}],"parameters":[{"parameter_id":"brief","label":"Creative brief","description":"Describe the goal, audience, message, style, and constraints.","value_kind":"TextValue","control":"TextAreaControl","default_value":"","required":false,"advanced":false,"options":[]}],"authority":"Observe","execution_owner":"mooncast","idempotent":true,"review_required":false,"evidence_outputs":["workspace/intakes"]}]}
+  let (definitions, rejected) = decode_workspace_catalog(@json.parse(source))
+  assert_eq(definitions.length(), 1)
+  assert_eq(rejected, 0)
 }
 
 ///|

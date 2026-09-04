@@ -764,6 +764,49 @@ fn workspace_edge_view(
 }
 
 ///|
+fn workspace_app_parameter_controls(
+  dispatch : @rabbita.Emit[Msg],
+  model : Model,
+) -> @rabbita.Html {
+  guard model.workspace_graph is Some(graph) else { return @html.nothing }
+  let sections : Array[@rabbita.Html] = []
+  for node in graph.nodes {
+    guard workspace_definition(model, node.definition_id) is Some(definition) else {
+      continue
+    }
+    let visible = definition.parameters.filter(parameter => {
+      !parameter.advanced && parameter.parameter_id != "brief"
+    })
+    if visible.is_empty() {
+      continue
+    }
+    sections.push(
+      @html.section(class="workspace-app-parameter-group") <| [
+        @html.div(class="workspace-app-parameter-heading") <| [
+          @html.strong(node.title),
+          @html.small(definition.category),
+        ],
+        @html.div(class="workspace-app-parameter-grid") <| visible.map(parameter => {
+          workspace_parameter_control(dispatch, model, node, parameter)
+        }),
+      ],
+    )
+  }
+  if sections.is_empty() {
+    @html.nothing
+  } else {
+    let children = [
+        @html.div(class="workspace-app-parameters-title") <| [
+          @html.span(class="eyebrow", "Recipe controls"),
+          @html.small("Generated from the versioned graph schema"),
+        ],
+      ] +
+      sections
+    @html.div(class="workspace-app-parameters") <| children
+  }
+}
+
+///|
 fn workspace_app_view(
   dispatch : @rabbita.Emit[Msg],
   model : Model,
@@ -799,6 +842,7 @@ fn workspace_app_view(
         @html.span("\{model.utility_concat.files.length()} selected"),
       ]
     },
+    workspace_app_parameter_controls(dispatch, model),
     @html.button(
       class="primary",
       type_="button",
@@ -1062,6 +1106,274 @@ fn workspace_specialized_editor(
 }
 
 ///|
+fn workspace_parameter_control(
+  dispatch : @rabbita.Emit[Msg],
+  model : Model,
+  node : WorkspaceGraphNodeSummary,
+  definition : WorkspaceParameterDefinition,
+) -> @rabbita.Html {
+  let value = workspace_parameter_text(node, definition)
+  let label = if definition.required {
+    definition.label + " *"
+  } else {
+    definition.label
+  }
+  let control = match definition.control {
+    TextAreaControl | JsonEditorControl =>
+      @html.textarea(
+        value~,
+        rows=if definition.control == JsonEditorControl { 7 } else { 4 },
+        on_input=dispatch.map(next => {
+          SetWorkspaceDeclaredParameter(
+            node.node_id,
+            definition.parameter_id,
+            next,
+          )
+        }),
+        "",
+      )
+    SelectControl =>
+      @html.select(
+        on_change=dispatch.map(next => {
+          SetWorkspaceDeclaredParameter(
+            node.node_id,
+            definition.parameter_id,
+            next,
+          )
+        }),
+      ) <| definition.options.map(option => {
+        @html.option(
+          value=option.value,
+          selected=option.value == value,
+          option.label,
+        )
+      })
+    CheckboxControl =>
+      @html.label(class="workspace-parameter-checkbox") <| [
+        @html.input(
+          input_type=@html.Checkbox,
+          checked=workspace_parameter_boolean(node, definition),
+          on_change=dispatch.map(_ => {
+            ToggleWorkspaceDeclaredBoolean(
+              node.node_id,
+              definition.parameter_id,
+            )
+          }),
+        ),
+        @html.span("Enabled"),
+      ]
+    SliderControl =>
+      @html.div(class="workspace-parameter-slider") <| [
+        @html.input(
+          input_type=@html.Range,
+          min=definition.minimum.map(number => number.to_int()).unwrap_or(0),
+          max=definition.maximum.map(number => number.to_int()).unwrap_or(100),
+          step=definition.step.map(number => number.to_int()).unwrap_or(1),
+          value~,
+          on_input=dispatch.map(next => {
+            SetWorkspaceDeclaredParameter(
+              node.node_id,
+              definition.parameter_id,
+              next,
+            )
+          }),
+        ),
+        @html.span(class="workspace-parameter-value", value),
+      ]
+    NumberFieldControl =>
+      @html.input(
+        input_type=@html.Number,
+        value~,
+        min=definition.minimum
+          .map(number => number.to_int())
+          .unwrap_or(-2147483647),
+        max=definition.maximum
+          .map(number => number.to_int())
+          .unwrap_or(2147483647),
+        step=definition.step.map(number => number.to_int()).unwrap_or(1),
+        on_input=dispatch.map(next => {
+          SetWorkspaceDeclaredParameter(
+            node.node_id,
+            definition.parameter_id,
+            next,
+          )
+        }),
+      )
+    AssetPickerControl => {
+      let options = [
+          @html.option(
+            value="",
+            selected=value.is_blank(),
+            "Choose an asset…",
+          ),
+        ] +
+        model.workspace_assets.map(entry => {
+          let artifact = entry.artifact
+          let reference = artifact.artifact_id +
+            "@" +
+            artifact.version.to_string()
+          @html.option(
+            value=reference,
+            selected=value == reference,
+            artifact.artifact_id + " v" + artifact.version.to_string(),
+          )
+        })
+      @html.select(
+        on_change=dispatch.map(next => {
+          SetWorkspaceDeclaredParameter(
+            node.node_id,
+            definition.parameter_id,
+            next,
+          )
+        }),
+      ) <| options
+    }
+    ProviderPickerControl | ModelPickerControl | TextFieldControl =>
+      @html.input(
+        value~,
+        placeholder=match definition.control {
+          ProviderPickerControl => "Governed routing"
+          ModelPickerControl => "Provider default"
+          _ => ""
+        },
+        on_input=dispatch.map(next => {
+          SetWorkspaceDeclaredParameter(
+            node.node_id,
+            definition.parameter_id,
+            next,
+          )
+        }),
+      )
+  }
+  @html.label(
+    class=if definition.advanced {
+      "workspace-parameter-field advanced"
+    } else {
+      "workspace-parameter-field"
+    },
+  ) <| [
+    @html.span(label),
+    control,
+    @html.small(definition.description),
+  ]
+}
+
+///|
+fn workspace_declared_parameters(
+  dispatch : @rabbita.Emit[Msg],
+  model : Model,
+  node : WorkspaceNodeView,
+) -> @rabbita.Html {
+  guard workspace_graph_node(model, node.node_id) is Some(graph_node) &&
+    workspace_definition(model, node.definition_id) is Some(definition) else {
+    return @html.nothing
+  }
+  let primary = definition.parameters.filter(parameter => !parameter.advanced)
+  let advanced = definition.parameters.filter(parameter => parameter.advanced)
+  @html.div(class="workspace-parameter-editor declared") <| [
+    @html.div(class="workspace-parameter-heading") <| [
+      @html.span(class="eyebrow", "Creative parameters"),
+      @html.span(
+        class="parameter-count",
+        definition.parameters.length().to_string(),
+      ),
+    ],
+    if definition.parameters.is_empty() {
+      @html.p(
+        class="workspace-empty-parameters",
+        "This operation has no creative parameters.",
+      )
+    } else {
+      @html.div(class="workspace-parameter-fields") <| primary.map(parameter => {
+        workspace_parameter_control(dispatch, model, graph_node, parameter)
+      })
+    },
+    if advanced.is_empty() {
+      @html.nothing
+    } else {
+      @html.details(class="workspace-advanced-schema") <| [
+        @html.summary(
+          "Advanced controls (" + advanced.length().to_string() + ")",
+        ),
+        @html.div(class="workspace-parameter-fields") <| advanced.map(parameter => {
+          workspace_parameter_control(dispatch, model, graph_node, parameter)
+        }),
+      ]
+    },
+  ]
+}
+
+///|
+fn workspace_advanced_parameters(
+  dispatch : @rabbita.Emit[Msg],
+  model : Model,
+  node : WorkspaceNodeView,
+) -> @rabbita.Html {
+  @html.details(class="workspace-parameter-editor raw") <| [
+    @html.summary("Raw graph parameters"),
+    match workspace_graph_node(model, node.node_id) {
+      None => @html.nothing
+      Some(graph_node) =>
+        @html.ul <| graph_node.parameters.map(parameter => {
+          @html.li <| [
+            @html.code(parameter.key + " = " + parameter.value.stringify()),
+            @html.button(
+              type_="button",
+              on_click=dispatch(DeleteWorkspaceNodeParameter(parameter.key)),
+              "Remove",
+            ),
+          ]
+        })
+    },
+    @html.input(
+      value=model.workspace_parameter_key,
+      placeholder="parameter key",
+      on_input=dispatch.map(value => WorkspaceParameterKeyChanged(value)),
+    ),
+    @html.input(
+      value=model.workspace_parameter_value,
+      placeholder="parameter value",
+      on_input=dispatch.map(value => WorkspaceParameterValueChanged(value)),
+    ),
+    @html.select(
+      on_change=dispatch.map(value => WorkspaceParameterTypeChanged(value)),
+    ) <| [
+      @html.option(
+        value="string",
+        selected=model.workspace_parameter_type == "string",
+        "Text",
+      ),
+      @html.option(
+        value="boolean",
+        selected=model.workspace_parameter_type == "boolean",
+        "Boolean",
+      ),
+      @html.option(
+        value="number",
+        selected=model.workspace_parameter_type == "number",
+        "Number",
+      ),
+      @html.option(
+        value="json",
+        selected=model.workspace_parameter_type == "json",
+        "JSON",
+      ),
+    ],
+    @html.small(
+      "Input schemas: " +
+      node.inputs.map(port => port.schema_id).join(", ") +
+      " · output schemas: " +
+      node.outputs.map(port => port.schema_id).join(", "),
+    ),
+    @html.button(
+      type_="button",
+      on_click=dispatch(SetWorkspaceNodeParameter),
+      "Set raw parameter",
+    ),
+  ]
+}
+
+///|
 fn workspace_inspector(
   dispatch : @rabbita.Emit[Msg],
   model : Model,
@@ -1086,68 +1398,8 @@ fn workspace_inspector(
       @html.dt("Review"),
       @html.dd("Explicit when required"),
     ],
-    @html.div(class="workspace-parameter-editor") <| [
-      @html.span(class="eyebrow", "Versioned parameters"),
-      match workspace_graph_node(model, node.node_id) {
-        None => @html.nothing
-        Some(graph_node) =>
-          @html.ul <| graph_node.parameters.map(parameter => {
-            @html.li <| [
-              @html.code(parameter.key + " = " + parameter.value.stringify()),
-              @html.button(
-                type_="button",
-                on_click=dispatch(DeleteWorkspaceNodeParameter(parameter.key)),
-                "Remove",
-              ),
-            ]
-          })
-      },
-      @html.input(
-        value=model.workspace_parameter_key,
-        placeholder="parameter key",
-        on_input=dispatch.map(value => WorkspaceParameterKeyChanged(value)),
-      ),
-      @html.input(
-        value=model.workspace_parameter_value,
-        placeholder="parameter value",
-        on_input=dispatch.map(value => WorkspaceParameterValueChanged(value)),
-      ),
-      @html.select(
-        on_change=dispatch.map(value => WorkspaceParameterTypeChanged(value)),
-      ) <| [
-        @html.option(
-          value="string",
-          selected=model.workspace_parameter_type == "string",
-          "Text",
-        ),
-        @html.option(
-          value="boolean",
-          selected=model.workspace_parameter_type == "boolean",
-          "Boolean",
-        ),
-        @html.option(
-          value="number",
-          selected=model.workspace_parameter_type == "number",
-          "Number",
-        ),
-        @html.option(
-          value="json",
-          selected=model.workspace_parameter_type == "json",
-          "JSON",
-        ),
-      ],
-      @html.small(
-        "Input schemas: " +
-        node.inputs.map(port => port.schema_id).join(", ") +
-        " · output schemas: " +
-        node.outputs.map(port => port.schema_id).join(", "),
-      ),
-      @html.button(
-        type_="button",
-        on_click=dispatch(SetWorkspaceNodeParameter),
-        "Set parameter",
-      ),
-    ],
+    workspace_declared_parameters(dispatch, model, node),
+    workspace_advanced_parameters(dispatch, model, node),
     match workspace_definition(model, node.definition_id) {
       Some(definition) if definition.node_kind == CapsuleNode =>
         @html.div(class="workspace-capsule-picker") <| [

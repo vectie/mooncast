@@ -24,6 +24,8 @@ enum Msg {
   WorkspaceParameterValueChanged(String)
   WorkspaceParameterTypeChanged(String)
   SetWorkspaceNodeParameter
+  SetWorkspaceDeclaredParameter(String, String, String)
+  ToggleWorkspaceDeclaredBoolean(String, String)
   DeleteWorkspaceNodeParameter(String)
   WorkspaceGraphUndo
   WorkspaceGraphRedo
