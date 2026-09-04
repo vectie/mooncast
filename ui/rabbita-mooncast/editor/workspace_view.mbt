@@ -275,6 +275,57 @@ fn workspace_outcome_definitions(
 }
 
 ///|
+fn workspace_asset_preview(
+  artifact : WorkspaceAssetArtifactSummary,
+  compact : Bool,
+) -> @rabbita.Html {
+  let class_name = if compact {
+    "workspace-asset-preview compact"
+  } else {
+    "workspace-asset-preview"
+  }
+  if artifact.preview_uri.is_blank() {
+    @html.div(class=class_name + " empty") <| [
+      @html.span(workspace_artifact_kind_label(artifact.kind)),
+    ]
+  } else {
+    match artifact.kind {
+      ImageArtifact | ShotCollection =>
+        @html.img(
+          class=class_name,
+          src=artifact.preview_uri,
+          alt="Preview of " + artifact.artifact_id,
+          loading="lazy",
+        )
+      VideoArtifact | TimelineArtifact | DeliveryPackageArtifact =>
+        @html.video(
+          class=class_name,
+          src=artifact.preview_uri,
+          controls=!compact,
+          muted=true,
+          preload="metadata",
+          "",
+        )
+      AudioArtifact =>
+        @html.div(class=class_name + " audio") <| [
+          @html.span("Audio preview"),
+          @html.audio(
+            src=artifact.preview_uri,
+            controls=true,
+            preload="metadata",
+            "",
+          ),
+        ]
+      _ =>
+        @html.div(class=class_name + " document") <| [
+          @html.span(workspace_artifact_kind_label(artifact.kind)),
+          @html.small(artifact.preview_uri),
+        ]
+    }
+  }
+}
+
+///|
 fn workspace_recipe_rail(
   dispatch : @rabbita.Emit[Msg],
   model : Model,
@@ -527,6 +578,7 @@ fn workspace_recipe_rail(
               ToggleWorkspaceAssetSelection(artifact.artifact_id),
             ),
           ) <| [
+            workspace_asset_preview(artifact, true),
             @html.strong(
               artifact.artifact_id + " v" + artifact.version.to_string(),
             ),
@@ -811,6 +863,7 @@ fn workspace_app_view(
   dispatch : @rabbita.Emit[Msg],
   model : Model,
 ) -> @rabbita.Html {
+  let is_local_concat = model.selected_workspace_recipe == CombineVideosRecipe
   let (title, input_label, input_help) = match model.selected_workspace_recipe {
     CombineVideosRecipe =>
       (
@@ -846,12 +899,19 @@ fn workspace_app_view(
     @html.button(
       class="primary",
       type_="button",
-      disabled=model.busy,
-      on_click=dispatch(StartWorkspaceRecipe),
-      "Run recipe",
+      disabled=model.busy ||
+        (is_local_concat && model.utility_concat.files.is_empty()),
+      on_click=dispatch(
+        if is_local_concat { StartUtilityConcat } else { StartWorkspaceRecipe },
+      ),
+      if is_local_concat { "Combine selected videos" } else { "Run recipe" },
     ),
     @html.small(
-      "The graph is validated and frozen before work starts. Provider work remains pending until a MoonFlow receipt arrives.",
+      if is_local_concat {
+        "The App uses Mooncast’s bound local media operation and preserves the same ordered, digest-pinned inputs as the graph recipe."
+      } else {
+        "The graph is validated and frozen before work starts. Provider work remains pending until a MoonFlow receipt arrives."
+      },
     ),
   ]
 }
@@ -1024,6 +1084,7 @@ fn workspace_specialized_editor(
         } else {
           selected.map(entry => {
             @html.div <| [
+              workspace_asset_preview(entry.artifact, false),
               @html.strong(entry.artifact.artifact_id),
               @html.span(entry.artifact.digest),
             ]
