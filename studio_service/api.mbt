@@ -500,9 +500,31 @@ async fn StudioService::dispatch_unsafe(
     }
     (Get, ["api", "workspace", "runs", run_id]) =>
       json_value_response(200, self.get_workspace_run(run_id))
+    (Get, ["api", "workspace", "projects", project_id, "runs"]) =>
+      json_value_response(
+        200,
+        self.list_workspace_runs(
+          project_id,
+          control_tower_query_value(request.query, "state").unwrap_or(""),
+          control_tower_query_value(request.query, "offset")
+          .map(value => @string.parse_int(value) catch { _ => 0 })
+          .unwrap_or(0),
+          control_tower_query_value(request.query, "limit")
+          .map(value => @string.parse_int(value) catch { _ => 50 })
+          .unwrap_or(50),
+        ),
+      )
     (Post, ["api", "workspace", "runs", run_id, "commands"]) => {
       let input : WorkspaceRunCommand = decode_body(request)
       json_value_response(200, self.apply_workspace_run_command(run_id, input))
+    }
+    (Post, ["api", "workspace", "runs", run_id, "claim"]) => {
+      let input : WorkspaceRunClaimRequest = decode_body(request)
+      json_value_response(200, self.claim_workspace_run_node(run_id, input))
+    }
+    (Post, ["api", "workspace", "runs", run_id, "actions", action]) => {
+      let input : WorkspaceRunActionRequest = decode_body(request)
+      json_value_response(200, self.apply_workspace_run_action(run_id, action, input))
     }
     (Post, ["api", "workspace", "runs", run_id, "promote-template"]) => {
       let input : WorkspaceRunTemplateRequest = decode_body(request)
@@ -512,18 +534,27 @@ async fn StudioService::dispatch_unsafe(
       )
     }
     (Get, ["api", "workspace", "runs", run_id, "events"]) => {
-      let run = self.get_workspace_run(run_id)
-      let event = @workspace.workspace_run_event(run, now_string())
       let response = @host_http.text_response(
         200,
         "OK",
-        @workspace.workspace_sse(event),
+        self.workspace_run_events_sse(
+          run_id,
+          control_tower_query_value(request.query, "after").unwrap_or(""),
+        ),
         content_type="text/event-stream; charset=utf-8",
       )
       response.headers["Cache-Control"] = "no-cache"
       response.headers["X-Accel-Buffering"] = "no"
       response
     }
+    (Get, ["api", "workspace", "runs", run_id, "events", "replay"]) =>
+      json_value_response(
+        200,
+        self.workspace_run_events(
+          run_id,
+          control_tower_query_value(request.query, "after").unwrap_or(""),
+        ),
+      )
     (Post, ["api", "workspace", "runs", run_id, "nodes", node_id, "dispatch"]) => {
       let input : WorkspaceDispatchPrepareRequest = decode_body(request)
       json_value_response(
@@ -542,6 +573,23 @@ async fn StudioService::dispatch_unsafe(
       json_value_response(200, self.list_workspace_artifacts())
     (Get, ["api", "workspace", "projects", project_id, "artifacts"]) =>
       json_value_response(200, self.list_workspace_artifacts(project_id~))
+    (Get, ["api", "workspace", "projects", project_id, "assets"]) =>
+      json_value_response(
+        200,
+        self.list_workspace_asset_library(
+          project_id,
+          control_tower_query_value(request.query, "q").unwrap_or(""),
+          control_tower_query_value(request.query, "kind").unwrap_or(""),
+          control_tower_query_value(request.query, "tag").unwrap_or(""),
+          control_tower_query_value(request.query, "offset")
+          .map(value => @string.parse_int(value) catch { _ => 0 })
+          .unwrap_or(0),
+          control_tower_query_value(request.query, "limit")
+          .map(value => @string.parse_int(value) catch { _ => 50 })
+          .unwrap_or(50),
+          control_tower_query_value(request.query, "include_deleted") == Some("true"),
+        ),
+      )
     (Post, ["api", "workspace", "artifacts"]) => {
       let artifact : @workspace.WorkspaceArtifact = decode_body(request)
       json_value_response(201, self.save_workspace_artifact(artifact))
@@ -557,6 +605,16 @@ async fn StudioService::dispatch_unsafe(
     (Post, ["api", "workspace", "artifacts", "branch"]) => {
       let input : WorkspaceArtifactBranchRequest = decode_body(request)
       json_value_response(201, self.branch_workspace_artifact(input))
+    }
+    (Post, ["api", "workspace", "assets", artifact_id, version, "tags"]) => {
+      let input : WorkspaceAssetTagsRequest = decode_body(request)
+      let parsed = @string.parse_int(version) catch { _ => -1 }
+      json_value_response(200, self.tag_workspace_asset(artifact_id, parsed, input))
+    }
+    (Post, ["api", "workspace", "assets", artifact_id, version, "delete"]) => {
+      let input : WorkspaceAssetDeleteRequest = decode_body(request)
+      let parsed = @string.parse_int(version) catch { _ => -1 }
+      json_value_response(200, self.delete_workspace_asset(artifact_id, parsed, input))
     }
     (
       Post,
@@ -582,9 +640,17 @@ async fn StudioService::dispatch_unsafe(
       let input : WorkspaceCommentCreateRequest = decode_body(request)
       json_value_response(201, self.record_workspace_comment(input))
     }
+    (Post, ["api", "workspace", "comments", "drafts"]) => {
+      let input : WorkspaceCommentDraftRequest = decode_body(request)
+      json_value_response(201, self.record_workspace_comment_draft(input))
+    }
     (Post, ["api", "workspace", "presence"]) => {
       let input : WorkspacePresenceRequest = decode_body(request)
       json_value_response(200, self.renew_workspace_presence(input))
+    }
+    (Post, ["api", "workspace", "presence", "leases"]) => {
+      let input : WorkspacePresenceLeaseRequest = decode_body(request)
+      json_value_response(200, self.renew_workspace_presence_lease(input))
     }
     (Post, ["api", "workspace", "shares"]) => {
       let input : WorkspaceShareCreateRequest = decode_body(request)
@@ -662,6 +728,14 @@ async fn StudioService::dispatch_unsafe(
     }
     (Get, ["api", "workspace", "projects", project_id, "proposals"]) =>
       json_value_response(200, self.list_workspace_proposals(project_id))
+    (
+      Get,
+      ["api", "workspace", "projects", project_id, "proposals", proposal_id],
+    ) =>
+      json_value_response(
+        200,
+        self.review_saved_workspace_proposal(project_id, proposal_id),
+      )
     (Get, ["api", "config"]) =>
       json_value_response(200, {
         mode: "moonbit-native-canonical",

@@ -5,6 +5,8 @@ enum Msg {
   WorkspaceProposalsLoaded(Result[Json, Error])
   WorkspaceCatalogLoaded(Result[Json, Error])
   WorkspaceGraphLoaded(Result[Json, Error])
+  WorkspaceAssetsLoaded(Result[Json, Error])
+  WorkspaceFeaturesLoaded(Result[Json, Error])
   SaveWorkspaceGraph(String)
   WorkspaceGraphSaved(String, Result[Json, Error])
   WorkspaceNodePaletteChanged(String)
@@ -12,6 +14,10 @@ enum Msg {
   DeleteSelectedWorkspaceNode
   DuplicateSelectedWorkspaceNode
   ToggleSelectedWorkspaceNodeCollapsed
+  WorkspaceParameterKeyChanged(String)
+  WorkspaceParameterValueChanged(String)
+  SetWorkspaceNodeParameter
+  DeleteWorkspaceNodeParameter(String)
   WorkspaceGraphUndo
   WorkspaceGraphRedo
   SelectProject(String)
@@ -28,6 +34,10 @@ enum Msg {
   WorkspaceAssetDragStarted(String)
   WorkspaceAssetAddRequested(String)
   WorkspaceAssetDropped
+  ToggleWorkspaceAssetSelection(String)
+  TagSelectedWorkspaceAsset
+  DeleteSelectedWorkspaceAsset
+  WorkspaceAssetMutationFinished(String, Result[Json, Error])
   ToggleWorkspaceAppView
   WorkspaceSearchChanged(String)
   WorkspaceSearchLoaded(Result[Json, Error])
@@ -40,13 +50,21 @@ enum Msg {
   PublishWorkspaceCapsule
   ShareWorkspaceRun
   WorkspaceSecureShareCreated(Result[Json, Error])
+  RevokeWorkspaceShare
+  WorkspaceShareRevoked(Result[Json, Error])
   ApplyWorkspaceProposal(String)
+  ReviewWorkspaceProposal(String)
+  WorkspaceProposalReviewLoaded(Result[Json, Error])
   WorkspaceProposalApplied(Result[Json, Error])
   StartWorkspaceRecipe
   StartWorkspaceSelectedOutput
   WorkspaceRecipeStarted(Result[Json, Error])
   PollWorkspaceRun
   WorkspaceRunPolled(Result[Json, Error])
+  WorkspaceRunEventsLoaded(Result[Json, Error])
+  ClaimWorkspaceNode
+  CancelWorkspaceRun
+  RetryWorkspaceNode
   WorkspaceActionFinished(String, Result[Json, Error])
   OpenProject
   ProductionProjectChanged(String)

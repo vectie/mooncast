@@ -329,7 +329,7 @@ pub fn create_workspace_share(
     target_kind,
     target_id,
     mode,
-    token_digest: "sha256:" + sha256_text(token),
+    token_digest: sha256_text(token),
     expires_at,
     created_by,
     created_at,

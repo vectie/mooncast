@@ -252,6 +252,18 @@ pub(all) struct WorkspaceArtifact {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+/// Mutable library metadata wraps an immutable artifact version. Deleting an
+/// asset hides the index entry without erasing its evidence or provenance.
+pub(all) struct WorkspaceAssetEntry {
+  contract : String
+  artifact : WorkspaceArtifact
+  tags : Array[String]
+  deleted : Bool
+  indexed_at : String
+  updated_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 pub(all) struct CapsulePort {
   port_id : String
   node_id : String

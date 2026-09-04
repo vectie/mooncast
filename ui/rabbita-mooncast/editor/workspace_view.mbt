@@ -180,60 +180,9 @@ fn workspace_node_position(
   node_id : String,
 ) -> WorkspaceNodePosition {
   if workspace_graph_node(model, node_id) is Some(node) {
-    return {
-      recipe: model.selected_workspace_recipe,
-      node_id,
-      x: node.x,
-      y: node.y,
-    }
+    return { x: node.x, y: node.y }
   }
-  model.workspace_node_positions
-  .iter()
-  .find_first(value => {
-    value.recipe == model.selected_workspace_recipe && value.node_id == node_id
-  })
-  .unwrap_or({ recipe: model.selected_workspace_recipe, node_id, x: 40, y: 80 })
-}
-
-///|
-fn workspace_output_kind(recipe : WorkspaceRecipe, node_id : String) -> String {
-  match (recipe, node_id) {
-    (CombineVideosRecipe, "intake" | "probe" | "normalize") => "media"
-    (CombineVideosRecipe, "concat" | "verify" | "register") => "video"
-    (BriefToDeliveryRecipe, "brief") => "text"
-    (BriefToDeliveryRecipe, "validate" | "project") => "data"
-    (BriefToDeliveryRecipe, "generate") => "video"
-    (BriefToDeliveryRecipe, "review") => "review"
-    (BriefToDeliveryRecipe, "delivery") => "delivery"
-    _ => "any"
-  }
-}
-
-///|
-fn workspace_input_kind(recipe : WorkspaceRecipe, node_id : String) -> String {
-  match (recipe, node_id) {
-    (CombineVideosRecipe, "intake") | (BriefToDeliveryRecipe, "brief") => "none"
-    (CombineVideosRecipe, "probe" | "normalize" | "concat") => "media"
-    (CombineVideosRecipe, "verify" | "register") => "video"
-    (BriefToDeliveryRecipe, "validate") => "text"
-    (BriefToDeliveryRecipe, "project" | "generate") => "data"
-    (BriefToDeliveryRecipe, "review") => "video"
-    (BriefToDeliveryRecipe, "delivery") => "review"
-    _ => "any"
-  }
-}
-
-///|
-fn workspace_connection_allowed(
-  recipe : WorkspaceRecipe,
-  source : String,
-  target : String,
-) -> Bool {
-  let output = workspace_output_kind(recipe, source)
-  let input = workspace_input_kind(recipe, target)
-  source != target &&
-  input != "none" &&
-  (input == output || input == "any" || output == "any")
+  { x: 40, y: 80 }
 }
 
 ///|
@@ -409,29 +358,58 @@ fn workspace_recipe_rail(
     ],
     @html.div(class="workspace-section-heading") <| [
       @html.h2("Assets"),
-      @html.span("\{model.utility_concat.files.length()} selected"),
+      @html.span(
+        "\{model.selected_workspace_asset_ids.length()} selected · \{model.workspace_asset_total} total",
+      ),
     ],
-    @html.ul(class="workspace-asset-list") <| (if model.utility_concat.files.is_empty() {
+    @html.ul(class="workspace-asset-list") <| (if model.workspace_assets.is_empty() {
       [
         @html.li(
-          "Choose media in the run drawer; every completed output becomes a versioned asset.",
+          "No indexed output yet. Completed runs register immutable, searchable asset versions here.",
         ),
       ]
     } else {
-      model.utility_concat.files.map(file => {
+      model.workspace_assets.map(entry => {
+        let artifact = entry.artifact
+        let selected = model.selected_workspace_asset_ids.contains(
+          artifact.artifact_id,
+        )
         @html.li(
+          class=if selected { "is-selected" } else { "" },
           attrs=@html.Attrs::build()
             .draggable("true")
             .on_dragstart(event => {
               ignore(event)
-              dispatch(WorkspaceAssetDragStarted(file.file_name))
+              dispatch(WorkspaceAssetDragStarted(artifact.artifact_id))
             }),
         ) <| [
-          @html.strong(file.file_name),
-          @html.span("\{file.size_bytes} bytes"),
           @html.button(
             type_="button",
-            on_click=dispatch(WorkspaceAssetAddRequested(file.file_name)),
+            on_click=dispatch(
+              ToggleWorkspaceAssetSelection(artifact.artifact_id),
+            ),
+          ) <| [
+            @html.strong(
+              artifact.artifact_id + " v" + artifact.version.to_string(),
+            ),
+            @html.span(
+              workspace_artifact_kind_label(artifact.kind) +
+              " · " +
+              artifact.qc_state +
+              " · " +
+              artifact.rights_state,
+            ),
+            @html.small(
+              if entry.tags.is_empty() {
+                "untagged"
+              } else {
+                entry.tags.join(", ")
+              },
+            ),
+          ],
+          @html.button(
+            type_="button",
+            on_click=dispatch(WorkspaceAssetAddRequested(artifact.artifact_id)),
             "Add input node",
           ),
         ]
@@ -452,6 +430,19 @@ fn workspace_recipe_rail(
         type_="button",
         on_click=dispatch(BranchWorkspaceAsset),
         "Branch",
+      ),
+      @html.button(
+        type_="button",
+        disabled=model.selected_workspace_asset_ids.is_empty(),
+        on_click=dispatch(TagSelectedWorkspaceAsset),
+        "Toggle review tag",
+      ),
+      @html.button(
+        class="danger",
+        type_="button",
+        disabled=model.selected_workspace_asset_ids.is_empty(),
+        on_click=dispatch(DeleteSelectedWorkspaceAsset),
+        "Hide",
       ),
     ],
     @html.div(class="workspace-section-heading") <| [
@@ -754,25 +745,30 @@ fn workspace_specialized_editor(
         ),
         @html.small("Versioned text becomes the public recipe input."),
       ]
-    "generate" =>
+    "generate" => {
+      let selected = model.workspace_assets.filter(entry => {
+        model.selected_workspace_asset_ids.contains(entry.artifact.artifact_id)
+      })
       @html.div(class="specialized-editor image-lens") <| [
-        @html.span(class="eyebrow", "Storyboard & image compare lens"),
-        @html.div(class="variant-grid") <| [
-          @html.div <| [
-            @html.strong("Variant A"),
-            @html.span("Pending receipt"),
-          ],
-          @html.div <| [
-            @html.strong("Variant B"),
-            @html.span("Pending receipt"),
-          ],
-        ],
+        @html.span(class="eyebrow", "Artifact compare lens"),
+        @html.div(class="variant-grid") <| (if selected.is_empty() {
+          [@html.p("Select two indexed assets in the library to compare evidence.")]
+        } else {
+          selected.map(entry => {
+            @html.div <| [
+              @html.strong(entry.artifact.artifact_id),
+              @html.span(entry.artifact.digest),
+            ]
+          })
+        }),
         @html.button(
           type_="button",
+          disabled=selected.length() < 2,
           on_click=dispatch(CompareWorkspaceAssets),
-          "Compare evidence",
+          "Compare selected evidence",
         ),
       ]
+    }
     "review" =>
       @html.div(class="specialized-editor review-lens") <| [
         @html.span(class="eyebrow", "Review lens"),
@@ -781,36 +777,35 @@ fn workspace_specialized_editor(
         ),
         status_tag("hold", "Awaiting reviewer"),
       ]
-    "delivery" | "register" =>
+    "delivery" | "register" => {
+      let selected = model.selected_workspace_asset_ids.last().bind(id => {
+        model.workspace_assets.iter().find_first(entry => {
+          entry.artifact.artifact_id == id
+        })
+      })
       @html.div(class="specialized-editor delivery-lens") <| [
         @html.span(class="eyebrow", "Delivery inspector"),
         @html.dl(class="inspector-data") <| [
           @html.dt("Artifact"),
           @html.dd(
-            if model.utility_concat.output_digest.is_blank() {
-              "Pending"
-            } else {
-              model.utility_concat.output_digest
-            },
+            selected.map(entry => entry.artifact.digest).unwrap_or("Select an asset"),
           ),
           @html.dt("Rights"),
-          @html.dd("Cleared before promotion"),
+          @html.dd(
+            selected.map(entry => entry.artifact.rights_state).unwrap_or("Unknown"),
+          ),
           @html.dt("QC"),
           @html.dd(
-            if model.utility_concat.phase == "succeeded" {
-              "Passed"
-            } else {
-              "Pending"
-            },
+            selected.map(entry => entry.artifact.qc_state).unwrap_or("Unknown"),
           ),
         ],
       ]
+    }
     _ =>
       @html.div(class="specialized-editor timeline-lens") <| [
-        @html.span(class="eyebrow", "Timeline & media lens"),
-        @html.div(class="mini-waveform", "▁▃▆▂▇▄▅▂▆▃▁▅"),
+        @html.span(class="eyebrow", "Timeline editor handoff"),
         @html.p(
-          "Open the full editor for frame-accurate trim, audio, captions, and effects.",
+          "Open the project’s real timeline and monitor for frame-accurate trim, audio, captions, and effects.",
         ),
         @html.button(
           type_="button",
@@ -845,6 +840,59 @@ fn workspace_inspector(
       @html.dd("Content-addressed"),
       @html.dt("Review"),
       @html.dd("Explicit when required"),
+    ],
+    @html.div(class="workspace-parameter-editor") <| [
+      @html.span(class="eyebrow", "Versioned parameters"),
+      match workspace_graph_node(model, node.node_id) {
+        None => @html.nothing
+        Some(graph_node) =>
+          @html.ul <| graph_node.parameters.map(parameter => {
+            @html.li <| [
+              @html.code(parameter.key + " = " + parameter.value.stringify()),
+              @html.button(
+                type_="button",
+                on_click=dispatch(DeleteWorkspaceNodeParameter(parameter.key)),
+                "Remove",
+              ),
+            ]
+          })
+      },
+      @html.input(
+        value=model.workspace_parameter_key,
+        placeholder="parameter key",
+        on_input=dispatch.map(value => WorkspaceParameterKeyChanged(value)),
+      ),
+      @html.input(
+        value=model.workspace_parameter_value,
+        placeholder="string value",
+        on_input=dispatch.map(value => WorkspaceParameterValueChanged(value)),
+      ),
+      @html.button(
+        type_="button",
+        on_click=dispatch(SetWorkspaceNodeParameter),
+        "Set parameter",
+      ),
+    ],
+    @html.div(class="workspace-collaboration") <| [
+      @html.span(class="eyebrow", "Live collaboration"),
+      @html.p(
+        if model.workspace_presence.any(value => value.target_id == node.node_id) {
+          model.workspace_presence
+          .filter(value => value.target_id == node.node_id)
+          .map(value => value.display_name)
+          .join(", ") + " viewing this node"
+        } else {
+          "No active collaborator lease on this node"
+        },
+      ),
+      @html.ul <| model.workspace_comments
+      .filter(value => value.target_id == node.node_id)
+      .map(comment => {
+        @html.li <| [
+          @html.strong(comment.actor),
+          @html.span(comment.body),
+        ]
+      }),
     ],
     match model.workspace_proposals.last() {
       None =>
@@ -896,6 +944,32 @@ fn workspace_inspector(
               "Exact-revision review required"
             },
           ),
+          @html.button(
+            type_="button",
+            on_click=dispatch(ReviewWorkspaceProposal(proposal.proposal_id)),
+            "Inspect exact diff",
+          ),
+          match model.workspace_proposal_review {
+            None => @html.nothing
+            Some(review) =>
+              @html.small(
+                "Current r" +
+                review.current_graph_revision.to_string() +
+                (if review.stale { " · stale" } else { " · current" }) +
+                " · nodes +" +
+                review.diff.added_node_ids.length().to_string() +
+                " / -" +
+                review.diff.removed_node_ids.length().to_string() +
+                " / ~" +
+                review.diff.modified_node_ids.length().to_string() +
+                " · edges +" +
+                review.diff.added_edge_ids.length().to_string() +
+                " / -" +
+                review.diff.removed_edge_ids.length().to_string() +
+                " / ~" +
+                review.diff.modified_edge_ids.length().to_string(),
+              )
+          },
           if proposal.applied {
             @html.span("")
           } else {
@@ -957,6 +1031,17 @@ fn workspace_inspector(
           target=@html.Blank,
           rel="noreferrer",
           "Open latest secure review link",
+        )
+      },
+      if model.workspace_share_id.is_blank() {
+        @html.span("")
+      } else {
+        @html.button(
+          class="danger",
+          type_="button",
+          disabled=model.busy,
+          on_click=dispatch(RevokeWorkspaceShare),
+          "Revoke latest link",
         )
       },
     ],
@@ -1023,6 +1108,36 @@ fn workspace_graph_view(
               "Live state reconnects through /events (SSE) or one-second snapshots. Queued does not mean generated.",
             ),
           ],
+        ]
+      },
+      if model.workspace_run_id.is_blank() {
+        @html.nothing
+      } else {
+        @html.div(class="workspace-run-actions") <| [
+          @html.button(
+            type_="button",
+            on_click=dispatch(PollWorkspaceRun),
+            "Replay new events",
+          ),
+          @html.button(
+            type_="button",
+            disabled=model.busy,
+            on_click=dispatch(ClaimWorkspaceNode),
+            "Claim next local node",
+          ),
+          @html.button(
+            type_="button",
+            disabled=model.busy,
+            on_click=dispatch(RetryWorkspaceNode),
+            "Retry selected node",
+          ),
+          @html.button(
+            class="danger",
+            type_="button",
+            disabled=model.busy,
+            on_click=dispatch(CancelWorkspaceRun),
+            "Cancel run",
+          ),
         ]
       },
     ],

@@ -462,6 +462,7 @@ test "collaboration shares and capsule publishing are least-authority" {
     "now",
   )
   assert_true(share.token_digest.has_prefix("sha256:"))
+  assert_false(share.token_digest.has_prefix("sha256:sha256:"))
   assert_false(share.publication_authority)
   let publication = publish_capsule(
     "publication-1",

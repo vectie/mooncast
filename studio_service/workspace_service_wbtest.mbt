@@ -285,3 +285,195 @@ async test "workspace recipes dispatch collaboration sharing and publishing are 
   assert_eq(stream.headers["Content-Type"], "text/event-stream; charset=utf-8")
   assert_true(@utf8.decode(stream.body).contains("workspace-run-snapshot"))
 }
+
+///|
+async test "saved graph revisions drive runs cache claims and replay" {
+  let root = "/tmp/mooncast-workspace-runtime-" + @async.now().to_string()
+  let service = StudioService::new(root)
+  let installed = service.install_workspace_capsule(
+    "runtime-project",
+    "combine-videos",
+    { graph_id: "runtime-graph", title: "Runtime graph", actor: "operator" },
+  )
+  assert_eq(installed.revision, 1)
+  let revised = service.revise_workspace_graph(
+    "runtime-project",
+    "runtime-graph",
+    {
+      expected_revision: 1,
+      title: "Runtime graph revised",
+      nodes: installed.nodes,
+      edges: installed.edges,
+      output_node_ids: installed.output_node_ids,
+      actor: "operator",
+    },
+  )
+  assert_eq(revised.revision, 2)
+  let first = service.start_workspace_graph_run(
+    "runtime-project",
+    "runtime-graph",
+    {
+      expected_revision: 2,
+      run_id: "runtime-run-1",
+      created_by: "operator",
+      provider: "local",
+      model: "ffmpeg-bundled",
+      policy_digest: "sha256:policy",
+      maximum_retries: 2,
+      requested_output_node_ids: ["intake"],
+    },
+  )
+  let claimed = service.claim_workspace_run_node(first.run_id, {
+    worker_id: "worker-1",
+    execution_owner: "",
+    input_refs: ["inline://inputs"],
+  })
+  assert_eq(claimed.node_id, "intake")
+  ignore(service.apply_workspace_dispatch_receipt(claimed.dispatch_id, {
+    contract: "mooncast.workspace-dispatch-receipt.v1",
+    dispatch_id: claimed.dispatch_id,
+    idempotency_key: claimed.idempotency_key,
+    state: @workspace.SucceededDispatch,
+    output_digest: "sha256:cached-intake",
+    output_ref: "workspace://artifact/cached-intake",
+    provider_receipt: { "worker": "worker-1" }.to_json(),
+    error_code: "",
+    error_message: "",
+    recorded_at: "finished",
+  }))
+  let replay = service.workspace_run_events(first.run_id, "")
+  assert_true(replay.events.length() >= 3)
+  let after_first = service.workspace_run_events(
+    first.run_id,
+    replay.events[0].event_id,
+  )
+  assert_eq(after_first.events.length(), replay.events.length() - 1)
+  let second = service.start_workspace_graph_run(
+    "runtime-project",
+    "runtime-graph",
+    {
+      expected_revision: 2,
+      run_id: "runtime-run-2",
+      created_by: "operator",
+      provider: "local",
+      model: "ffmpeg-bundled",
+      policy_digest: "sha256:policy",
+      maximum_retries: 2,
+      requested_output_node_ids: ["intake"],
+    },
+  )
+  assert_eq(second.nodes[0].state, @workspace.Cached)
+  let listed = service.list_workspace_runs("runtime-project", "", 0, 10)
+  assert_eq(listed.total, 2)
+}
+
+///|
+async test "asset library metadata is mutable while artifacts remain immutable" {
+  let root = "/tmp/mooncast-workspace-assets-" + @async.now().to_string()
+  let service = StudioService::new(root)
+  let artifact = @workspace.new_workspace_artifact(
+    "library-video",
+    1,
+    "asset-project",
+    @workspace.VideoArtifact,
+    "sha256:library-video",
+    "workspace://artifact/library-video/1",
+    "/api/workspace/artifacts/library-video/1/preview",
+    [],
+    "asset-graph",
+    "asset-run",
+    "asset-node",
+    "",
+    "local",
+    "ffmpeg-bundled",
+    Json::empty_object(),
+    "cleared",
+    "passed",
+    [],
+    0.0,
+    2.0,
+    "created",
+  )
+  ignore(service.save_workspace_artifact(artifact))
+  let initial = service.list_workspace_asset_library(
+    "asset-project", "library", "VideoArtifact", "", 0, 10, false,
+  )
+  assert_eq(initial.total, 1)
+  let tagged = service.tag_workspace_asset(
+    "library-video",
+    1,
+    { tags: ["Review", "review", "hero"], actor: "operator" },
+  )
+  assert_eq(tagged.tags, ["review", "hero"])
+  let filtered = service.list_workspace_asset_library(
+    "asset-project", "", "", "hero", 0, 1, false,
+  )
+  assert_eq(filtered.entries.length(), 1)
+  let hidden = service.delete_workspace_asset(
+    "library-video",
+    1,
+    { actor: "operator" },
+  )
+  assert_true(hidden.deleted)
+  assert_eq(
+    service.list_workspace_asset_library(
+      "asset-project", "", "", "", 0, 10, false,
+    ).total,
+    0,
+  )
+  assert_eq(service.list_workspace_artifacts(project_id="asset-project").artifacts, [artifact])
+}
+
+///|
+async test "secure shares revoke and stored proposals apply once" {
+  let root = "/tmp/mooncast-workspace-governed-" + @async.now().to_string()
+  let service = StudioService::new(root)
+  let installed = service.install_workspace_capsule(
+    "governed-project",
+    "brief-to-generated-delivery",
+    { graph_id: "governed-graph", title: "Governed graph", actor: "operator" },
+  )
+  let created = service.create_secure_workspace_share({
+    project_id: "governed-project",
+    target_kind: @workspace.GraphTarget,
+    target_id: installed.graph_id,
+    mode: "client-review",
+    created_by: "operator",
+    lifetime_seconds: 600,
+  })
+  let access = service.access_workspace_share(created.share.share_id, created.token)
+  assert_eq(access.target_id, installed.graph_id)
+  let revoked = service.revoke_workspace_share(
+    created.share.share_id,
+    { actor: "operator" },
+  )
+  assert_true(revoked.revoked)
+
+  let proposed = { ..installed, revision: 2, title: "Reviewed proposal" }
+  let proposal : @workspace.AgentGraphProposal = {
+    contract: "mooncast.agent-graph-proposal.v1",
+    proposal_id: "proposal-governed",
+    project_id: "governed-project",
+    base_graph_id: installed.graph_id,
+    base_graph_revision: installed.revision,
+    proposed_graph: proposed,
+    explanation: "Rename the reviewed graph",
+    affected_node_ids: [],
+    provider_ids: [],
+    expected_cost_cny: 0.0,
+    required_approvals: ["operator"],
+    created_by: "moonclaw",
+    created_at: "created",
+    applied: false,
+  }
+  ignore(service.save_workspace_proposal(proposal))
+  let applied = service.apply_saved_workspace_proposal(
+    "governed-project",
+    proposal.proposal_id,
+    { actor: "operator" },
+  )
+  assert_eq(applied.title, "Reviewed proposal")
+  assert_true(
+    service.list_workspace_proposals("governed-project").proposals[0].applied,
+  )
+}

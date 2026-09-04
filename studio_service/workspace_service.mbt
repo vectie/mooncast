@@ -359,6 +359,7 @@ pub async fn StudioService::create_workspace_run(
           maximum_retries=request.maximum_retries,
         )
         save_value(self.store, key, value)
+        ignore(self.record_workspace_run_event(value))
         value
       }
     }
@@ -516,6 +517,7 @@ pub async fn StudioService::apply_workspace_run_command(
         )
     }
     save_value(self.store, workspace_run_key(run_id), updated)
+    ignore(self.record_workspace_run_event(updated))
     if command.command == "succeed" {
       self.remember_workspace_node_output(
         updated,
@@ -554,6 +556,19 @@ pub async fn StudioService::save_workspace_artifact(
       }
       None => {
         save_value(self.store, key, artifact)
+        let entry : @workspace.WorkspaceAssetEntry = {
+          contract: "mooncast.workspace-asset-entry.v1",
+          artifact,
+          tags: [],
+          deleted: false,
+          indexed_at: artifact.created_at,
+          updated_at: artifact.created_at,
+        }
+        save_value(
+          self.store,
+          workspace_asset_entry_key(artifact.artifact_id, artifact.version),
+          entry,
+        )
         artifact
       }
     }
@@ -1034,6 +1049,7 @@ pub async fn StudioService::prepare_workspace_dispatch(
         }
         save_value(self.store, workspace_run_key(run_id), running)
         save_value(self.store, key, dispatch)
+        ignore(self.record_workspace_run_event(running))
         self.save_workspace_activity(
           workspace_activity(
             run.plan.frozen_graph.project_id,
@@ -1109,6 +1125,7 @@ pub async fn StudioService::apply_workspace_dispatch_receipt(
         )
     }
     save_value(self.store, workspace_run_key(updated.run_id), run_updated)
+    ignore(self.record_workspace_run_event(run_updated))
     if updated.state == @workspace.SucceededDispatch {
       self.remember_workspace_node_output(
         run_updated,
@@ -1139,6 +1156,7 @@ pub async fn StudioService::workspace_features(
   let activities : Array[@workspace.WorkspaceActivity] = []
   let publications : Array[@workspace.CapsulePublication] = []
   let dispatches : Array[@workspace.WorkspaceDispatch] = []
+  let now = (@runtime.wall_clock_ms() / 1000L).to_string()
   for key in self.store.list_keys(prefix="workspace-", suffix=".json") {
     if key.has_prefix("workspace-comment-") {
       let value : @workspace.WorkspaceComment? = load_value(self.store, key)
@@ -1147,7 +1165,9 @@ pub async fn StudioService::workspace_features(
       }
     } else if key.has_prefix("workspace-presence-") {
       let value : @workspace.WorkspacePresence? = load_value(self.store, key)
-      if value is Some(item) && item.project_id == project_id {
+      if value is Some(item) &&
+        item.project_id == project_id &&
+        (item.lease_expires_at.length() != now.length() || item.lease_expires_at > now) {
         presence.push(item)
       }
     } else if key.has_prefix("workspace-promotion-") {

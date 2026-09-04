@@ -280,6 +280,52 @@ fn workspace_graph_toggle_collapsed(model : Model) -> Model {
 }
 
 ///|
+fn workspace_graph_set_parameter(model : Model) -> Model {
+  let key = model.workspace_parameter_key.trim().to_owned()
+  guard !key.is_blank() &&
+    model.workspace_graph is Some(graph) &&
+    workspace_graph_node(model, model.selected_workspace_node) is Some(node) else {
+    return { ..model, error: "Choose a node and enter a parameter key." }
+  }
+  let parameters = node.parameters.filter(parameter => parameter.key != key)
+  parameters.push({ key, value: model.workspace_parameter_value.to_json() })
+  let prepared = begin_workspace_graph_edit(model)
+  {
+    ..replace_workspace_graph(
+      prepared,
+      workspace_graph_with_node(graph, { ..node, parameters, }),
+    ),
+    workspace_parameter_key: "",
+    workspace_parameter_value: "",
+    status: "Updated node parameter. Save a revision before running.",
+    error: "",
+  }
+}
+
+///|
+fn workspace_graph_delete_parameter(model : Model, key : String) -> Model {
+  guard model.workspace_graph is Some(graph) &&
+    workspace_graph_node(model, model.selected_workspace_node) is Some(node) else {
+    return model
+  }
+  let prepared = begin_workspace_graph_edit(model)
+  {
+    ..replace_workspace_graph(
+      prepared,
+      workspace_graph_with_node(
+        graph,
+        {
+          ..node,
+          parameters: node.parameters.filter(parameter => parameter.key != key),
+        },
+      ),
+    ),
+    status: "Removed node parameter. Save a revision before running.",
+    error: "",
+  }
+}
+
+///|
 fn workspace_graph_move_node(
   model : Model,
   node_id : String,

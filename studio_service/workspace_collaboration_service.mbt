@@ -13,6 +13,47 @@ async fn StudioService::find_workspace_share(
 }
 
 ///|
+pub async fn StudioService::record_workspace_comment_draft(
+  self : StudioService,
+  request : WorkspaceCommentDraftRequest,
+) -> @workspace.WorkspaceComment {
+  self.record_workspace_comment({
+    comment_id: @runtime.new_id(prefix="workspace-comment"),
+    project_id: request.project_id,
+    target_kind: request.target_kind,
+    target_id: request.target_id,
+    body: request.body,
+    actor: request.actor,
+    start_tick: request.start_tick,
+    end_tick: request.end_tick,
+    created_at: now_string(),
+  })
+}
+
+///|
+pub async fn StudioService::renew_workspace_presence_lease(
+  self : StudioService,
+  request : WorkspacePresenceLeaseRequest,
+) -> @workspace.WorkspacePresence {
+  guard request.lifetime_seconds >= 15 && request.lifetime_seconds <= 300 else {
+    raise Invalid(
+      code="workspace_presence_lifetime_invalid",
+      message="presence lease must be between 15 seconds and 5 minutes",
+    )
+  }
+  let now = @runtime.wall_clock_ms() / 1000L
+  self.renew_workspace_presence({
+    project_id: request.project_id,
+    actor_id: request.actor_id,
+    display_name: request.display_name,
+    target_kind: request.target_kind,
+    target_id: request.target_id,
+    lease_expires_at: (now + Int64::from_int(request.lifetime_seconds)).to_string(),
+    updated_at: now.to_string(),
+  })
+}
+
+///|
 pub async fn StudioService::create_secure_workspace_share(
   self : StudioService,
   request : WorkspaceSecureShareRequest,
@@ -172,4 +213,26 @@ pub async fn StudioService::apply_saved_workspace_proposal(
     ),
   )
   saved
+}
+
+///|
+pub async fn StudioService::review_saved_workspace_proposal(
+  self : StudioService,
+  project_id : String,
+  proposal_id : String,
+) -> WorkspaceProposalReviewProjection {
+  let key = workspace_proposal_key(project_id, proposal_id)
+  guard load_value(self.store, key) is Some(proposal) else {
+    raise NotFound(entity="workspace_proposal", id=proposal_id)
+  }
+  let proposal : @workspace.AgentGraphProposal = proposal
+  let current = self.get_workspace_graph(project_id, proposal.base_graph_id)
+  {
+    contract: "mooncast.workspace-proposal-review.v1",
+    proposal,
+    current_graph_revision: current.revision,
+    stale: current.revision != proposal.base_graph_revision,
+    diff: @workspace.graph_diff(current, proposal.proposed_graph),
+    publication_authority: false,
+  }
 }

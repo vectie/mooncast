@@ -411,6 +411,40 @@ pub(all) struct WorkspaceRunCommand {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+pub(all) struct WorkspaceRunListProjection {
+  contract : String
+  project_id : String
+  runs : Array[@workspace.RunRecord]
+  total : Int
+  offset : Int
+  limit : Int
+  has_more : Bool
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceRunClaimRequest {
+  worker_id : String
+  execution_owner : String
+  input_refs : Array[String]
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceRunActionRequest {
+  node_id : String
+  actor : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceRunEventProjection {
+  contract : String
+  run_id : String
+  events : Array[@workspace.WorkspaceRunEvent]
+  last_event_id : String
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 pub(all) struct WorkspaceProposalApplyRequest {
   base : @workspace.WorkspaceGraph
   proposal : @workspace.AgentGraphProposal
@@ -443,6 +477,29 @@ pub(all) struct WorkspaceArtifactProjection {
   contract : String
   artifacts : Array[@workspace.WorkspaceArtifact]
   publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceAssetLibraryProjection {
+  contract : String
+  project_id : String
+  entries : Array[@workspace.WorkspaceAssetEntry]
+  total : Int
+  offset : Int
+  limit : Int
+  has_more : Bool
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceAssetTagsRequest {
+  tags : Array[String]
+  actor : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceAssetDeleteRequest {
+  actor : String
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -552,6 +609,17 @@ pub(all) struct WorkspaceCommentCreateRequest {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+pub(all) struct WorkspaceCommentDraftRequest {
+  project_id : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  body : String
+  actor : String
+  start_tick : Int?
+  end_tick : Int?
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 pub(all) struct WorkspacePresenceRequest {
   project_id : String
   actor_id : String
@@ -560,6 +628,16 @@ pub(all) struct WorkspacePresenceRequest {
   target_id : String
   lease_expires_at : String
   updated_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspacePresenceLeaseRequest {
+  project_id : String
+  actor_id : String
+  display_name : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  lifetime_seconds : Int
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -659,6 +737,16 @@ pub(all) struct WorkspaceProposalProjection {
   contract : String
   project_id : String
   proposals : Array[@workspace.AgentGraphProposal]
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceProposalReviewProjection {
+  contract : String
+  proposal : @workspace.AgentGraphProposal
+  current_graph_revision : Int
+  stale : Bool
+  diff : @workspace.GraphDiff
   publication_authority : Bool
 } derive(Debug, Eq, ToJson, FromJson)
 

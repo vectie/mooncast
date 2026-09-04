@@ -146,8 +146,6 @@ struct WorkspaceCatalogPayload {
 
 ///|
 struct WorkspaceNodePosition {
-  recipe : WorkspaceRecipe
-  node_id : String
   x : Int
   y : Int
 }
@@ -162,28 +160,27 @@ struct WorkspaceCanvasDrag {
 }
 
 ///|
-struct WorkspaceConnection {
-  recipe : WorkspaceRecipe
-  source_node_id : String
-  target_node_id : String
-}
-
-///|
-struct WorkspaceAssetNode {
-  recipe : WorkspaceRecipe
-  node_id : String
-  title : String
-  artifact_kind : String
-  x : Int
-  y : Int
-}
-
-///|
 #warnings("-unused_field")
 struct WorkspaceRunPayload {
   run_id : String
   state : Json
   updated_at : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceRunEventSummary {
+  event_id : String
+  event_name : String
+  run : WorkspaceRunPayload
+  recorded_at : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceRunEventPayload {
+  events : Array[WorkspaceRunEventSummary]
+  last_event_id : String
 } derive(FromJson)
 
 ///|
@@ -218,8 +215,88 @@ struct WorkspaceShareCreatedPayload {
 
 ///|
 #warnings("-unused_field")
+struct WorkspaceAssetArtifactSummary {
+  artifact_id : String
+  version : Int
+  kind : WorkspaceArtifactKind
+  digest : String
+  preview_uri : String
+  provider : String
+  node_id : String
+  qc_state : String
+  rights_state : String
+  created_at : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceAssetEntrySummary {
+  artifact : WorkspaceAssetArtifactSummary
+  tags : Array[String]
+  deleted : Bool
+  updated_at : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceAssetLibraryPayload {
+  entries : Array[WorkspaceAssetEntrySummary]
+  total : Int
+  offset : Int
+  limit : Int
+  has_more : Bool
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceCommentSummary {
+  comment_id : String
+  target_id : String
+  body : String
+  actor : String
+  created_at : String
+  resolved : Bool
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspacePresenceSummary {
+  actor_id : String
+  display_name : String
+  target_id : String
+  lease_expires_at : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceFeaturesPayload {
+  comments : Array[WorkspaceCommentSummary]
+  presence : Array[WorkspacePresenceSummary]
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
 struct WorkspaceProposalPayload {
   proposals : Array[WorkspaceProposalSummary]
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceGraphDiffSummary {
+  added_node_ids : Array[String]
+  removed_node_ids : Array[String]
+  modified_node_ids : Array[String]
+  added_edge_ids : Array[String]
+  removed_edge_ids : Array[String]
+  modified_edge_ids : Array[String]
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceProposalReviewPayload {
+  current_graph_revision : Int
+  stale : Bool
+  diff : WorkspaceGraphDiffSummary
 } derive(FromJson)
 
 ///|
@@ -576,14 +653,15 @@ struct Model {
   workspace_graph_redo : Array[WorkspaceGraphSummary]
   workspace_graph_dirty : Bool
   workspace_graph_saving : Bool
-  workspace_pending_run : String
   workspace_node_palette_search : String
+  workspace_parameter_key : String
+  workspace_parameter_value : String
   workspace_connect_port : String
-  workspace_node_positions : Array[WorkspaceNodePosition]
   workspace_canvas_drag : WorkspaceCanvasDrag?
   workspace_canvas_zoom : Double
-  workspace_connections : Array[WorkspaceConnection]
-  workspace_asset_nodes : Array[WorkspaceAssetNode]
+  workspace_assets : Array[WorkspaceAssetEntrySummary]
+  selected_workspace_asset_ids : Array[String]
+  workspace_asset_total : Int
   workspace_dragged_asset : String
   workspace_connect_from : String
   workspace_app_view : Bool
@@ -592,10 +670,15 @@ struct Model {
   workspace_comment : String
   workspace_public_input : String
   workspace_activity : Array[String]
+  workspace_comments : Array[WorkspaceCommentSummary]
+  workspace_presence : Array[WorkspacePresenceSummary]
   workspace_run_id : String
   workspace_run_state : String
+  workspace_run_last_event_id : String
   workspace_proposals : Array[WorkspaceProposalSummary]
+  workspace_proposal_review : WorkspaceProposalReviewPayload?
   workspace_share_url : String
+  workspace_share_id : String
   production_project_id : String
   workspace : @api.WorkspaceSnapshot?
   selected_take_id : String
@@ -701,27 +784,15 @@ fn initial_model() -> Model {
     workspace_graph_redo: [],
     workspace_graph_dirty: false,
     workspace_graph_saving: false,
-    workspace_pending_run: "",
     workspace_node_palette_search: "",
+    workspace_parameter_key: "",
+    workspace_parameter_value: "",
     workspace_connect_port: "",
-    workspace_node_positions: [
-      { recipe: CombineVideosRecipe, node_id: "intake", x: 40, y: 80 },
-      { recipe: CombineVideosRecipe, node_id: "probe", x: 300, y: 80 },
-      { recipe: CombineVideosRecipe, node_id: "normalize", x: 560, y: 80 },
-      { recipe: CombineVideosRecipe, node_id: "concat", x: 820, y: 80 },
-      { recipe: CombineVideosRecipe, node_id: "verify", x: 1080, y: 80 },
-      { recipe: CombineVideosRecipe, node_id: "register", x: 1340, y: 80 },
-      { recipe: BriefToDeliveryRecipe, node_id: "brief", x: 40, y: 80 },
-      { recipe: BriefToDeliveryRecipe, node_id: "validate", x: 300, y: 80 },
-      { recipe: BriefToDeliveryRecipe, node_id: "project", x: 560, y: 80 },
-      { recipe: BriefToDeliveryRecipe, node_id: "generate", x: 820, y: 80 },
-      { recipe: BriefToDeliveryRecipe, node_id: "review", x: 1080, y: 80 },
-      { recipe: BriefToDeliveryRecipe, node_id: "delivery", x: 1340, y: 80 },
-    ],
     workspace_canvas_drag: None,
     workspace_canvas_zoom: 1.0,
-    workspace_connections: [],
-    workspace_asset_nodes: [],
+    workspace_assets: [],
+    selected_workspace_asset_ids: [],
+    workspace_asset_total: 0,
     workspace_dragged_asset: "",
     workspace_connect_from: "",
     workspace_app_view: false,
@@ -730,10 +801,15 @@ fn initial_model() -> Model {
     workspace_comment: "",
     workspace_public_input: "",
     workspace_activity: ["Workspace opened · graph revision 1"],
+    workspace_comments: [],
+    workspace_presence: [],
     workspace_run_id: "",
     workspace_run_state: "idle",
+    workspace_run_last_event_id: "",
     workspace_proposals: [],
+    workspace_proposal_review: None,
     workspace_share_url: "",
+    workspace_share_id: "",
     production_project_id: "",
     workspace: None,
     selected_take_id: "",
