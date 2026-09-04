@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://workspace-run/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "run_id", "plan", "state", "nodes", "created_by", "created_at", "updated_at", "publication_authority"],
+  "properties": {
+    "contract": {"const": "mooncast.workspace-run.v1"},
+    "run_id": {"type": "string", "minLength": 1},
+    "plan": {"$ref": "workspace-execution-plan.schema.json"},
+    "state": {"enum": ["Queued", "RunningRun", "SucceededRun", "FailedRun", "CancelledRun"]},
+    "nodes": {"type": "array", "items": {"type": "object"}},
+    "created_by": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string"},
+    "updated_at": {"type": "string"},
+    "publication_authority": {"const": false}
+  }
+}

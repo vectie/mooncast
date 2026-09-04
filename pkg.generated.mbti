@@ -4,13 +4,46 @@ package "vectie/mooncast"
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
+  "vectie/mooncast/workspace",
   "vectie/moonlib/pack",
 }
 
 // Values
+pub fn add_graph_node(@workspace.WorkspaceGraph, @workspace.WorkflowNode) -> @workspace.WorkspaceGraph raise @workspace.WorkspaceError
+
+pub fn apply_agent_proposal(@workspace.WorkspaceGraph, @workspace.AgentGraphProposal) -> (@workspace.WorkspaceGraph, @workspace.AgentGraphProposal) raise @workspace.WorkspaceError
+
+pub fn bounded_control_catalog() -> Array[@workspace.NodeDefinition]
+
+pub fn brief_to_delivery_capsule(String, String, String) -> @workspace.CreativeCapsule
+
+pub fn builtin_workspace_catalog() -> Array[@workspace.NodeDefinition]
+
+pub fn combine_videos_capsule(String, String, String) -> @workspace.CreativeCapsule
+
+pub fn connect_graph_nodes(@workspace.WorkspaceGraph, @workspace.WorkflowEdge, Array[@workspace.NodeDefinition]) -> @workspace.WorkspaceGraph raise @workspace.WorkspaceError
+
 pub fn delivery_ready(DeliveryGate) -> Bool
 
+pub fn disconnect_graph_edge(@workspace.WorkspaceGraph, String) -> @workspace.WorkspaceGraph raise @workspace.WorkspaceError
+
+pub fn fork_graph(@workspace.WorkspaceGraph, String, String, String, String) -> @workspace.WorkspaceGraph raise @workspace.WorkspaceError
+
+pub fn freeze_plan(@workspace.WorkspaceGraph, Array[@workspace.NodeDefinition], Array[String], @workspace.ExecutionContext, String) -> @workspace.ExecutionPlan raise @workspace.WorkspaceError
+
+pub fn graph_diff(@workspace.WorkspaceGraph, @workspace.WorkspaceGraph) -> @workspace.GraphDiff
+
+pub fn graph_digest(@workspace.WorkspaceGraph) -> String
+
+pub fn instantiate_capsule(@workspace.CreativeCapsule, String, String, String, String, String) -> @workspace.WorkspaceGraph raise @workspace.WorkspaceError
+
 pub fn manifest() -> @pack.MoonPackManifest
+
+pub fn move_graph_node(@workspace.WorkspaceGraph, String, Int, Int) -> @workspace.WorkspaceGraph raise @workspace.WorkspaceError
+
+pub fn new_run(@workspace.ExecutionPlan, String, String, String, maximum_retries? : Int) -> @workspace.RunRecord
+
+pub fn new_workspace_artifact(String, Int, @workspace.ArtifactKind, String, String, String, Array[String], String, String, String, String, String, String, Json, String, String, Array[String], Double, Double, String) -> @workspace.WorkspaceArtifact raise @workspace.WorkspaceError
 
 pub fn next_production_gate(Array[GateReceipt]) -> ProductionGate?
 
@@ -20,7 +53,17 @@ pub fn production_gate_sequence() -> Array[ProductionGate]
 
 pub fn publication_ready(CampaignStage, DeliveryGate) -> Bool
 
+pub fn recover_run_after_restart(@workspace.RunRecord, String) -> @workspace.RunRecord
+
+pub fn remove_graph_node(@workspace.WorkspaceGraph, String) -> @workspace.WorkspaceGraph raise @workspace.WorkspaceError
+
+pub fn set_graph_node_parameter(@workspace.WorkspaceGraph, String, @workspace.NodeParameter) -> @workspace.WorkspaceGraph raise @workspace.WorkspaceError
+
 pub fn systematic_delivery_ready(ProductionProjectSummary, ProductionReadiness) -> Bool
+
+pub fn validate_graph(@workspace.WorkspaceGraph, Array[@workspace.NodeDefinition]) -> @workspace.GraphValidation
+
+pub fn workspace_node_catalog() -> Array[@workspace.NodeDefinition]
 
 // Errors
 
@@ -103,5 +146,58 @@ pub(all) enum ProductionStage {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases
+pub using @workspace {type AgentGraphProposal}
+
+pub using @workspace {type ArtifactAnnotation}
+
+pub using @workspace {type ArtifactKind}
+
+pub using @workspace {type CachedNodeOutput}
+
+pub using @workspace {type CapsuleParameter}
+
+pub using @workspace {type CapsulePort}
+
+pub using @workspace {type CreativeCapsule}
+
+pub using @workspace {type ExecutionContext}
+
+pub using @workspace {type ExecutionPlan}
+
+pub using @workspace {type GraphDiff}
+
+pub using @workspace {type GraphValidation}
+
+pub using @workspace {type NodeAttempt}
+
+pub using @workspace {type NodeDefinition}
+
+pub using @workspace {type NodeParameter}
+
+pub using @workspace {type NodeRun}
+
+pub using @workspace {type NodeRunState}
+
+pub using @workspace {type PlannedNode}
+
+pub using @workspace {type PortCardinality}
+
+pub using @workspace {type PortDefinition}
+
+pub using @workspace {type RunRecord}
+
+pub using @workspace {type WorkflowEdge}
+
+pub using @workspace {type WorkflowNode}
+
+pub using @workspace {type WorkspaceArtifact}
+
+pub using @workspace {type WorkspaceError}
+
+pub using @workspace {type WorkspaceGraph}
+
+pub using @workspace {type WorkspaceNodeKind}
+
+pub using @workspace {type WorkspaceRunState}
 
 // Traits

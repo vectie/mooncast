@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://workspace-execution-plan/v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["contract", "plan_id", "graph_id", "graph_revision", "graph_digest", "frozen_graph", "selected_output_node_ids", "nodes", "provider", "model", "policy_digest", "frozen_at", "publication_authority"],
+  "properties": {
+    "contract": {"const": "mooncast.workspace-execution-plan.v1"},
+    "plan_id": {"type": "string", "minLength": 1},
+    "graph_id": {"type": "string", "minLength": 1},
+    "graph_revision": {"type": "integer", "minimum": 1},
+    "graph_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "frozen_graph": {"$ref": "mooncast://workspace-graph/v1"},
+    "selected_output_node_ids": {"type": "array", "items": {"type": "string"}},
+    "nodes": {"type": "array", "items": {"type": "object"}},
+    "provider": {"type": "string"},
+    "model": {"type": "string"},
+    "policy_digest": {"type": "string"},
+    "frozen_at": {"type": "string"},
+    "publication_authority": {"const": false}
+  }
+}

@@ -1,0 +1,363 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/workspace"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/moonlib/pack",
+}
+
+// Values
+pub fn add_graph_node(WorkspaceGraph, WorkflowNode) -> WorkspaceGraph raise WorkspaceError
+
+pub fn apply_agent_proposal(WorkspaceGraph, AgentGraphProposal) -> (WorkspaceGraph, AgentGraphProposal) raise WorkspaceError
+
+pub fn bounded_control_catalog() -> Array[NodeDefinition]
+
+pub fn brief_to_delivery_capsule(String, String, String) -> CreativeCapsule
+
+pub fn builtin_workspace_catalog() -> Array[NodeDefinition]
+
+pub fn catalog_from_tools(Array[@pack.ToolDeclaration]) -> Array[NodeDefinition]
+
+pub fn combine_videos_capsule(String, String, String) -> CreativeCapsule
+
+pub fn complete_node_catalog(Array[@pack.ToolDeclaration]) -> Array[NodeDefinition]
+
+pub fn connect_graph_nodes(WorkspaceGraph, WorkflowEdge, Array[NodeDefinition]) -> WorkspaceGraph raise WorkspaceError
+
+pub fn disconnect_graph_edge(WorkspaceGraph, String) -> WorkspaceGraph raise WorkspaceError
+
+pub fn fork_graph(WorkspaceGraph, String, String, String, String) -> WorkspaceGraph raise WorkspaceError
+
+pub fn freeze_plan(WorkspaceGraph, Array[NodeDefinition], Array[String], ExecutionContext, String) -> ExecutionPlan raise WorkspaceError
+
+pub fn graph_diff(WorkspaceGraph, WorkspaceGraph) -> GraphDiff
+
+pub fn graph_digest(WorkspaceGraph) -> String
+
+pub fn instantiate_capsule(CreativeCapsule, String, String, String, String, String) -> WorkspaceGraph raise WorkspaceError
+
+pub fn move_graph_node(WorkspaceGraph, String, Int, Int) -> WorkspaceGraph raise WorkspaceError
+
+pub fn new_run(ExecutionPlan, String, String, String, maximum_retries? : Int) -> RunRecord
+
+pub fn new_workspace_artifact(String, Int, ArtifactKind, String, String, String, Array[String], String, String, String, String, String, String, Json, String, String, Array[String], Double, Double, String) -> WorkspaceArtifact raise WorkspaceError
+
+pub fn recover_run_after_restart(RunRecord, String) -> RunRecord
+
+pub fn remove_graph_node(WorkspaceGraph, String) -> WorkspaceGraph raise WorkspaceError
+
+pub fn set_graph_node_parameter(WorkspaceGraph, String, NodeParameter) -> WorkspaceGraph raise WorkspaceError
+
+pub fn validate_graph(WorkspaceGraph, Array[NodeDefinition]) -> GraphValidation
+
+// Errors
+pub(all) suberror WorkspaceError {
+  InvalidGraph(Array[String])
+  UnknownNode(String)
+  InvalidTransition(String)
+  RevisionConflict(expected~ : Int, actual~ : Int)
+  ProposalAlreadyApplied(String)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub(all) struct AgentGraphProposal {
+  contract : String
+  proposal_id : String
+  project_id : String
+  base_graph_id : String
+  base_graph_revision : Int
+  proposed_graph : WorkspaceGraph
+  explanation : String
+  affected_node_ids : Array[String]
+  provider_ids : Array[String]
+  expected_cost_cny : Double
+  required_approvals : Array[String]
+  created_by : String
+  created_at : String
+  applied : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ArtifactAnnotation {
+  annotation_id : String
+  actor : String
+  body : String
+  start_tick : Int?
+  end_tick : Int?
+  created_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum ArtifactKind {
+  TextArtifact
+  ImageArtifact
+  AudioArtifact
+  VideoArtifact
+  MediaCollection
+  ShotCollection
+  TimelineArtifact
+  ReviewDecisionArtifact
+  DeliveryPackageArtifact
+  DataArtifact
+  AnyArtifact
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ArtifactKind::accepts(Self, Self) -> Bool
+
+pub(all) struct CachedNodeOutput {
+  node_id : String
+  cache_key : String
+  output_digest : String
+  output_ref : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CapsuleParameter {
+  parameter_id : String
+  node_id : String
+  node_parameter_key : String
+  label : String
+  default_value : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CapsulePort {
+  port_id : String
+  node_id : String
+  node_port_id : String
+  label : String
+  artifact_kind : ArtifactKind
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CreativeCapsule {
+  contract : String
+  capsule_id : String
+  version : Int
+  title : String
+  summary : String
+  graph : WorkspaceGraph
+  public_inputs : Array[CapsulePort]
+  public_outputs : Array[CapsulePort]
+  exposed_parameters : Array[CapsuleParameter]
+  policy_constraints : Array[String]
+  provider_constraints : Array[String]
+  example_asset_refs : Array[String]
+  thumbnail_uri : String
+  minimum_mooncast_version : String
+  created_by : String
+  created_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ExecutionContext {
+  provider : String
+  model : String
+  policy_digest : String
+  cached_outputs : Array[CachedNodeOutput]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ExecutionPlan {
+  contract : String
+  plan_id : String
+  graph_id : String
+  graph_revision : Int
+  graph_digest : String
+  frozen_graph : WorkspaceGraph
+  selected_output_node_ids : Array[String]
+  nodes : Array[PlannedNode]
+  provider : String
+  model : String
+  policy_digest : String
+  frozen_at : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GraphDiff {
+  contract : String
+  added_node_ids : Array[String]
+  removed_node_ids : Array[String]
+  modified_node_ids : Array[String]
+  added_edge_ids : Array[String]
+  removed_edge_ids : Array[String]
+  modified_edge_ids : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GraphValidation {
+  contract : String
+  valid : Bool
+  errors : Array[String]
+  warnings : Array[String]
+  topological_node_ids : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct NodeAttempt {
+  attempt : Int
+  state : NodeRunState
+  started_at : String
+  finished_at : String
+  output_digest : String
+  output_ref : String
+  error_code : String
+  error_message : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct NodeDefinition {
+  definition_id : String
+  display_name : String
+  category : String
+  node_kind : WorkspaceNodeKind
+  tool_id : String
+  inputs : Array[PortDefinition]
+  outputs : Array[PortDefinition]
+  authority : @pack.AuthorityClass
+  execution_owner : String
+  idempotent : Bool
+  review_required : Bool
+  evidence_outputs : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct NodeParameter {
+  key : String
+  value : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct NodeRun {
+  node_id : String
+  state : NodeRunState
+  progress_numerator : Int
+  progress_denominator : Int
+  retry_count : Int
+  maximum_retries : Int
+  attempts : Array[NodeAttempt]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum NodeRunState {
+  Blocked
+  Ready
+  Running
+  Cached
+  Succeeded
+  Failed
+  Cancelled
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PlannedNode {
+  node_id : String
+  definition_id : String
+  tool_digest : String
+  input_node_ids : Array[String]
+  cache_key : String
+  cache_hit : Bool
+  cached_output_digest : String
+  cached_output_ref : String
+  authority : @pack.AuthorityClass
+  execution_owner : String
+  review_required : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum PortCardinality {
+  One
+  Many
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PortDefinition {
+  port_id : String
+  label : String
+  schema_id : String
+  artifact_kind : ArtifactKind
+  cardinality : PortCardinality
+  required : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RunRecord {
+  contract : String
+  run_id : String
+  plan : ExecutionPlan
+  state : WorkspaceRunState
+  nodes : Array[NodeRun]
+  created_by : String
+  created_at : String
+  updated_at : String
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn RunRecord::cancel(Self, String) -> Self
+pub fn RunRecord::fail_node(Self, String, String, String, String) -> Self raise WorkspaceError
+pub fn RunRecord::progress_node(Self, String, Int, Int, String) -> Self raise WorkspaceError
+pub fn RunRecord::retry_node(Self, String, String) -> Self raise WorkspaceError
+pub fn RunRecord::start_node(Self, String, String) -> Self raise WorkspaceError
+pub fn RunRecord::succeed_node(Self, String, String, String, String) -> Self raise WorkspaceError
+
+pub(all) struct WorkflowEdge {
+  edge_id : String
+  source_node_id : String
+  source_port_id : String
+  target_node_id : String
+  target_port_id : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkflowNode {
+  node_id : String
+  definition_id : String
+  title : String
+  x : Int
+  y : Int
+  parameters : Array[NodeParameter]
+  collapsed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceArtifact {
+  contract : String
+  artifact_id : String
+  version : Int
+  kind : ArtifactKind
+  digest : String
+  uri : String
+  preview_uri : String
+  parent_digests : Array[String]
+  graph_id : String
+  run_id : String
+  node_id : String
+  prompt_digest : String
+  provider : String
+  model : String
+  provider_receipt : Json
+  rights_state : String
+  qc_state : String
+  qc_results : Array[String]
+  cost_cny : Double
+  duration_seconds : Double
+  annotations : Array[ArtifactAnnotation]
+  created_at : String
+  immutable : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn WorkspaceArtifact::annotate(Self, ArtifactAnnotation) -> Self raise WorkspaceError
+
+pub(all) struct WorkspaceGraph {
+  contract : String
+  graph_id : String
+  project_id : String
+  revision : Int
+  title : String
+  nodes : Array[WorkflowNode]
+  edges : Array[WorkflowEdge]
+  output_node_ids : Array[String]
+  created_by : String
+  created_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum WorkspaceNodeKind {
+  InputNode
+  OperationNode
+  ControlNode
+  HumanGateNode
+  OutputNode
+  CapsuleNode
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum WorkspaceRunState {
+  Queued
+  RunningRun
+  SucceededRun
+  FailedRun
+  CancelledRun
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://workspace-graph/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "graph_id", "project_id", "revision", "title", "nodes", "edges", "output_node_ids", "created_by", "created_at"],
+  "properties": {
+    "contract": {"const": "mooncast.workspace-graph.v1"},
+    "graph_id": {"type": "string", "minLength": 1},
+    "project_id": {"type": "string", "minLength": 1},
+    "revision": {"type": "integer", "minimum": 1},
+    "title": {"type": "string", "minLength": 1},
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["node_id", "definition_id", "title", "x", "y", "parameters", "collapsed"],
+        "properties": {
+          "node_id": {"type": "string", "minLength": 1},
+          "definition_id": {"type": "string", "minLength": 1},
+          "title": {"type": "string", "minLength": 1},
+          "x": {"type": "integer"},
+          "y": {"type": "integer"},
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["key", "value"],
+              "properties": {"key": {"type": "string", "minLength": 1}, "value": {}}
+            }
+          },
+          "collapsed": {"type": "boolean"}
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["edge_id", "source_node_id", "source_port_id", "target_node_id", "target_port_id"],
+        "properties": {
+          "edge_id": {"type": "string", "minLength": 1},
+          "source_node_id": {"type": "string", "minLength": 1},
+          "source_port_id": {"type": "string", "minLength": 1},
+          "target_node_id": {"type": "string", "minLength": 1},
+          "target_port_id": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "output_node_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "created_by": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string"}
+  }
+}

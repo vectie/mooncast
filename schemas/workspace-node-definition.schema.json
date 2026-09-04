@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://workspace-node-definition/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["definition_id", "display_name", "category", "node_kind", "tool_id", "inputs", "outputs", "authority", "execution_owner", "idempotent", "review_required", "evidence_outputs"],
+  "properties": {
+    "definition_id": {"type": "string", "minLength": 1},
+    "display_name": {"type": "string", "minLength": 1},
+    "category": {"type": "string", "minLength": 1},
+    "node_kind": {"type": "string", "minLength": 1},
+    "tool_id": {"type": "string", "minLength": 1},
+    "inputs": {"type": "array", "items": {"$ref": "#/$defs/port"}},
+    "outputs": {"type": "array", "items": {"$ref": "#/$defs/port"}},
+    "authority": {"enum": ["CognitiveMaintenance", "ExternalEffect", "Observe", "PhysicalEffect", "SandboxExecution", "WorkspaceMutation"]},
+    "execution_owner": {"enum": ["mooncast", "moonflow"]},
+    "idempotent": {"type": "boolean"},
+    "review_required": {"type": "boolean"},
+    "evidence_outputs": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["port_id", "label", "schema_id", "artifact_kind", "cardinality", "required"],
+      "properties": {
+        "port_id": {"type": "string", "minLength": 1},
+        "label": {"type": "string", "minLength": 1},
+        "schema_id": {"type": "string", "minLength": 1},
+        "artifact_kind": {"type": "string", "minLength": 1},
+        "cardinality": {"enum": ["One", "Many"]},
+        "required": {"type": "boolean"}
+      }
+    }
+  }
+}

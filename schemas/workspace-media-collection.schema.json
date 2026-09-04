@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://workspace-media-collection/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "items", "order_frozen"],
+  "properties": {
+    "contract": {"const": "mooncast.workspace-media-collection.v1"},
+    "items": {
+      "type": "array",
+      "maxItems": 512,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file_name", "mime_type", "size_bytes", "digest", "uri"],
+        "properties": {
+          "file_name": {"type": "string", "minLength": 1, "maxLength": 255},
+          "mime_type": {"type": "string", "minLength": 1},
+          "size_bytes": {"type": "integer", "minimum": 1},
+          "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+          "uri": {"type": "string", "minLength": 1},
+          "duration_seconds": {"type": "number", "minimum": 0}
+        }
+      }
+    },
+    "order_frozen": {"type": "boolean"}
+  }
+}

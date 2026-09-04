@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://workspace-artifact/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "artifact_id", "version", "kind", "digest", "uri", "preview_uri", "parent_digests", "graph_id", "run_id", "node_id", "prompt_digest", "provider", "model", "provider_receipt", "rights_state", "qc_state", "qc_results", "cost_cny", "duration_seconds", "annotations", "created_at", "immutable"],
+  "properties": {
+    "contract": {"const": "mooncast.workspace-artifact.v1"},
+    "artifact_id": {"type": "string", "minLength": 1},
+    "version": {"type": "integer", "minimum": 1},
+    "kind": {"type": "string", "minLength": 1},
+    "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "uri": {"type": "string", "minLength": 1},
+    "preview_uri": {"type": "string"},
+    "parent_digests": {"type": "array", "items": {"type": "string"}},
+    "graph_id": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "node_id": {"type": "string", "minLength": 1},
+    "prompt_digest": {"type": "string"},
+    "provider": {"type": "string"},
+    "model": {"type": "string"},
+    "provider_receipt": {},
+    "rights_state": {"type": "string", "minLength": 1},
+    "qc_state": {"type": "string", "minLength": 1},
+    "qc_results": {"type": "array", "items": {"type": "string"}},
+    "cost_cny": {"type": "number", "minimum": 0},
+    "duration_seconds": {"type": "number", "minimum": 0},
+    "annotations": {"type": "array", "items": {"type": "object"}},
+    "created_at": {"type": "string"},
+    "immutable": {"const": true}
+  }
+}

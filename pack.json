@@ -147,7 +147,16 @@
     {"id":"host-authority-grant","version":"1.0.0","path":"schemas/host-authority-grant.schema.json"},
     {"id":"pack-town-projection","version":"1.0.0","path":"schemas/pack-town-projection.schema.json"},
     {"id":"town-pack-candidate","version":"1.0.0","path":"schemas/town-pack-candidate.schema.json"},
-    {"id":"pack-candidate-acknowledgement","version":"1.0.0","path":"schemas/pack-candidate-acknowledgement.schema.json"}
+    {"id":"pack-candidate-acknowledgement","version":"1.0.0","path":"schemas/pack-candidate-acknowledgement.schema.json"},
+    {"id":"workspace-media-collection","version":"1.0.0","path":"schemas/workspace-media-collection.schema.json"},
+    {"id":"workspace-node-definition","version":"1.0.0","path":"schemas/workspace-node-definition.schema.json"},
+    {"id":"workspace-graph","version":"1.0.0","path":"schemas/workspace-graph.schema.json"},
+    {"id":"workspace-graph-validation","version":"1.0.0","path":"schemas/workspace-graph-validation.schema.json"},
+    {"id":"workspace-execution-plan","version":"1.0.0","path":"schemas/workspace-execution-plan.schema.json"},
+    {"id":"workspace-run","version":"1.0.0","path":"schemas/workspace-run.schema.json"},
+    {"id":"workspace-artifact","version":"1.0.0","path":"schemas/workspace-artifact.schema.json"},
+    {"id":"creative-capsule","version":"1.0.0","path":"schemas/creative-capsule.schema.json"},
+    {"id":"workspace-agent-proposal","version":"1.0.0","path":"schemas/workspace-agent-proposal.schema.json"}
   ],
   "tools": [
     {"id":"brief.validate","owner_product":"mooncast","input_schema_id":"creative-brief","output_schema_id":"creative-brief","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["records/briefs"],"review_required":false},
@@ -235,14 +244,26 @@
     {"id":"control-tower.observe","owner_product":"mooncast","input_schema_id":"control-tower-query","output_schema_id":"production-control-tower","authority":"Observe","idempotent":true,"evidence_outputs":[],"review_required":false},
     {"id":"control-tower.actuals.record","owner_product":"mooncast","input_schema_id":"control-tower-actuals-input","output_schema_id":"control-tower-operating-actuals","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["control-tower/actuals"],"review_required":true},
     {"id":"control-tower.exception.assign","owner_product":"mooncast","input_schema_id":"control-tower-exception-assignment-input","output_schema_id":"control-tower-exception-assignment","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["control-tower/assignments"],"review_required":true},
-    {"id":"creative.candidate.intake","owner_product":"mooncast","input_schema_id":"town-pack-candidate","output_schema_id":"creative-brief","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["production/candidate-intake"],"review_required":true}
+    {"id":"creative.candidate.intake","owner_product":"mooncast","input_schema_id":"town-pack-candidate","output_schema_id":"creative-brief","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["production/candidate-intake"],"review_required":true},
+    {"id":"workspace.graph.validate","owner_product":"mooncast","input_schema_id":"workspace-graph","output_schema_id":"workspace-graph-validation","authority":"Observe","idempotent":true,"evidence_outputs":[],"review_required":false},
+    {"id":"workspace.plan.freeze","owner_product":"mooncast","input_schema_id":"workspace-graph","output_schema_id":"workspace-execution-plan","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["workspace/plans"],"review_required":false},
+    {"id":"workspace.capsule.combine-videos","owner_product":"mooncast","input_schema_id":"workspace-media-collection","output_schema_id":"creative-capsule","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["workspace/capsules"],"review_required":false},
+    {"id":"workspace.folder-intake","owner_product":"mooncast","input_schema_id":"workspace-media-collection","output_schema_id":"workspace-media-collection","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["workspace/intakes"],"review_required":false},
+    {"id":"workspace.media-probe","owner_product":"mooncast","input_schema_id":"workspace-media-collection","output_schema_id":"workspace-media-collection","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["workspace/media-probes"],"review_required":false},
+    {"id":"workspace.media-normalize","owner_product":"mooncast","input_schema_id":"workspace-media-collection","output_schema_id":"workspace-media-collection","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["workspace/normalized-media"],"review_required":false},
+    {"id":"workspace.media-concat","owner_product":"mooncast","input_schema_id":"workspace-media-collection","output_schema_id":"workspace-artifact","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["workspace/runs","workspace/artifacts"],"review_required":false},
+    {"id":"workspace.media-verify","owner_product":"mooncast","input_schema_id":"workspace-artifact","output_schema_id":"workspace-artifact","authority":"SandboxExecution","idempotent":true,"evidence_outputs":["workspace/verifications"],"review_required":false},
+    {"id":"workspace.artifact-register","owner_product":"mooncast","input_schema_id":"workspace-artifact","output_schema_id":"workspace-artifact","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["workspace/artifacts"],"review_required":false},
+    {"id":"workspace.agent.propose","owner_product":"mooncast","input_schema_id":"workspace-graph","output_schema_id":"workspace-agent-proposal","authority":"CognitiveMaintenance","idempotent":true,"evidence_outputs":["workspace/proposals"],"review_required":false},
+    {"id":"workspace.agent.apply","owner_product":"mooncast","input_schema_id":"workspace-agent-proposal","output_schema_id":"workspace-graph","authority":"WorkspaceMutation","idempotent":true,"evidence_outputs":["workspace/graphs","workspace/proposals"],"review_required":true}
   ],
   "workflows": [
     {"id":"brief-to-delivery","version":"1.0.0","path":"workflows/brief-to-delivery.md"},
     {"id":"systematic-long-form","version":"1.0.0","path":"workflows/systematic-long-form.md"},
     {"id":"performance-feedback","version":"1.0.0","path":"workflows/performance-feedback.md"},
     {"id":"moonflow-closed-loop","version":"1.0.0","path":"workflows/moonflow-closed-loop.md"},
-    {"id":"moonfind-review-episode","version":"1.0.0","path":"workflows/moonfind-review-episode.md"}
+    {"id":"moonfind-review-episode","version":"1.0.0","path":"workflows/moonfind-review-episode.md"},
+    {"id":"creative-workspace","version":"1.0.0","path":"workflows/creative-workspace.md"}
   ],
   "skills": [
     {"id":"mooncast-producer","version":"1.0.0","path":"skills/mooncast-producer/SKILL.md"},

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://workspace-graph-validation/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "valid", "errors", "warnings", "topological_node_ids"],
+  "properties": {
+    "contract": {"const": "mooncast.workspace-graph-validation.v1"},
+    "valid": {"type": "boolean"},
+    "errors": {"type": "array", "items": {"type": "string"}},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "topological_node_ids": {"type": "array", "items": {"type": "string"}}
+  }
+}

@@ -1,0 +1,57 @@
+///|
+/// The complete canvas catalogue: governed built-ins plus every pack manifest
+/// tool projected as a typed node definition.
+pub fn workspace_node_catalog() -> Array[@workspace.NodeDefinition] {
+  @workspace.complete_node_catalog(manifest().tools)
+}
+
+///|
+pub using @workspace {
+  type AgentGraphProposal,
+  type ArtifactAnnotation,
+  type ArtifactKind,
+  type CachedNodeOutput,
+  type CapsuleParameter,
+  type CapsulePort,
+  type CreativeCapsule,
+  type ExecutionContext,
+  type ExecutionPlan,
+  type GraphDiff,
+  type GraphValidation,
+  type NodeAttempt,
+  type NodeDefinition,
+  type NodeParameter,
+  type NodeRun,
+  type NodeRunState,
+  type PlannedNode,
+  type PortCardinality,
+  type PortDefinition,
+  type RunRecord,
+  type WorkflowEdge,
+  type WorkflowNode,
+  type WorkspaceArtifact,
+  type WorkspaceError,
+  type WorkspaceGraph,
+  type WorkspaceNodeKind,
+  type WorkspaceRunState,
+  apply_agent_proposal,
+  add_graph_node,
+  brief_to_delivery_capsule,
+  bounded_control_catalog,
+  builtin_workspace_catalog,
+  combine_videos_capsule,
+  connect_graph_nodes,
+  disconnect_graph_edge,
+  freeze_plan,
+  graph_diff,
+  graph_digest,
+  instantiate_capsule,
+  fork_graph,
+  move_graph_node,
+  new_run,
+  new_workspace_artifact,
+  recover_run_after_restart,
+  remove_graph_node,
+  set_graph_node_parameter,
+  validate_graph,
+}

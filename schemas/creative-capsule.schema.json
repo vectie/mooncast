@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://creative-capsule/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "capsule_id", "version", "title", "summary", "graph", "public_inputs", "public_outputs", "exposed_parameters", "policy_constraints", "provider_constraints", "example_asset_refs", "thumbnail_uri", "minimum_mooncast_version", "created_by", "created_at"],
+  "properties": {
+    "contract": {"const": "mooncast.creative-capsule.v1"},
+    "capsule_id": {"type": "string", "minLength": 1},
+    "version": {"type": "integer", "minimum": 1},
+    "title": {"type": "string", "minLength": 1},
+    "summary": {"type": "string", "minLength": 1},
+    "graph": {"$ref": "workspace-graph.schema.json"},
+    "public_inputs": {"type": "array", "items": {"type": "object"}},
+    "public_outputs": {"type": "array", "items": {"type": "object"}},
+    "exposed_parameters": {"type": "array", "items": {"type": "object"}},
+    "policy_constraints": {"type": "array", "items": {"type": "string"}},
+    "provider_constraints": {"type": "array", "items": {"type": "string"}},
+    "example_asset_refs": {"type": "array", "items": {"type": "string"}},
+    "thumbnail_uri": {"type": "string"},
+    "minimum_mooncast_version": {"type": "string", "minLength": 1},
+    "created_by": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string"}
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mooncast://workspace-agent-proposal/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "proposal_id", "project_id", "base_graph_id", "base_graph_revision", "proposed_graph", "explanation", "affected_node_ids", "provider_ids", "expected_cost_cny", "required_approvals", "created_by", "created_at", "applied"],
+  "properties": {
+    "contract": {"const": "mooncast.agent-graph-proposal.v1"},
+    "proposal_id": {"type": "string", "minLength": 1},
+    "project_id": {"type": "string", "minLength": 1},
+    "base_graph_id": {"type": "string", "minLength": 1},
+    "base_graph_revision": {"type": "integer", "minimum": 1},
+    "proposed_graph": {"$ref": "workspace-graph.schema.json"},
+    "explanation": {"type": "string", "minLength": 1},
+    "affected_node_ids": {"type": "array", "items": {"type": "string"}},
+    "provider_ids": {"type": "array", "items": {"type": "string"}},
+    "expected_cost_cny": {"type": "number", "minimum": 0},
+    "required_approvals": {"type": "array", "items": {"type": "string"}},
+    "created_by": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string"},
+    "applied": {"type": "boolean"}
+  }
+}

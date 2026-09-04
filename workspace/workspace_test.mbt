@@ -1,0 +1,370 @@
+///|
+fn test_capsule() -> CreativeCapsule {
+  combine_videos_capsule(
+    "project-workspace", "operator", "2026-09-04T00:00:00Z",
+  )
+}
+
+///|
+fn test_context() -> ExecutionContext {
+  {
+    provider: "local",
+    model: "ffmpeg-bundled",
+    policy_digest: "sha256:policy",
+    cached_outputs: [],
+  }
+}
+
+///|
+test "combine-videos capsule is a valid typed graph" {
+  let capsule = test_capsule()
+  let validation = validate_graph(capsule.graph, builtin_workspace_catalog())
+  assert_true(validation.valid)
+  inspect(
+    validation.topological_node_ids.join(","),
+    content="intake,probe,normalize,concat,verify,register",
+  )
+  assert_eq(capsule.public_inputs[0].artifact_kind, MediaCollection)
+  assert_eq(capsule.public_outputs[0].artifact_kind, VideoArtifact)
+}
+
+///|
+test "graph validation rejects incompatible ports and cycles" {
+  let capsule = test_capsule()
+  let incompatible : WorkflowEdge = {
+    edge_id: "bad",
+    source_node_id: "concat",
+    source_port_id: "video",
+    target_node_id: "probe",
+    target_port_id: "media",
+  }
+  let graph = { ..capsule.graph, edges: capsule.graph.edges + [incompatible] }
+  let validation = validate_graph(graph, builtin_workspace_catalog())
+  assert_false(validation.valid)
+  assert_true(
+    validation.errors.any(value => value.contains("incompatible artifact kinds")),
+  )
+  assert_true(validation.errors.contains("graph contains a cycle"))
+}
+
+///|
+test "planning is deterministic and limited to selected ancestors" {
+  let capsule = test_capsule()
+  let plan = freeze_plan(
+    capsule.graph,
+    builtin_workspace_catalog(),
+    ["concat"],
+    test_context(),
+    "2026-09-04T00:01:00Z",
+  )
+  inspect(
+    plan.nodes.map(node => node.node_id).join(","),
+    content="intake,probe,normalize,concat",
+  )
+  assert_true(plan.graph_digest.has_prefix("sha256:"))
+  assert_eq(plan.frozen_graph, capsule.graph)
+  assert_true(plan.nodes.all(node => node.tool_digest.has_prefix("sha256:")))
+  assert_true(plan.plan_id.has_prefix("plan-"))
+  assert_false(plan.publication_authority)
+  let second = freeze_plan(
+    capsule.graph,
+    builtin_workspace_catalog(),
+    ["concat"],
+    test_context(),
+    "later",
+  )
+  assert_eq(plan.plan_id, second.plan_id)
+  assert_eq(
+    plan.nodes.map(node => node.cache_key),
+    second.nodes.map(node => node.cache_key),
+  )
+}
+
+///|
+test "matching content-addressed records produce cache hits" {
+  let capsule = test_capsule()
+  let first = freeze_plan(
+    capsule.graph,
+    builtin_workspace_catalog(),
+    ["intake"],
+    test_context(),
+    "first",
+  )
+  let cached : CachedNodeOutput = {
+    node_id: "intake",
+    cache_key: first.nodes[0].cache_key,
+    output_digest: "sha256:input",
+    output_ref: "workspace://artifact/input",
+  }
+  let context = { ..test_context(), cached_outputs: [cached] }
+  let second = freeze_plan(
+    capsule.graph,
+    builtin_workspace_catalog(),
+    ["intake"],
+    context,
+    "second",
+  )
+  assert_true(second.nodes[0].cache_hit)
+  assert_eq(second.nodes[0].cached_output_ref, "workspace://artifact/input")
+}
+
+///|
+test "workspace runs expose node progress and unblock downstream work" {
+  let capsule = test_capsule()
+  let plan = freeze_plan(
+    capsule.graph,
+    builtin_workspace_catalog(),
+    ["probe"],
+    test_context(),
+    "freeze",
+  )
+  let run = new_run(plan, "run-1", "operator", "created")
+  assert_eq(run.nodes[0].state, Ready)
+  assert_eq(run.nodes[1].state, Blocked)
+  let running = run.start_node("intake", "started")
+  assert_eq(running.state, RunningRun)
+  let progressing = running.progress_node("intake", 1, 2, "progress")
+  assert_eq(progressing.nodes[0].progress_numerator, 1)
+  let completed = progressing.succeed_node(
+    "intake", "sha256:intake", "workspace://artifact/intake", "done",
+  )
+  assert_eq(completed.nodes[0].state, Succeeded)
+  assert_eq(completed.nodes[1].state, Ready)
+}
+
+///|
+test "failed nodes retry and running nodes recover after restart" {
+  let capsule = test_capsule()
+  let plan = freeze_plan(
+    capsule.graph,
+    builtin_workspace_catalog(),
+    ["intake"],
+    test_context(),
+    "freeze",
+  )
+  let running = new_run(plan, "run-2", "operator", "created").start_node(
+    "intake", "started",
+  )
+  let recovered = recover_run_after_restart(running, "restart")
+  assert_eq(recovered.nodes[0].state, Ready)
+  assert_eq(recovered.nodes[0].retry_count, 1)
+  assert_eq(recovered.nodes[0].attempts[0].error_code, "process-restarted")
+  let failed = recovered
+    .start_node("intake", "again")
+    .fail_node("intake", "probe-failed", "bad media", "failed")
+  assert_eq(failed.state, FailedRun)
+  let retry = failed.retry_node("intake", "retry")
+  assert_eq(retry.nodes[0].state, Ready)
+  assert_eq(retry.nodes[0].retry_count, 2)
+}
+
+///|
+test "agent proposals are revision checked and auditable" {
+  let capsule = test_capsule()
+  let proposed_graph = {
+    ..capsule.graph,
+    revision: 2,
+    title: "Combine launch videos",
+  }
+  let proposal : AgentGraphProposal = {
+    contract: "mooncast.agent-graph-proposal.v1",
+    proposal_id: "proposal-1",
+    project_id: capsule.graph.project_id,
+    base_graph_id: capsule.graph.graph_id,
+    base_graph_revision: 1,
+    proposed_graph,
+    explanation: "Rename the recipe for the launch task.",
+    affected_node_ids: [],
+    provider_ids: [],
+    expected_cost_cny: 0.0,
+    required_approvals: [],
+    created_by: "moonclaw",
+    created_at: "now",
+    applied: false,
+  }
+  let diff = graph_diff(capsule.graph, proposed_graph)
+  assert_true(diff.added_node_ids.is_empty())
+  let (applied, receipt) = apply_agent_proposal(capsule.graph, proposal)
+  assert_eq(applied.revision, 2)
+  assert_true(receipt.applied)
+}
+
+///|
+test "artifacts preserve immutable lineage and time-ranged annotations" {
+  let artifact = new_workspace_artifact(
+    "asset-1",
+    1,
+    VideoArtifact,
+    "sha256:output",
+    "workspace://artifact/asset-1/1",
+    "/api/workspace/artifacts/asset-1/1/preview",
+    ["sha256:source-a", "sha256:source-b"],
+    "combine-videos",
+    "run-1",
+    "register",
+    "",
+    "local",
+    "ffmpeg-bundled",
+    { "receipt_id": "local-concat-1" }.to_json(),
+    "cleared",
+    "passed",
+    ["streams-readable", "duration-positive"],
+    0.0,
+    12.5,
+    "now",
+  )
+  let annotated = artifact.annotate({
+    annotation_id: "comment-1",
+    actor: "reviewer",
+    body: "Check this cut.",
+    start_tick: Some(10),
+    end_tick: Some(20),
+    created_at: "later",
+  })
+  assert_true(annotated.immutable)
+  assert_eq(annotated.parent_digests.length(), 2)
+  assert_eq(annotated.annotations.length(), 1)
+  assert_eq(annotated.qc_results.length(), 2)
+}
+
+///|
+test "manifest-backed generation capsule exposes external and human gates" {
+  let tools = [
+    @pack.tool_declaration(
+      "brief.validate",
+      "mooncast",
+      "creative-brief",
+      "creative-brief",
+      @pack.SandboxExecution,
+      idempotent=true,
+      evidence_outputs=[],
+      review_required=false,
+    ),
+    @pack.tool_declaration(
+      "project.create",
+      "mooncast",
+      "creative-brief",
+      "production-project",
+      @pack.SandboxExecution,
+      idempotent=true,
+      evidence_outputs=[],
+      review_required=false,
+    ),
+    @pack.tool_declaration(
+      "shots.generate",
+      "mooncast",
+      "production-project",
+      "asset-provenance",
+      @pack.ExternalEffect,
+      idempotent=true,
+      evidence_outputs=[],
+      review_required=true,
+    ),
+    @pack.tool_declaration(
+      "asset.review",
+      "mooncast",
+      "asset-provenance",
+      "review-decision",
+      @pack.WorkspaceMutation,
+      idempotent=true,
+      evidence_outputs=[],
+      review_required=true,
+    ),
+    @pack.tool_declaration(
+      "delivery.package",
+      "mooncast",
+      "review-decision",
+      "delivery-package",
+      @pack.SandboxExecution,
+      idempotent=true,
+      evidence_outputs=[],
+      review_required=false,
+    ),
+  ]
+  let capsule = brief_to_delivery_capsule(
+    "project-generated", "operator", "now",
+  )
+  let validation = validate_graph(capsule.graph, complete_node_catalog(tools))
+  assert_true(validation.valid)
+  let plan = freeze_plan(
+    capsule.graph,
+    complete_node_catalog(tools),
+    ["delivery"],
+    test_context(),
+    "freeze",
+  )
+  assert_true(
+    plan.nodes.any(node => {
+      node.node_id == "generate" &&
+      node.execution_owner == "moonflow" &&
+      node.review_required
+    }),
+  )
+  assert_true(
+    plan.nodes.any(node => node.node_id == "review" && node.review_required),
+  )
+  let catalog = complete_node_catalog(tools)
+  assert_true(
+    catalog.any(node => {
+      node.tool_id == "shots.generate" && node.node_kind == OperationNode
+    }),
+  )
+  assert_true(
+    catalog.any(node => {
+      node.tool_id == "asset.review" && node.node_kind == HumanGateNode
+    }),
+  )
+}
+
+///|
+test "capsule installation starts an independent graph lineage" {
+  let capsule = test_capsule()
+  let graph = instantiate_capsule(
+    capsule, "launch-cut", "project-launch", "Launch cut", "creator", "now",
+  )
+  assert_eq(graph.graph_id, "launch-cut")
+  assert_eq(graph.project_id, "project-launch")
+  assert_eq(graph.revision, 1)
+  assert_eq(graph.nodes.length(), capsule.graph.nodes.length())
+}
+
+///|
+test "graph editing is revisioned typed and cycle safe" {
+  let capsule = test_capsule()
+  let moved = move_graph_node(capsule.graph, "concat", 900, 240)
+  assert_eq(moved.revision, 2)
+  assert_true(
+    moved.nodes.any(node => node.node_id == "concat" && node.x == 900),
+  )
+  let parameterized = set_graph_node_parameter(moved, "concat", {
+    key: "mode",
+    value: "copy-or-normalize".to_json(),
+  })
+  assert_eq(parameterized.revision, 3)
+  let disconnected = disconnect_graph_edge(parameterized, "e-concat-verify")
+  assert_eq(disconnected.revision, 4)
+  let reconnected = connect_graph_nodes(
+    disconnected,
+    {
+      edge_id: "e-concat-verify-v2",
+      source_node_id: "concat",
+      source_port_id: "video",
+      target_node_id: "verify",
+      target_port_id: "video",
+    },
+    builtin_workspace_catalog(),
+  )
+  assert_eq(reconnected.revision, 5)
+  let forked = fork_graph(
+    reconnected, "combine-videos-vertical", "Combine vertical videos", "operator",
+    "later",
+  )
+  assert_eq(forked.revision, 1)
+  assert_eq(forked.graph_id, "combine-videos-vertical")
+  let removed = remove_graph_node(forked, "normalize")
+  assert_false(
+    removed.edges.any(edge => {
+      edge.source_node_id == "normalize" || edge.target_node_id == "normalize"
+    }),
+  )
+}
