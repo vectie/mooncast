@@ -106,8 +106,16 @@ fn workspace_name_after(line : String, marker : String) -> String? {
 ///|
 fn has_sibling_workspace_path(text : String, root_name : String) -> Bool {
   for line in text.split("\n") {
+    let owned = line.to_owned()
+    let filesystem_absolute = owned.contains("/Users/") ||
+      owned.contains("/home/") ||
+      owned.contains("/Volumes/") ||
+      owned.contains("/private/")
+    if !filesystem_absolute {
+      continue
+    }
     for marker in ["/" + "Workspace/", "/" + "workspace/"] {
-      match workspace_name_after(line.to_owned(), marker) {
+      match workspace_name_after(owned, marker) {
         Some(name) if name.to_lower() != root_name.to_lower() => return true
         _ => ()
       }

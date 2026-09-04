@@ -2,7 +2,7 @@
 
 Class: governed creative-workspace pack
 Visible surface: workspace graph, production studio, cut editor and review lens
-Maturity: deterministic workspace and production-pipeline alpha
+Maturity: deterministic workspace beta foundation and production-pipeline alpha
 Last reviewed: 2026-09-04
 
 ## Outcome
@@ -41,8 +41,13 @@ orchestration, provider credentials or final publication authority.
 | Creative Capsules and project-owned capsule installation | available; two initial recipes |
 | Bounded variants/map/select/merge/policy/human/subgraph controls | available as typed graph primitives |
 | Graph, Editor and Review lenses | available locally |
-| MoonClaw graph proposals and revision-checked graph diffs | available as review-gated contracts and API |
-| MoonFlow `adapter.v2` declaration, reconciliation and expiring health | available for control-tower operations |
+| Infinite canvas interaction, typed connect, asset drop and contextual editors | available locally |
+| Whole-recipe and selected-output execution with SSE snapshots | available |
+| Artifact compare, promotion, branch and successful-run template promotion | available |
+| Comments, presence leases, activity, search and client-review shares | available; deployment/identity remains host-owned |
+| MoonClaw graph proposals and revision-checked graph diffs | available through review-gated API and loopback tools |
+| MoonFlow `adapter.v2` plus deterministic workspace dispatch/receipt boundary | available; workers remain separately deployed |
+| Capsule publishing and simplified App view | available in the workspace catalogue |
 | Text/image/video/voice/music provider ports | available as contracts |
 | Real-provider complete episode | conditional and not yet commercially proven |
 | External publication | separately authorized |

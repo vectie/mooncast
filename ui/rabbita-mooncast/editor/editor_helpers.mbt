@@ -1034,6 +1034,17 @@ fn editor_subscriptions(
       @sub.on_mouse_move(mouse => dispatch(TimelinePointerMoved(mouse))),
     )
   }
+  if model.workspace_canvas_drag is Some(_) {
+    subscriptions.push(
+      @sub.on_mouse_move(mouse => dispatch(WorkspaceCanvasPointerMoved(mouse))),
+    )
+  }
+  if !model.workspace_run_id.is_blank() &&
+    !model.workspace_run_state.contains("SucceededRun") &&
+    !model.workspace_run_state.contains("FailedRun") &&
+    !model.workspace_run_state.contains("CancelledRun") {
+    subscriptions.push(@sub.every(1000, dispatch(PollWorkspaceRun)))
+  }
   match model.preview_job {
     Some(job) if preview_state(job) == "queued" ||
       preview_state(job) == "running" ||

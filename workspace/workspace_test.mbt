@@ -194,6 +194,7 @@ test "artifacts preserve immutable lineage and time-ranged annotations" {
   let artifact = new_workspace_artifact(
     "asset-1",
     1,
+    "project-workspace",
     VideoArtifact,
     "sha256:output",
     "workspace://artifact/asset-1/1",
@@ -367,4 +368,163 @@ test "graph editing is revisioned typed and cycle safe" {
       edge.source_node_id == "normalize" || edge.target_node_id == "normalize"
     }),
   )
+}
+
+///|
+test "asset comparison promotion and specialized lenses are governed" {
+  let first = new_workspace_artifact(
+    "variant-a",
+    1,
+    "project-workspace",
+    VideoArtifact,
+    "sha256:variant-a",
+    "workspace://artifact/variant-a/1",
+    "/preview/a",
+    ["sha256:source"],
+    "graph-a",
+    "run-a",
+    "generate",
+    "sha256:prompt",
+    "provider-a",
+    "model-a",
+    { "receipt": "a" }.to_json(),
+    "cleared",
+    "passed",
+    ["probe-passed"],
+    1.0,
+    5.0,
+    "now",
+  )
+  let second = {
+    ..first,
+    artifact_id: "variant-b",
+    digest: "sha256:variant-b",
+    provider: "provider-b",
+    duration_seconds: 6.0,
+  }
+  let comparison = compare_artifacts(
+    "project-workspace",
+    [first, second],
+    "variant-a",
+  )
+  assert_true(comparison.comparable)
+  assert_true(comparison.differences.contains("provider"))
+  assert_true(comparison.differences.contains("duration"))
+  let promotion = promote_artifact(
+    "project-workspace", first, "master-candidate", "reviewer", "Approved", "later",
+  )
+  assert_eq(promotion.artifact_id, "variant-a")
+  assert_false(promotion.publication_authority)
+  let branch = branch_workspace_artifact(
+    first, "variant-a-branch", "sha256:variant-a-branch", "workspace://artifact/variant-a-branch/1",
+    "/preview/a-branch", "run-branch", "edit", "later",
+  )
+  assert_eq(branch.version, 1)
+  assert_true(branch.parent_digests.contains(first.digest))
+  assert_eq(specialized_lens_for(TextArtifact), ScriptLens)
+  assert_eq(specialized_lens_for(AudioArtifact), AudioTranscriptLens)
+  assert_eq(specialized_lens_for(ReviewDecisionArtifact), ReviewLens)
+}
+
+///|
+test "collaboration shares and capsule publishing are least-authority" {
+  let comment = new_workspace_comment(
+    "comment-1",
+    "project-workspace",
+    NodeTarget,
+    "generate",
+    "  Try the alternate framing.  ",
+    "reviewer",
+    "now",
+    Some(100),
+    Some(200),
+  )
+  assert_eq(comment.body, "Try the alternate framing.")
+  let presence = renew_workspace_presence(
+    "project-workspace",
+    "actor-1",
+    "Director",
+    NodeTarget,
+    "generate",
+    "later",
+    "now",
+  )
+  assert_eq(presence.target_id, "generate")
+  let share = create_workspace_share(
+    "share-1",
+    "project-workspace",
+    RunTarget,
+    "run-1",
+    "client-review",
+    "0123456789abcdef",
+    "tomorrow",
+    "operator",
+    "now",
+  )
+  assert_true(share.token_digest.has_prefix("sha256:"))
+  assert_false(share.publication_authority)
+  let publication = publish_capsule(
+    "publication-1",
+    test_capsule(),
+    "workspace",
+    "operator",
+    "now",
+  )
+  assert_true(publication.immutable_digest.has_prefix("sha256:"))
+  assert_false(publication.publication_authority)
+  let promoted = capsule_from_graph(
+    test_capsule().graph,
+    builtin_workspace_catalog(),
+    "combine-promoted",
+    "Combine promoted",
+    "Promoted from a successful run",
+    "operator",
+    "later",
+  )
+  assert_false(promoted.public_inputs.is_empty())
+  assert_false(promoted.public_outputs.is_empty())
+}
+
+///|
+test "provider dispatch is deterministic and receipt driven" {
+  let capsule = test_capsule()
+  let plan = freeze_plan(
+    capsule.graph,
+    builtin_workspace_catalog(),
+    ["probe"],
+    test_context(),
+    "freeze",
+  )
+  let run = new_run(plan, "dispatch-run", "operator", "created")
+  let dispatch = prepare_workspace_dispatch(
+    run,
+    "intake",
+    ["workspace://input/folder"],
+    "started",
+  )
+  let repeated = prepare_workspace_dispatch(
+    run,
+    "intake",
+    ["workspace://input/folder"],
+    "later",
+  )
+  assert_eq(dispatch.dispatch_id, repeated.dispatch_id)
+  assert_eq(dispatch.state, PreparedDispatch)
+  let completed = apply_dispatch_receipt(dispatch, {
+    contract: "mooncast.workspace-dispatch-receipt.v1",
+    dispatch_id: dispatch.dispatch_id,
+    idempotency_key: dispatch.idempotency_key,
+    state: SucceededDispatch,
+    output_digest: "sha256:folder",
+    output_ref: "workspace://artifact/folder",
+    provider_receipt: { "worker": "moonclaw" }.to_json(),
+    error_code: "",
+    error_message: "",
+    recorded_at: "finished",
+  })
+  assert_eq(completed.state, SucceededDispatch)
+  let event = workspace_run_event(run, "snapshot")
+  assert_true(workspace_sse(event).has_prefix("retry: 1000\n"))
+  assert_true(workspace_sse(event).contains("event: workspace-run-snapshot"))
+  assert_true(workspace_sse(event).contains("data: {"))
 }

@@ -228,6 +228,7 @@ pub(all) struct WorkspaceArtifact {
   contract : String
   artifact_id : String
   version : Int
+  project_id : String
   kind : ArtifactKind
   digest : String
   uri : String
@@ -315,6 +316,203 @@ pub(all) struct AgentGraphProposal {
   created_by : String
   created_at : String
   applied : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// Addressable workspace objects. Comments, presence, shares, search results,
+/// and activity all use this finite target vocabulary instead of loose URLs.
+pub(all) enum WorkspaceTargetKind {
+  GraphTarget
+  NodeTarget
+  RunTarget
+  ArtifactTarget
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceComment {
+  contract : String
+  comment_id : String
+  project_id : String
+  target_kind : WorkspaceTargetKind
+  target_id : String
+  body : String
+  actor : String
+  start_tick : Int?
+  end_tick : Int?
+  created_at : String
+  resolved : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// A renewable edit lease. It is advisory presence, never publication or
+/// provider authority.
+pub(all) struct WorkspacePresence {
+  contract : String
+  project_id : String
+  actor_id : String
+  display_name : String
+  target_kind : WorkspaceTargetKind
+  target_id : String
+  lease_expires_at : String
+  updated_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct ArtifactComparison {
+  contract : String
+  project_id : String
+  artifact_ids : Array[String]
+  baseline_artifact_id : String
+  comparable : Bool
+  differences : Array[String]
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct ArtifactPromotion {
+  contract : String
+  promotion_id : String
+  project_id : String
+  artifact_id : String
+  artifact_version : Int
+  channel : String
+  actor : String
+  note : String
+  promoted_at : String
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) enum SpecializedLens {
+  ScriptLens
+  StoryboardLens
+  ImageCompareLens
+  AudioTranscriptLens
+  TimelineLens
+  ReviewLens
+  DeliveryLens
+  DataLens
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct CapsulePublication {
+  contract : String
+  publication_id : String
+  capsule : CreativeCapsule
+  visibility : String
+  actor : String
+  published_at : String
+  immutable_digest : String
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceTemplatePromotion {
+  contract : String
+  promotion_id : String
+  project_id : String
+  run_id : String
+  capsule : CreativeCapsule
+  actor : String
+  promoted_at : String
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceShare {
+  contract : String
+  share_id : String
+  project_id : String
+  target_kind : WorkspaceTargetKind
+  target_id : String
+  mode : String
+  token_digest : String
+  expires_at : String
+  created_by : String
+  created_at : String
+  revoked : Bool
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceActivity {
+  contract : String
+  activity_id : String
+  project_id : String
+  actor : String
+  action : String
+  target_kind : WorkspaceTargetKind
+  target_id : String
+  detail : String
+  recorded_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// Mooncast prepares deterministic work for MoonFlow and imports a signed or
+/// otherwise provider-verifiable receipt later. Prepared is not success.
+pub(all) enum WorkspaceDispatchState {
+  PreparedDispatch
+  AcceptedDispatch
+  SucceededDispatch
+  FailedDispatch
+  CancelledDispatch
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceDispatch {
+  contract : String
+  dispatch_id : String
+  run_id : String
+  node_id : String
+  execution_owner : String
+  operation : String
+  input_digest : String
+  input_refs : Array[String]
+  idempotency_key : String
+  state : WorkspaceDispatchState
+  output_digest : String
+  output_ref : String
+  provider_receipt : Json
+  error_code : String
+  error_message : String
+  created_at : String
+  updated_at : String
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceDispatchReceipt {
+  contract : String
+  dispatch_id : String
+  idempotency_key : String
+  state : WorkspaceDispatchState
+  output_digest : String
+  output_ref : String
+  provider_receipt : Json
+  error_code : String
+  error_message : String
+  recorded_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceSearchMatch {
+  contract : String
+  project_id : String
+  target_kind : WorkspaceTargetKind
+  target_id : String
+  title : String
+  detail : String
+  score : Int
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// A complete reconnect-safe snapshot encoded as an SSE event by the service.
+pub(all) struct WorkspaceRunEvent {
+  contract : String
+  event_id : String
+  event_name : String
+  run_id : String
+  run : RunRecord
+  recorded_at : String
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|

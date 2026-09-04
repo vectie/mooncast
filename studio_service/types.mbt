@@ -378,6 +378,26 @@ pub(all) struct WorkspaceRunCreateRequest {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+pub(all) struct WorkspaceRecipeRunRequest {
+  project_id : String
+  run_id : String
+  created_by : String
+  created_at : String
+  provider : String
+  model : String
+  policy_digest : String
+  maximum_retries : Int
+  public_inputs : Array[WorkspacePublicInputValue]
+  requested_output_node_ids : Array[String]
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspacePublicInputValue {
+  port_id : String
+  value : Json
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 pub(all) struct WorkspaceRunCommand {
   command : String
   node_id : String
@@ -422,6 +442,162 @@ pub(all) struct WorkspaceGraphHistoryProjection {
   contract : String
   graph_id : String
   revisions : Array[@workspace.WorkspaceGraph]
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceGraphDiffRequest {
+  base : @workspace.WorkspaceGraph
+  proposed : @workspace.WorkspaceGraph
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceGraphForkRequest {
+  graph_id : String
+  title : String
+  created_by : String
+  created_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceArtifactCompareRequest {
+  project_id : String
+  artifact_ids : Array[String]
+  baseline_artifact_id : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceArtifactPromoteRequest {
+  project_id : String
+  artifact_id : String
+  artifact_version : Int
+  channel : String
+  actor : String
+  note : String
+  promoted_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceArtifactBranchRequest {
+  project_id : String
+  source_artifact_id : String
+  source_version : Int
+  artifact_id : String
+  actor : String
+  branched_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceUtilityArtifactRegisterRequest {
+  actor : String
+  recorded_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceCommentCreateRequest {
+  comment_id : String
+  project_id : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  body : String
+  actor : String
+  start_tick : Int?
+  end_tick : Int?
+  created_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspacePresenceRequest {
+  project_id : String
+  actor_id : String
+  display_name : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  lease_expires_at : String
+  updated_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceShareCreateRequest {
+  share_id : String
+  project_id : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  mode : String
+  token : String
+  expires_at : String
+  created_by : String
+  created_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceCapsulePublishRequest {
+  publication_id : String
+  capsule : @workspace.CreativeCapsule
+  visibility : String
+  actor : String
+  published_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceBuiltinCapsulePublishRequest {
+  publication_id : String
+  project_id : String
+  visibility : String
+  actor : String
+  published_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceDispatchPrepareRequest {
+  input_refs : Array[String]
+  created_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceRunTemplateRequest {
+  promotion_id : String
+  capsule_id : String
+  title : String
+  summary : String
+  actor : String
+  promoted_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceSearchRequest {
+  project_id : String
+  query : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceProposalProjection {
+  contract : String
+  project_id : String
+  proposals : Array[@workspace.AgentGraphProposal]
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceFeatureProjection {
+  contract : String
+  project_id : String
+  comments : Array[@workspace.WorkspaceComment]
+  presence : Array[@workspace.WorkspacePresence]
+  promotions : Array[@workspace.ArtifactPromotion]
+  shares : Array[@workspace.WorkspaceShare]
+  activities : Array[@workspace.WorkspaceActivity]
+  publications : Array[@workspace.CapsulePublication]
+  dispatches : Array[@workspace.WorkspaceDispatch]
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceSearchProjection {
+  contract : String
+  project_id : String
+  query : String
+  matches : Array[@workspace.WorkspaceSearchMatch]
   publication_authority : Bool
 } derive(Debug, Eq, ToJson, FromJson)
 

@@ -2,6 +2,7 @@
 pub fn new_workspace_artifact(
   artifact_id : String,
   version : Int,
+  project_id : String,
   kind : ArtifactKind,
   digest : String,
   uri : String,
@@ -22,6 +23,7 @@ pub fn new_workspace_artifact(
   created_at : String,
 ) -> WorkspaceArtifact raise WorkspaceError {
   guard !artifact_id.is_blank() &&
+    !project_id.is_blank() &&
     version > 0 &&
     digest.has_prefix("sha256:") &&
     !uri.is_blank() &&
@@ -31,9 +33,10 @@ pub fn new_workspace_artifact(
     raise InvalidTransition("artifact identity and provenance are required")
   }
   {
-    contract: "mooncast.workspace-artifact.v1",
+    contract: "mooncast.workspace-artifact.v2",
     artifact_id,
     version,
+    project_id,
     kind,
     digest,
     uri,

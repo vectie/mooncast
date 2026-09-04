@@ -41,6 +41,12 @@ test "source boundary rejects generic imports and sibling workspaces" {
     ).length() >
     0,
   )
+  assert_false(
+    source_text_issues(
+      "ui.mbt", "let endpoint = \"/api/workspace/projects/p1\"", "mooncast",
+    ).length() >
+    0,
+  )
 }
 
 ///|

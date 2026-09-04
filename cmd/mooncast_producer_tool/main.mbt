@@ -240,6 +240,157 @@ async fn resource_call(tool : String, args : Array[String]) -> ProducerCall {
 }
 
 ///|
+fn workspace_project_call(
+  tool : String,
+  args : Array[String],
+) -> ProducerCall raise {
+  let project_id = required_id(args, 2, "project id")
+  let root = "/api/workspace/projects/" + project_id
+  match tool {
+    "workspace.capsules" => {
+      guard args.length() == 3 else { fail(usage()) }
+      { request_method: Get, path: root + "/capsules", body: None }
+    }
+    "workspace.artifacts" => {
+      guard args.length() == 3 else { fail(usage()) }
+      { request_method: Get, path: root + "/artifacts", body: None }
+    }
+    "workspace.features" => {
+      guard args.length() == 3 else { fail(usage()) }
+      { request_method: Get, path: root + "/features", body: None }
+    }
+    "workspace.proposals" => {
+      guard args.length() == 3 else { fail(usage()) }
+      { request_method: Get, path: root + "/proposals", body: None }
+    }
+    _ => fail("unknown workspace project tool id: " + tool)
+  }
+}
+
+///|
+async fn workspace_run_call(
+  tool : String,
+  args : Array[String],
+) -> ProducerCall {
+  let run_id = required_id(args, 2, "run id")
+  let root = "/api/workspace/runs/" + run_id
+  match tool {
+    "workspace.run.get" => {
+      guard args.length() == 3 else { fail(usage()) }
+      { request_method: Get, path: root, body: None }
+    }
+    "workspace.run.events" => {
+      guard args.length() == 3 else { fail(usage()) }
+      { request_method: Get, path: root + "/events", body: None }
+    }
+    "workspace.run.command" => {
+      let body = required_body(args, 3)
+      { request_method: Post, path: root + "/commands", body: Some(body) }
+    }
+    "workspace.run.dispatch" => {
+      let node_id = required_id(args, 3, "node id")
+      let body = required_body(args, 4)
+      {
+        request_method: Post,
+        path: root + "/nodes/" + node_id + "/dispatch",
+        body: Some(body),
+      }
+    }
+    "workspace.run.promote-template" => {
+      let body = required_body(args, 3)
+      {
+        request_method: Post,
+        path: root + "/promote-template",
+        body: Some(body),
+      }
+    }
+    _ => fail("unknown workspace run tool id: " + tool)
+  }
+}
+
+///|
+async fn workspace_body_call(
+  tool : String,
+  args : Array[String],
+) -> ProducerCall {
+  let (path, authority) = match tool {
+    "workspace.plan.create" => ("/api/workspace/plans", "mutation")
+    "workspace.run.create" => ("/api/workspace/runs", "mutation")
+    "workspace.artifact.save" => ("/api/workspace/artifacts", "mutation")
+    "workspace.artifact.compare" =>
+      ("/api/workspace/artifacts/compare", "observe")
+    "workspace.artifact.promote" =>
+      ("/api/workspace/artifacts/promote", "review")
+    "workspace.search" => ("/api/workspace/search", "observe")
+    "workspace.comment.create" => ("/api/workspace/comments", "mutation")
+    "workspace.presence.renew" => ("/api/workspace/presence", "mutation")
+    "workspace.share.create" => ("/api/workspace/shares", "review")
+    "workspace.capsule.publish" => ("/api/workspace/capsules/publish", "review")
+    "workspace.graph.compare" => ("/api/workspace/graphs/compare", "observe")
+    "workspace.proposal.create" => ("/api/workspace/proposals", "mutation")
+    "workspace.proposal.apply" => ("/api/workspace/proposals/apply", "review")
+    _ => fail("unknown workspace body tool id: " + tool)
+  }
+  ignore(authority)
+  let body = required_body(args, 2)
+  { request_method: Post, path, body: Some(body) }
+}
+
+///|
+async fn workspace_artifact_call(args : Array[String]) -> ProducerCall {
+  let artifact_id = required_id(args, 2, "artifact id")
+  let body = required_body(args, 3)
+  {
+    request_method: Post,
+    path: "/api/workspace/artifacts/" + artifact_id + "/branch",
+    body: Some(body),
+  }
+}
+
+///|
+async fn workspace_capsule_call(args : Array[String]) -> ProducerCall {
+  let capsule_id = required_id(args, 2, "capsule id")
+  let body = required_body(args, 3)
+  {
+    request_method: Post,
+    path: "/api/workspace/capsules/" + capsule_id + "/publish",
+    body: Some(body),
+  }
+}
+
+///|
+async fn workspace_graph_call(
+  tool : String,
+  args : Array[String],
+) -> ProducerCall {
+  let project_id = required_id(args, 2, "project id")
+  let graph_id = required_id(args, 3, "graph id")
+  let root = "/api/workspace/projects/" + project_id + "/graphs/" + graph_id
+  match tool {
+    "workspace.graph.get" => {
+      guard args.length() == 4 else { fail(usage()) }
+      { request_method: Get, path: root, body: None }
+    }
+    "workspace.graph.fork" => {
+      let body = required_body(args, 4)
+      { request_method: Post, path: root + "/fork", body: Some(body) }
+    }
+    _ => fail("unknown workspace graph tool id: " + tool)
+  }
+}
+
+///|
+async fn workspace_recipe_call(args : Array[String]) -> ProducerCall {
+  let capsule_id = required_id(args, 2, "capsule id")
+  let body = required_body(args, 3)
+  {
+    request_method: Post,
+    path: "/api/workspace/recipes/" + capsule_id + "/runs",
+    body: Some(body),
+  }
+}
+
+///|
 async fn resolve_call(args : Array[String]) -> ProducerCall {
   guard args.length() >= 2 else { fail(usage()) }
   let tool = args[1]
@@ -251,6 +402,46 @@ async fn resolve_call(args : Array[String]) -> ProducerCall {
     "project.list" => {
       guard args.length() == 2 else { fail(usage()) }
       { request_method: Get, path: "/api/v2/projects", body: None }
+    }
+    "workspace.catalog" => {
+      guard args.length() == 2 else { fail(usage()) }
+      { request_method: Get, path: "/api/workspace/catalog", body: None }
+    }
+    "workspace.capsules"
+    | "workspace.artifacts"
+    | "workspace.features"
+    | "workspace.proposals" => workspace_project_call(tool, args)
+    "workspace.run.get"
+    | "workspace.run.events"
+    | "workspace.run.command"
+    | "workspace.run.dispatch"
+    | "workspace.run.promote-template" => workspace_run_call(tool, args)
+    "workspace.graph.get" | "workspace.graph.fork" =>
+      workspace_graph_call(tool, args)
+    "workspace.recipe.run" => workspace_recipe_call(args)
+    "workspace.plan.create"
+    | "workspace.run.create"
+    | "workspace.artifact.save"
+    | "workspace.artifact.compare"
+    | "workspace.artifact.promote"
+    | "workspace.search"
+    | "workspace.comment.create"
+    | "workspace.presence.renew"
+    | "workspace.share.create"
+    | "workspace.capsule.publish"
+    | "workspace.graph.compare"
+    | "workspace.proposal.create"
+    | "workspace.proposal.apply" => workspace_body_call(tool, args)
+    "workspace.artifact.branch" => workspace_artifact_call(args)
+    "workspace.capsule.publish-builtin" => workspace_capsule_call(args)
+    "workspace.dispatch.receipt" => {
+      let dispatch_id = required_id(args, 2, "dispatch id")
+      let body = required_body(args, 3)
+      {
+        request_method: Post,
+        path: "/api/workspace/dispatches/" + dispatch_id + "/receipt",
+        body: Some(body),
+      }
     }
     "project.get"
     | "project.events"

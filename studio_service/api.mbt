@@ -390,6 +390,10 @@ async fn StudioService::dispatch_unsafe(
       let graph : @workspace.WorkspaceGraph = decode_body(request)
       json_value_response(200, self.validate_workspace_graph(graph))
     }
+    (Post, ["api", "workspace", "graphs", "compare"]) => {
+      let input : WorkspaceGraphDiffRequest = decode_body(request)
+      json_value_response(200, self.compare_workspace_graphs(input))
+    }
     (Post, ["api", "workspace", "projects", project_id, "graphs"]) => {
       let graph : @workspace.WorkspaceGraph = decode_body(request)
       guard graph.project_id == project_id else {
@@ -402,6 +406,16 @@ async fn StudioService::dispatch_unsafe(
     }
     (Get, ["api", "workspace", "projects", project_id, "graphs", graph_id]) =>
       json_value_response(200, self.get_workspace_graph(project_id, graph_id))
+    (
+      Post,
+      ["api", "workspace", "projects", project_id, "graphs", graph_id, "fork"],
+    ) => {
+      let input : WorkspaceGraphForkRequest = decode_body(request)
+      json_value_response(
+        201,
+        self.fork_workspace_graph(project_id, graph_id, input),
+      )
+    }
     (
       Get,
       [
@@ -422,6 +436,10 @@ async fn StudioService::dispatch_unsafe(
       let input : WorkspacePlanRequest = decode_body(request)
       json_value_response(201, self.freeze_workspace_plan(input))
     }
+    (Post, ["api", "workspace", "recipes", capsule_id, "runs"]) => {
+      let input : WorkspaceRecipeRunRequest = decode_body(request)
+      json_value_response(201, self.start_workspace_recipe(capsule_id, input))
+    }
     (Post, ["api", "workspace", "runs"]) => {
       let input : WorkspaceRunCreateRequest = decode_body(request)
       json_value_response(201, self.create_workspace_run(input))
@@ -432,16 +450,130 @@ async fn StudioService::dispatch_unsafe(
       let input : WorkspaceRunCommand = decode_body(request)
       json_value_response(200, self.apply_workspace_run_command(run_id, input))
     }
+    (Post, ["api", "workspace", "runs", run_id, "promote-template"]) => {
+      let input : WorkspaceRunTemplateRequest = decode_body(request)
+      json_value_response(
+        201,
+        self.promote_workspace_run_to_template(run_id, input),
+      )
+    }
+    (Get, ["api", "workspace", "runs", run_id, "events"]) => {
+      let run = self.get_workspace_run(run_id)
+      let event = @workspace.workspace_run_event(run, now_string())
+      let response = @host_http.text_response(
+        200,
+        "OK",
+        @workspace.workspace_sse(event),
+        content_type="text/event-stream; charset=utf-8",
+      )
+      response.headers["Cache-Control"] = "no-cache"
+      response.headers["X-Accel-Buffering"] = "no"
+      response
+    }
+    (Post, ["api", "workspace", "runs", run_id, "nodes", node_id, "dispatch"]) => {
+      let input : WorkspaceDispatchPrepareRequest = decode_body(request)
+      json_value_response(
+        202,
+        self.prepare_workspace_dispatch(run_id, node_id, input),
+      )
+    }
+    (Post, ["api", "workspace", "dispatches", dispatch_id, "receipt"]) => {
+      let input : @workspace.WorkspaceDispatchReceipt = decode_body(request)
+      json_value_response(
+        200,
+        self.apply_workspace_dispatch_receipt(dispatch_id, input),
+      )
+    }
     (Get, ["api", "workspace", "artifacts"]) =>
       json_value_response(200, self.list_workspace_artifacts())
+    (Get, ["api", "workspace", "projects", project_id, "artifacts"]) =>
+      json_value_response(200, self.list_workspace_artifacts(project_id~))
     (Post, ["api", "workspace", "artifacts"]) => {
       let artifact : @workspace.WorkspaceArtifact = decode_body(request)
       json_value_response(201, self.save_workspace_artifact(artifact))
+    }
+    (Post, ["api", "workspace", "artifacts", "compare"]) => {
+      let input : WorkspaceArtifactCompareRequest = decode_body(request)
+      json_value_response(200, self.compare_workspace_artifacts(input))
+    }
+    (Post, ["api", "workspace", "artifacts", "promote"]) => {
+      let input : WorkspaceArtifactPromoteRequest = decode_body(request)
+      json_value_response(201, self.promote_workspace_artifact(input))
+    }
+    (Post, ["api", "workspace", "artifacts", "branch"]) => {
+      let input : WorkspaceArtifactBranchRequest = decode_body(request)
+      json_value_response(201, self.branch_workspace_artifact(input))
+    }
+    (
+      Post,
+      [
+        "api",
+        "workspace",
+        "projects",
+        project_id,
+        "utility-concats",
+        job_id,
+        "register",
+      ],
+    ) => {
+      let input : WorkspaceUtilityArtifactRegisterRequest = decode_body(request)
+      json_value_response(
+        201,
+        self.register_utility_concat_workspace_artifact(
+          project_id, job_id, input,
+        ),
+      )
+    }
+    (Post, ["api", "workspace", "comments"]) => {
+      let input : WorkspaceCommentCreateRequest = decode_body(request)
+      json_value_response(201, self.record_workspace_comment(input))
+    }
+    (Post, ["api", "workspace", "presence"]) => {
+      let input : WorkspacePresenceRequest = decode_body(request)
+      json_value_response(200, self.renew_workspace_presence(input))
+    }
+    (Post, ["api", "workspace", "shares"]) => {
+      let input : WorkspaceShareCreateRequest = decode_body(request)
+      json_value_response(201, self.create_workspace_share(input))
+    }
+    (Post, ["api", "workspace", "capsules", "publish"]) => {
+      let input : WorkspaceCapsulePublishRequest = decode_body(request)
+      json_value_response(201, self.publish_workspace_capsule(input))
+    }
+    (Post, ["api", "workspace", "capsules", capsule_id, "publish"]) => {
+      let input : WorkspaceBuiltinCapsulePublishRequest = decode_body(request)
+      json_value_response(
+        201,
+        self.publish_builtin_workspace_capsule(capsule_id, input),
+      )
+    }
+    (Get, ["api", "workspace", "projects", project_id, "features"]) =>
+      json_value_response(200, self.workspace_features(project_id))
+    (Get, ["api", "workspace", "projects", project_id, "search"]) =>
+      json_value_response(
+        200,
+        self.search_workspace(
+          project_id,
+          control_tower_query_value(request.query, "q").unwrap_or(""),
+        ),
+      )
+    (Post, ["api", "workspace", "search"]) => {
+      let input : WorkspaceSearchRequest = decode_body(request)
+      json_value_response(
+        200,
+        self.search_workspace(input.project_id, input.query),
+      )
     }
     (Post, ["api", "workspace", "proposals", "apply"]) => {
       let input : WorkspaceProposalApplyRequest = decode_body(request)
       json_value_response(200, self.apply_workspace_proposal(input))
     }
+    (Post, ["api", "workspace", "proposals"]) => {
+      let input : @workspace.AgentGraphProposal = decode_body(request)
+      json_value_response(201, self.save_workspace_proposal(input))
+    }
+    (Get, ["api", "workspace", "projects", project_id, "proposals"]) =>
+      json_value_response(200, self.list_workspace_proposals(project_id))
     (Get, ["api", "config"]) =>
       json_value_response(200, {
         mode: "moonbit-native-canonical",

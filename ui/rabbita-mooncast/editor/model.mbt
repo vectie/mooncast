@@ -33,6 +33,84 @@ enum WorkspaceRecipe {
 } derive(Debug, Eq)
 
 ///|
+struct WorkspaceNodePosition {
+  recipe : WorkspaceRecipe
+  node_id : String
+  x : Int
+  y : Int
+}
+
+///|
+struct WorkspaceCanvasDrag {
+  recipe : WorkspaceRecipe
+  node_id : String
+  origin_client_x : Int
+  origin_client_y : Int
+  origin_x : Int
+  origin_y : Int
+}
+
+///|
+struct WorkspaceConnection {
+  recipe : WorkspaceRecipe
+  source_node_id : String
+  target_node_id : String
+}
+
+///|
+struct WorkspaceAssetNode {
+  recipe : WorkspaceRecipe
+  node_id : String
+  title : String
+  artifact_kind : String
+  x : Int
+  y : Int
+}
+
+///|
+#warnings("-unused_field")
+struct WorkspaceRunPayload {
+  run_id : String
+  state : Json
+  updated_at : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceProposalSummary {
+  proposal_id : String
+  explanation : String
+  affected_node_ids : Array[String]
+  provider_ids : Array[String]
+  expected_cost_cny : Double
+  required_approvals : Array[String]
+  applied : Bool
+  created_by : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceProposalPayload {
+  proposals : Array[WorkspaceProposalSummary]
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceSearchSummary {
+  project_id : String
+  target_id : String
+  title : String
+  detail : String
+  score : Int
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceSearchPayload {
+  matches : Array[WorkspaceSearchSummary]
+} derive(FromJson)
+
+///|
 struct TimelineDrag {
   clip_id : String
   mode : TimelineDragMode
@@ -364,6 +442,22 @@ struct Model {
   workspace_lens : WorkspaceLens
   selected_workspace_recipe : WorkspaceRecipe
   selected_workspace_node : String
+  workspace_node_positions : Array[WorkspaceNodePosition]
+  workspace_canvas_drag : WorkspaceCanvasDrag?
+  workspace_canvas_zoom : Double
+  workspace_connections : Array[WorkspaceConnection]
+  workspace_asset_nodes : Array[WorkspaceAssetNode]
+  workspace_dragged_asset : String
+  workspace_connect_from : String
+  workspace_app_view : Bool
+  workspace_search : String
+  workspace_search_results : Array[WorkspaceSearchSummary]
+  workspace_comment : String
+  workspace_public_input : String
+  workspace_activity : Array[String]
+  workspace_run_id : String
+  workspace_run_state : String
+  workspace_proposals : Array[WorkspaceProposalSummary]
   production_project_id : String
   workspace : @api.WorkspaceSnapshot?
   selected_take_id : String
@@ -463,6 +557,35 @@ fn initial_model() -> Model {
     workspace_lens: GraphLens,
     selected_workspace_recipe: CombineVideosRecipe,
     selected_workspace_node: "concat",
+    workspace_node_positions: [
+      { recipe: CombineVideosRecipe, node_id: "intake", x: 40, y: 80 },
+      { recipe: CombineVideosRecipe, node_id: "probe", x: 300, y: 80 },
+      { recipe: CombineVideosRecipe, node_id: "normalize", x: 560, y: 80 },
+      { recipe: CombineVideosRecipe, node_id: "concat", x: 820, y: 80 },
+      { recipe: CombineVideosRecipe, node_id: "verify", x: 1080, y: 80 },
+      { recipe: CombineVideosRecipe, node_id: "register", x: 1340, y: 80 },
+      { recipe: BriefToDeliveryRecipe, node_id: "brief", x: 40, y: 80 },
+      { recipe: BriefToDeliveryRecipe, node_id: "validate", x: 300, y: 80 },
+      { recipe: BriefToDeliveryRecipe, node_id: "project", x: 560, y: 80 },
+      { recipe: BriefToDeliveryRecipe, node_id: "generate", x: 820, y: 80 },
+      { recipe: BriefToDeliveryRecipe, node_id: "review", x: 1080, y: 80 },
+      { recipe: BriefToDeliveryRecipe, node_id: "delivery", x: 1340, y: 80 },
+    ],
+    workspace_canvas_drag: None,
+    workspace_canvas_zoom: 1.0,
+    workspace_connections: [],
+    workspace_asset_nodes: [],
+    workspace_dragged_asset: "",
+    workspace_connect_from: "",
+    workspace_app_view: false,
+    workspace_search: "",
+    workspace_search_results: [],
+    workspace_comment: "",
+    workspace_public_input: "",
+    workspace_activity: ["Workspace opened · graph revision 1"],
+    workspace_run_id: "",
+    workspace_run_state: "idle",
+    workspace_proposals: [],
     production_project_id: "",
     workspace: None,
     selected_take_id: "",

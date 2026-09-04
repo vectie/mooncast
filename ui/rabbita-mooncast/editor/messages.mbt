@@ -2,10 +2,38 @@
 enum Msg {
   Bootstrap
   ProjectsLoaded(Result[Json, Error])
+  WorkspaceProposalsLoaded(Result[Json, Error])
   SelectProject(String)
   SwitchWorkspaceLens(WorkspaceLens)
   SelectWorkspaceRecipe(WorkspaceRecipe)
   SelectWorkspaceNode(String)
+  WorkspacePresenceRenewed(Result[Json, Error])
+  WorkspaceCanvasPointerDown(String, @common.Mouse)
+  WorkspaceCanvasPointerMoved(@common.Mouse)
+  WorkspaceCanvasPointerReleased
+  WorkspaceNodeNudged(String, Int, Int)
+  WorkspaceZoomChanged(Double)
+  WorkspacePortActivated(String)
+  WorkspaceAssetDragStarted(String)
+  WorkspaceAssetAddRequested(String)
+  WorkspaceAssetDropped
+  ToggleWorkspaceAppView
+  WorkspaceSearchChanged(String)
+  WorkspaceSearchLoaded(Result[Json, Error])
+  WorkspaceCommentChanged(String)
+  WorkspacePublicInputChanged(String)
+  PostWorkspaceNodeComment
+  CompareWorkspaceAssets
+  PromoteWorkspaceAsset
+  BranchWorkspaceAsset
+  PublishWorkspaceCapsule
+  ShareWorkspaceRun
+  StartWorkspaceRecipe
+  StartWorkspaceSelectedOutput
+  WorkspaceRecipeStarted(Result[Json, Error])
+  PollWorkspaceRun
+  WorkspaceRunPolled(Result[Json, Error])
+  WorkspaceActionFinished(String, Result[Json, Error])
   OpenProject
   ProductionProjectChanged(String)
   ImportProduction

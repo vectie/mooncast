@@ -1,6 +1,14 @@
 ///|
 fn view(dispatch : @rabbita.Emit[Msg], model : Model) -> @rabbita.Html {
-  @html.div(on_mouseup=dispatch.map(_ => TimelinePointerReleased)) <| [
+  @html.div(
+    on_mouseup=mouse => {
+      ignore(mouse)
+      @cmd.batch([
+        dispatch(TimelinePointerReleased),
+        dispatch(WorkspaceCanvasPointerReleased),
+      ])
+    },
+  ) <| [
     @html.main_(class="mooncast-editor") <| [
       project_header(dispatch, model),
       match model.workspace_lens {
