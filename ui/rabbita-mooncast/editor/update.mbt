@@ -60,6 +60,9 @@ fn update(
           let catalog = @http.get("/api/workspace/catalog").expect_json(value => {
             dispatch(WorkspaceCatalogLoaded(value))
           })
+          let capsules = @http.get(
+            "/api/workspace/projects/" + project_id + "/capsules",
+          ).expect_json(value => dispatch(WorkspaceCapsulesLoaded(value)))
           let graph = @http.post(
               "/api/workspace/projects/" +
               project_id +
@@ -82,7 +85,7 @@ fn update(
           ).expect_json(value => dispatch(WorkspaceRunHistoryLoaded(value)))
           (
             @rabbita.batch([
-              opened, proposals, catalog, graph, assets, features, runs,
+              opened, proposals, catalog, capsules, graph, assets, features, runs,
             ]),
             {
               ..model,
@@ -137,6 +140,38 @@ fn update(
                 @rabbita.none,
                 { ..model, error: "Node catalog response was invalid." },
               )
+          }
+        }
+      }
+    WorkspaceCapsulesLoaded(result) =>
+      match result {
+        Err(_) =>
+          (
+            @rabbita.none,
+            {
+              ..model,
+              workspace_activity: model.workspace_activity +
+              ["Installable capsules could not be refreshed"],
+            },
+          )
+        Ok(response) => {
+          let decoded : WorkspaceCapsulePayload? = Some(
+            @json.from_json(response),
+          ) catch {
+            _ => None
+          }
+          match decoded {
+            Some(value) =>
+              (
+                @rabbita.none,
+                {
+                  ..model,
+                  workspace_capsules: value.capsules,
+                  workspace_activity: model.workspace_activity +
+                  ["{value.capsules.length()} installable capsules loaded"],
+                },
+              )
+            None => (@rabbita.none, model)
           }
         }
       }
@@ -366,6 +401,36 @@ fn update(
             { ..model, error: "That node definition is unavailable." },
           )
       }
+    ExpandWorkspaceCapsule(capsule_id, capsule_version) => {
+      guard model.workspace_graph is Some(graph) &&
+        !model.selected_workspace_node.is_blank() else {
+        return (@rabbita.none, model)
+      }
+      (
+        @http.post(
+          "/api/workspace/projects/" +
+          model.project_id +
+          "/graphs/" +
+          graph.graph_id +
+          "/nodes/" +
+          model.selected_workspace_node +
+          "/expand-capsule",
+        )
+        .with_json({
+          "expected_revision": graph.revision.to_json(),
+          "capsule_id": capsule_id.to_json(),
+          "capsule_version": capsule_version.to_json(),
+          "actor": model.workspace_actor_name.to_json(),
+        })
+        .expect_json(result => dispatch(WorkspaceGraphLoaded(result))),
+        {
+          ..model,
+          loading: true,
+          status: "Expanding exact capsule revision…",
+          error: "",
+        },
+      )
+    }
     DeleteSelectedWorkspaceNode =>
       (@rabbita.none, workspace_graph_delete_selected(model))
     ToggleWorkspaceNodeSelection => {
@@ -1814,6 +1879,9 @@ fn update(
       let catalog = @http.get("/api/workspace/catalog").expect_json(result => {
         dispatch(WorkspaceCatalogLoaded(result))
       })
+      let capsules = @http.get(
+        "/api/workspace/projects/" + model.project_id + "/capsules",
+      ).expect_json(result => dispatch(WorkspaceCapsulesLoaded(result)))
       let capsule_id = workspace_recipe_id(model.selected_workspace_recipe)
       let graph = @http.post(
           "/api/workspace/projects/" +
@@ -1839,7 +1907,7 @@ fn update(
       ).expect_json(result => dispatch(WorkspaceRunHistoryLoaded(result)))
       (
         @rabbita.batch([
-          opened, proposals, catalog, graph, assets, features, runs,
+          opened, proposals, catalog, capsules, graph, assets, features, runs,
         ]),
         {
           ..model,

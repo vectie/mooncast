@@ -4,6 +4,7 @@ enum Msg {
   ProjectsLoaded(Result[Json, Error])
   WorkspaceProposalsLoaded(Result[Json, Error])
   WorkspaceCatalogLoaded(Result[Json, Error])
+  WorkspaceCapsulesLoaded(Result[Json, Error])
   WorkspaceGraphLoaded(Result[Json, Error])
   WorkspaceAssetsLoaded(Result[Json, Error])
   WorkspaceAssetQueryChanged(String)
@@ -15,6 +16,7 @@ enum Msg {
   WorkspaceGraphSaved(String, Result[Json, Error])
   WorkspaceNodePaletteChanged(String)
   AddWorkspaceNode(String)
+  ExpandWorkspaceCapsule(String, Int)
   DeleteSelectedWorkspaceNode
   DuplicateSelectedWorkspaceNode
   ToggleSelectedWorkspaceNodeCollapsed

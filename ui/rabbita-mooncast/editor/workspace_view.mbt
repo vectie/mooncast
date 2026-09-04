@@ -1148,6 +1148,31 @@ fn workspace_inspector(
         "Set parameter",
       ),
     ],
+    match workspace_definition(model, node.definition_id) {
+      Some(definition) if definition.node_kind == CapsuleNode =>
+        @html.div(class="workspace-capsule-picker") <| [
+          @html.span(class="eyebrow", "Expand installed capsule"),
+          @html.p(
+            "Expansion replaces this wrapper with the exact versioned child graph and preserves mapped external edges.",
+          ),
+          @html.div(class="workspace-review-actions") <| (if model.workspace_capsules.is_empty() {
+            [@html.small("No installable capsule is available.")]
+          } else {
+            model.workspace_capsules.map(capsule => {
+              @html.button(
+                type_="button",
+                disabled=model.loading,
+                title=capsule.summary,
+                on_click=dispatch(
+                  ExpandWorkspaceCapsule(capsule.capsule_id, capsule.version),
+                ),
+                capsule.title + " v" + capsule.version.to_string(),
+              )
+            })
+          }),
+        ]
+      _ => @html.nothing
+    },
     @html.div(class="workspace-collaboration") <| [
       @html.span(class="eyebrow", "Live collaboration"),
       @html.label <| [

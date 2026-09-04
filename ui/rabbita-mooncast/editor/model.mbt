@@ -145,6 +145,21 @@ struct WorkspaceCatalogPayload {
 } derive(FromJson)
 
 ///|
+#warnings("-unused_field")
+struct WorkspaceCapsuleSummary {
+  capsule_id : String
+  version : Int
+  title : String
+  summary : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceCapsulePayload {
+  capsules : Array[WorkspaceCapsuleSummary]
+} derive(FromJson)
+
+///|
 struct WorkspaceNodePosition {
   x : Int
   y : Int
@@ -730,6 +745,7 @@ struct Model {
   selected_workspace_node_ids : Array[String]
   selected_workspace_edge : String
   workspace_catalog : Array[WorkspaceDefinitionSummary]
+  workspace_capsules : Array[WorkspaceCapsuleSummary]
   workspace_graph : WorkspaceGraphSummary?
   workspace_graph_undo : Array[WorkspaceGraphSummary]
   workspace_graph_redo : Array[WorkspaceGraphSummary]
@@ -880,6 +896,7 @@ fn initial_model() -> Model {
     selected_workspace_node_ids: ["concat"],
     selected_workspace_edge: "",
     workspace_catalog: [],
+    workspace_capsules: [],
     workspace_graph: None,
     workspace_graph_undo: [],
     workspace_graph_redo: [],

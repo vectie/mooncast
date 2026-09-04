@@ -398,3 +398,31 @@ test "asset library URL includes query kind tag and pagination" {
   assert_true(url.contains("offset=20"))
   assert_true(url.contains("limit=10"))
 }
+
+///|
+test "installable capsule versions load for subgraph expansion" {
+  let response : Json = {
+    "capsules": [
+      {
+        "capsule_id": "combine-videos",
+        "version": 1,
+        "title": "Combine videos",
+        "summary": "Deterministic local assembly",
+      },
+      {
+        "capsule_id": "promoted-cut",
+        "version": 4,
+        "title": "Promoted cut",
+        "summary": "Reviewed project template",
+      },
+    ],
+  }
+  let (_, loaded) = update(
+    _ => @rabbita.none,
+    WorkspaceCapsulesLoaded(Ok(response)),
+    initial_model(),
+  )
+  assert_eq(loaded.workspace_capsules.length(), 2)
+  assert_eq(loaded.workspace_capsules[1].capsule_id, "promoted-cut")
+  assert_eq(loaded.workspace_capsules[1].version, 4)
+}
