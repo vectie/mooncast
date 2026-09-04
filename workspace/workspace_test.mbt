@@ -62,7 +62,10 @@ test "planning is deterministic and limited to selected ancestors" {
     content="intake,probe,normalize,concat",
   )
   assert_true(plan.graph_digest.has_prefix("sha256:"))
-  assert_eq(plan.frozen_graph, capsule.graph)
+  assert_eq(
+    plan.frozen_graph,
+    materialize_graph_parameters(capsule.graph, builtin_workspace_catalog()),
+  )
   assert_true(plan.nodes.all(node => node.tool_digest.has_prefix("sha256:")))
   assert_true(plan.plan_id.has_prefix("plan-"))
   assert_false(plan.publication_authority)

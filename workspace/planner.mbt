@@ -142,29 +142,30 @@ pub fn freeze_plan(
   context : ExecutionContext,
   frozen_at : String,
 ) -> ExecutionPlan raise WorkspaceError {
-  let validation = validate_graph(graph, catalog)
+  let frozen_graph = materialize_graph_parameters(graph, catalog)
+  let validation = validate_graph(frozen_graph, catalog)
   guard validation.valid else { raise InvalidGraph(validation.errors) }
   let outputs = if requested_output_node_ids.is_empty() {
-    graph.output_node_ids.copy()
+    frozen_graph.output_node_ids.copy()
   } else {
     requested_output_node_ids.copy()
   }
   for output_id in outputs {
-    guard graph.nodes.any(node => node.node_id == output_id) else {
+    guard frozen_graph.nodes.any(node => node.node_id == output_id) else {
       raise UnknownNode(output_id)
     }
   }
-  let selected = selected_ancestors(graph, outputs)
+  let selected = selected_ancestors(frozen_graph, outputs)
   let planned : Array[PlannedNode] = []
   for node_id in validation.topological_node_ids {
     if !selected.contains(node_id) {
       continue
     }
-    guard workflow_node_for(graph, node_id) is Some(node) &&
+    guard workflow_node_for(frozen_graph, node_id) is Some(node) &&
       catalog_definition_for(catalog, node.definition_id) is Some(definition) else {
       raise UnknownNode(node_id)
     }
-    let input_ids = graph.edges
+    let input_ids = frozen_graph.edges
       .filter(edge => edge.target_node_id == node_id)
       .map(edge => edge.source_node_id)
     input_ids.sort()
@@ -214,7 +215,7 @@ pub fn freeze_plan(
       review_required: definition.review_required,
     })
   }
-  let digest = graph_digest(graph)
+  let digest = graph_digest(frozen_graph)
   let output_copy = outputs.copy()
   output_copy.sort()
   let plan_core = [
@@ -228,10 +229,10 @@ pub fn freeze_plan(
   {
     contract: "mooncast.workspace-execution-plan.v1",
     plan_id: "plan-" + sha256_text(plan_core)[7:27].to_owned(),
-    graph_id: graph.graph_id,
-    graph_revision: graph.revision,
+    graph_id: frozen_graph.graph_id,
+    graph_revision: frozen_graph.revision,
     graph_digest: digest,
-    frozen_graph: graph,
+    frozen_graph,
     selected_output_node_ids: output_copy,
     nodes: planned,
     provider: context.provider,

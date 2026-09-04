@@ -42,6 +42,62 @@ pub(all) struct PortDefinition {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+/// The semantic value expected by a creative parameter. Keeping this separate
+/// from its visual control lets every surface render the same graph contract
+/// without putting UI details into execution logic.
+pub(all) enum ParameterValueKind {
+  TextValue
+  IntegerValue
+  NumberValue
+  BooleanValue
+  JsonValue
+  AssetReferenceValue
+  ProviderValue
+  ModelValue
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// A portable control hint. Clients may choose a native equivalent, but must
+/// preserve the value semantics declared by `value_kind`.
+pub(all) enum ParameterControl {
+  TextFieldControl
+  TextAreaControl
+  NumberFieldControl
+  SliderControl
+  SelectControl
+  CheckboxControl
+  JsonEditorControl
+  AssetPickerControl
+  ProviderPickerControl
+  ModelPickerControl
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct ParameterOption {
+  value : String
+  label : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// Declarative parameter metadata shared by the graph editor, App Mode, the
+/// planner, and agents. Defaults are data, so they participate in frozen plans
+/// and cache identity instead of being hidden in UI code.
+pub(all) struct ParameterDefinition {
+  parameter_id : String
+  label : String
+  description : String
+  value_kind : ParameterValueKind
+  control : ParameterControl
+  default_value : Json?
+  required : Bool
+  advanced : Bool
+  minimum : Double?
+  maximum : Double?
+  step : Double?
+  options : Array[ParameterOption]
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 /// A graph node type. Manifest-backed definitions retain the manifest tool id
 /// so the workspace never becomes a second capability registry.
 pub(all) struct NodeDefinition {
@@ -52,6 +108,7 @@ pub(all) struct NodeDefinition {
   tool_id : String
   inputs : Array[PortDefinition]
   outputs : Array[PortDefinition]
+  parameters : Array[ParameterDefinition]
   authority : @pack.AuthorityClass
   execution_owner : String
   idempotent : Bool
@@ -63,6 +120,13 @@ pub(all) struct NodeDefinition {
 pub(all) struct NodeParameter {
   key : String
   value : Json
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct NodeParameterValidation {
+  valid : Bool
+  errors : Array[String]
+  warnings : Array[String]
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|

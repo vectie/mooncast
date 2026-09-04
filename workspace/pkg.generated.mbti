@@ -48,6 +48,10 @@ pub fn graph_digest(WorkspaceGraph) -> String
 
 pub fn instantiate_capsule(CreativeCapsule, String, String, String, String, String) -> WorkspaceGraph raise WorkspaceError
 
+pub fn materialize_graph_parameters(WorkspaceGraph, Array[NodeDefinition]) -> WorkspaceGraph
+
+pub fn materialize_node_parameters(NodeDefinition, Array[NodeParameter]) -> Array[NodeParameter]
+
 pub fn move_graph_node(WorkspaceGraph, String, Int, Int) -> WorkspaceGraph raise WorkspaceError
 
 pub fn new_run(ExecutionPlan, String, String, String, maximum_retries? : Int) -> RunRecord
@@ -73,6 +77,8 @@ pub fn set_graph_node_parameter(WorkspaceGraph, String, NodeParameter) -> Worksp
 pub fn specialized_lens_for(ArtifactKind) -> SpecializedLens
 
 pub fn validate_graph(WorkspaceGraph, Array[NodeDefinition]) -> GraphValidation
+
+pub fn validate_node_parameters(NodeDefinition, Array[NodeParameter]) -> NodeParameterValidation
 
 pub fn workspace_run_event(RunRecord, String) -> WorkspaceRunEvent
 
@@ -265,6 +271,7 @@ pub(all) struct NodeDefinition {
   tool_id : String
   inputs : Array[PortDefinition]
   outputs : Array[PortDefinition]
+  parameters : Array[ParameterDefinition]
   authority : @pack.AuthorityClass
   execution_owner : String
   idempotent : Bool
@@ -275,6 +282,12 @@ pub(all) struct NodeDefinition {
 pub(all) struct NodeParameter {
   key : String
   value : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct NodeParameterValidation {
+  valid : Bool
+  errors : Array[String]
+  warnings : Array[String]
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct NodeRun {
@@ -295,6 +308,50 @@ pub(all) enum NodeRunState {
   Succeeded
   Failed
   Cancelled
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum ParameterControl {
+  TextFieldControl
+  TextAreaControl
+  NumberFieldControl
+  SliderControl
+  SelectControl
+  CheckboxControl
+  JsonEditorControl
+  AssetPickerControl
+  ProviderPickerControl
+  ModelPickerControl
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ParameterDefinition {
+  parameter_id : String
+  label : String
+  description : String
+  value_kind : ParameterValueKind
+  control : ParameterControl
+  default_value : Json?
+  required : Bool
+  advanced : Bool
+  minimum : Double?
+  maximum : Double?
+  step : Double?
+  options : Array[ParameterOption]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ParameterOption {
+  value : String
+  label : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) enum ParameterValueKind {
+  TextValue
+  IntegerValue
+  NumberValue
+  BooleanValue
+  JsonValue
+  AssetReferenceValue
+  ProviderValue
+  ModelValue
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct PlannedNode {

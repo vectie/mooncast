@@ -130,13 +130,30 @@ pub fn validate_graph(
     if node.node_id.is_blank() {
       errors.push("node id must not be blank")
     }
-    if definition_named(catalog, node.definition_id) is None {
-      errors.push(
-        "node " +
-        node.node_id +
-        " references unknown definition " +
-        node.definition_id,
-      )
+    match definition_named(catalog, node.definition_id) {
+      None =>
+        errors.push(
+          "node " +
+          node.node_id +
+          " references unknown definition " +
+          node.definition_id,
+        )
+      Some(definition) => {
+        let parameter_validation = validate_node_parameters(
+          definition,
+          node.parameters,
+        )
+        errors.append(
+          parameter_validation.errors.map(error => {
+            "node " + node.node_id + ": " + error
+          }),
+        )
+        warnings.append(
+          parameter_validation.warnings.map(warning => {
+            "node " + node.node_id + ": " + warning
+          }),
+        )
+      }
     }
     for key in duplicate_values(node.parameters.map(parameter => parameter.key)) {
       errors.push("node " + node.node_id + " has duplicate parameter " + key)

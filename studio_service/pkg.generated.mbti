@@ -406,8 +406,6 @@ type PerformanceReviewInput derive(@json.FromJson)
 
 type PortalsProjection derive(ToJson)
 
-type PortfolioReservation
-
 type PostprocessTaskRequest derive(@json.FromJson)
 
 type ProductionBatchQcInput derive(@json.FromJson)
@@ -443,8 +441,6 @@ pub(all) struct ProjectCommandResponse {
   result : @kernel.CommandResult
   idempotent_replay : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type ProjectCommercialBinding
 
 type ProjectExperienceMetadata derive(ToJson, @json.FromJson)
 
@@ -601,6 +597,7 @@ pub async fn StudioService::access_workspace_share(Self, String, String) -> Work
 pub async fn StudioService::adopt_pipeline_result(Self, String, @pipeline.RoutedIngestResult) -> ProjectRecord
 pub async fn StudioService::advance_gate(Self, String, GateCommandRequest) -> ProjectCommandResponse
 pub async fn StudioService::advance_ready_gates(Self, String, String, String, String) -> ProjectRecord
+pub async fn StudioService::advance_workspace_run(Self, String, WorkspaceRunAdvanceRequest) -> WorkspaceRunAdvanceProjection
 pub async fn StudioService::analyze_editor_media(Self, String) -> EditorMediaAnalysisView
 pub async fn StudioService::apply_project_command(Self, String, ProjectCommandRequest) -> ProjectCommandResponse
 pub async fn StudioService::apply_provider_command(Self, String, @vectie/mooncast/execution.ProviderExecutionCommand) -> ProviderCommandResponse
@@ -609,6 +606,7 @@ pub async fn StudioService::apply_workspace_dispatch_receipt(Self, String, @work
 pub async fn StudioService::apply_workspace_proposal(Self, WorkspaceProposalApplyRequest) -> @workspace.WorkspaceGraph
 pub async fn StudioService::apply_workspace_run_action(Self, String, String, WorkspaceRunActionRequest) -> @workspace.RunRecord
 pub async fn StudioService::apply_workspace_run_command(Self, String, WorkspaceRunCommand) -> @workspace.RunRecord
+pub async fn StudioService::assist_workspace_graph(Self, String, WorkspaceAgentAssistRequest) -> WorkspaceAgentAssistProjection
 pub async fn StudioService::authorize_provider_job(Self, ProviderAuthorizationRequest) -> ProviderJobRecord
 pub async fn StudioService::branch_workspace_artifact(Self, WorkspaceArtifactBranchRequest) -> @workspace.WorkspaceArtifact
 pub async fn StudioService::capacity_board_projection(Self, String) -> CapacityBoardProjection
@@ -636,12 +634,14 @@ pub async fn StudioService::create_workspace_share(Self, WorkspaceShareCreateReq
 pub async fn StudioService::creative_view(Self, String, @creative.ArtifactKind) -> CreativeView
 pub async fn StudioService::creative_workspace_projection(Self, String, @creative.ArtifactKind) -> Json
 pub async fn StudioService::decide_commercial_quote(Self, String, String, HumanDecisionInput) -> QuoteProjection
+pub async fn StudioService::decide_workspace_human_gate(Self, String, String, WorkspaceHumanDecisionRequest) -> @workspace.RunRecord
 pub async fn StudioService::delete_project(Self, String, Int) -> Unit
 pub async fn StudioService::delete_workspace_asset(Self, String, Int, WorkspaceAssetDeleteRequest) -> @workspace.WorkspaceAssetEntry
 pub async fn StudioService::dispatch_application_http(Self, @http.Request) -> @http.Response?
 pub async fn StudioService::dispatch_editor_command(Self, String, @domain.EditCommand, String) -> EditorOpenView
 pub async fn StudioService::dispatch_http(Self, @http.Request) -> @http.Response
 pub async fn StudioService::editor_export_path_for_digest(Self, String, String) -> String
+pub async fn StudioService::expand_workspace_capsule_node(Self, String, String, String, WorkspaceCapsuleExpandRequest) -> @workspace.WorkspaceGraph
 pub async fn StudioService::fork_workspace_graph(Self, String, String, WorkspaceGraphForkRequest) -> @workspace.WorkspaceGraph
 pub fn StudioService::freeze_workspace_plan(Self, WorkspacePlanRequest) -> @workspace.ExecutionPlan raise
 pub async fn StudioService::get_editor_job(Self, String, String) -> EditorJobView
@@ -651,6 +651,8 @@ pub async fn StudioService::get_provider_job(Self, String) -> ProviderJobRecord
 pub async fn StudioService::get_routed_execution(Self, String, String) -> RoutedExecutionRecord
 pub async fn StudioService::get_utility_concat(Self, String) -> UtilityConcatJob
 pub async fn StudioService::get_workspace_graph(Self, String, String) -> @workspace.WorkspaceGraph
+pub async fn StudioService::get_workspace_human_decision(Self, String, String) -> WorkspaceHumanDecisionEvidence
+pub async fn StudioService::get_workspace_native_output(Self, String, String) -> WorkspaceNativeOutput
 pub async fn StudioService::get_workspace_run(Self, String) -> @workspace.RunRecord
 pub async fn StudioService::governance_stage_projection(Self, String, String) -> Json
 pub async fn StudioService::governance_view(Self, String) -> GovernanceView
@@ -663,6 +665,7 @@ pub async fn StudioService::list_provider_jobs(Self) -> Array[ProviderJobRecord]
 pub async fn StudioService::list_routed_executions(Self, String) -> Array[RoutedExecutionRecord]
 pub async fn StudioService::list_workspace_artifacts(Self, project_id? : String) -> WorkspaceArtifactProjection
 pub async fn StudioService::list_workspace_asset_library(Self, String, String, String, String, Int, Int, Bool) -> WorkspaceAssetLibraryProjection
+pub async fn StudioService::list_workspace_graphs(Self, String) -> WorkspaceGraphListProjection
 pub async fn StudioService::list_workspace_proposals(Self, String) -> WorkspaceProposalProjection
 pub async fn StudioService::list_workspace_runs(Self, String, String, Int, Int) -> WorkspaceRunListProjection
 pub fn StudioService::new(String, provider_catalog? : @vectie/mooncast/application/execution.ProviderCatalog) -> Self
@@ -718,10 +721,11 @@ pub async fn StudioService::studio_project_projection(Self, ProjectRecord) -> Js
 pub async fn StudioService::tag_workspace_asset(Self, String, Int, WorkspaceAssetTagsRequest) -> @workspace.WorkspaceAssetEntry
 pub async fn StudioService::upload_utility_concat_input(Self, String, Int, Bytes) -> UtilityConcatJob
 pub fn StudioService::validate_workspace_graph(Self, @workspace.WorkspaceGraph) -> @workspace.GraphValidation
-pub fn StudioService::workspace_capsules(Self, String) -> WorkspaceCapsuleProjection raise
+pub async fn StudioService::workspace_capsules(Self, String) -> WorkspaceCapsuleProjection
 pub fn StudioService::workspace_catalog(Self) -> WorkspaceCatalogProjection
 pub async fn StudioService::workspace_features(Self, String) -> WorkspaceFeatureProjection
 pub async fn StudioService::workspace_graph_history(Self, String, String) -> WorkspaceGraphHistoryProjection
+pub async fn StudioService::workspace_review_page(Self, String, String) -> @http.Response
 pub async fn StudioService::workspace_run_events(Self, String, String) -> WorkspaceRunEventProjection
 pub async fn StudioService::workspace_run_events_sse(Self, String, String) -> String
 
@@ -781,6 +785,23 @@ type UtilityConcatProbeStream derive(@json.FromJson)
 
 type UtilityConcatVideoSignature derive(Eq, @debug.Debug)
 
+pub(all) struct WorkspaceAgentAssistProjection {
+  contract : String
+  project_id : String
+  graph_id : String
+  diagnosis : Array[String]
+  proposal : @workspace.AgentGraphProposal?
+  execute_authority : Bool
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceAgentAssistRequest {
+  graph_id : String
+  target_node_id : String
+  instruction : String
+  actor : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct WorkspaceArtifactBranchRequest {
   project_id : String
   source_artifact_id : String
@@ -838,6 +859,13 @@ pub(all) struct WorkspaceBuiltinCapsulePublishRequest {
   visibility : String
   actor : String
   published_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceCapsuleExpandRequest {
+  expected_revision : Int
+  capsule_id : String
+  capsule_version : Int
+  actor : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct WorkspaceCapsuleInstallRequest {
@@ -925,6 +953,13 @@ pub(all) struct WorkspaceGraphHistoryProjection {
   publication_authority : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct WorkspaceGraphListProjection {
+  contract : String
+  project_id : String
+  graphs : Array[@workspace.WorkspaceGraph]
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct WorkspaceGraphRevisionRequest {
   expected_revision : Int
   title : String
@@ -943,6 +978,36 @@ pub(all) struct WorkspaceGraphRunRequest {
   policy_digest : String
   maximum_retries : Int
   requested_output_node_ids : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceHumanDecisionEvidence {
+  contract : String
+  run_id : String
+  node_id : String
+  actor : String
+  decision : String
+  note : String
+  recorded_at : String
+  digest : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceHumanDecisionRequest {
+  actor : String
+  decision : String
+  note : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceNativeOutput {
+  contract : String
+  run_id : String
+  node_id : String
+  definition_id : String
+  semantics : String
+  input_refs : Array[String]
+  parameters : Array[@workspace.NodeParameter]
+  actor : String
+  created_at : String
+  digest : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct WorkspacePlanRequest {
@@ -1017,6 +1082,25 @@ pub(all) struct WorkspaceRecipeRunRequest {
 pub(all) struct WorkspaceRunActionRequest {
   node_id : String
   actor : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceRunAdvanceProjection {
+  contract : String
+  run : @workspace.RunRecord
+  executed_node_ids : Array[String]
+  blockers : Array[WorkspaceRunBlocker]
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceRunAdvanceRequest {
+  actor : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WorkspaceRunBlocker {
+  node_id : String
+  execution_owner : String
+  reason : String
+  required_action : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct WorkspaceRunClaimRequest {
