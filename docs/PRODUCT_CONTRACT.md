@@ -1,9 +1,9 @@
 # MoonCast product contract
 
-Class: domain pack
-Visible surface: production studio and cut editor
-Maturity: deterministic production-pipeline alpha
-Last reviewed: 2026-07-31
+Class: governed creative-workspace pack
+Visible surface: workspace graph, production studio, cut editor and review lens
+Maturity: deterministic workspace and production-pipeline alpha
+Last reviewed: 2026-09-04
 
 ## Outcome
 
@@ -35,6 +35,13 @@ orchestration, provider credentials or final publication authority.
 | Deterministic multi-shot long-form fixture | available; fixture-only |
 | Cut editor, timeline operations and QC/review UI | available locally |
 | Multi-project cost, schedule, capacity and exception control | available locally |
+| Typed workspace graph, validation and deterministic selected-output planning | available |
+| Durable workspace graph revisions, runs, retries and restart recovery | available |
+| Immutable workspace assets with lineage, provider receipts, cost and QC | available |
+| Creative Capsules and project-owned capsule installation | available; two initial recipes |
+| Bounded variants/map/select/merge/policy/human/subgraph controls | available as typed graph primitives |
+| Graph, Editor and Review lenses | available locally |
+| MoonClaw graph proposals and revision-checked graph diffs | available as review-gated contracts and API |
 | MoonFlow `adapter.v2` declaration, reconciliation and expiring health | available for control-tower operations |
 | Text/image/video/voice/music provider ports | available as contracts |
 | Real-provider complete episode | conditional and not yet commercially proven |
@@ -47,6 +54,15 @@ trim/split/ripple, transitions, effects, audio, subtitles, comments, QC and
 delivery preparation. It must preserve source asset lineage and produce an
 immutable edit-decision/version history. Rendering a procedural fixture does
 not prove provider quality or client acceptance.
+
+## Creative-workspace boundary
+
+The pack manifest remains the capability source of truth. Mooncast projects its
+tools into typed node definitions and adds only a finite set of safe built-ins;
+there is no arbitrary-code node. Mooncast owns graph validation, frozen plans,
+run projections, artifacts, capsule versions and human gates. External-effect
+nodes identify MoonFlow as execution owner, while provider credentials remain
+host-injected. The workspace never grants publication authority implicitly.
 
 ## Pack and runtime contract
 
