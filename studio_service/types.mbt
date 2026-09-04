@@ -436,6 +436,49 @@ pub(all) struct WorkspaceRunActionRequest {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+pub(all) struct WorkspaceRunAdvanceRequest {
+  actor : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceRunBlocker {
+  node_id : String
+  execution_owner : String
+  reason : String
+  required_action : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceRunAdvanceProjection {
+  contract : String
+  run : @workspace.RunRecord
+  executed_node_ids : Array[String]
+  blockers : Array[WorkspaceRunBlocker]
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceHumanDecisionRequest {
+  actor : String
+  decision : String
+  note : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceNativeOutput {
+  contract : String
+  run_id : String
+  node_id : String
+  definition_id : String
+  semantics : String
+  input_refs : Array[String]
+  parameters : Array[@workspace.NodeParameter]
+  actor : String
+  created_at : String
+  digest : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 pub(all) struct WorkspaceRunEventProjection {
   contract : String
   run_id : String
@@ -469,6 +512,14 @@ pub(all) struct WorkspaceCatalogProjection {
 pub(all) struct WorkspaceCapsuleProjection {
   contract : String
   capsules : Array[@workspace.CreativeCapsule]
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceGraphListProjection {
+  contract : String
+  project_id : String
+  graphs : Array[@workspace.WorkspaceGraph]
   publication_authority : Bool
 } derive(Debug, Eq, ToJson, FromJson)
 

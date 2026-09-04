@@ -114,23 +114,99 @@ pub fn StudioService::workspace_catalog(
 }
 
 ///|
-pub fn StudioService::workspace_capsules(
+pub async fn StudioService::workspace_capsules(
   self : StudioService,
   project_id : String,
-) -> WorkspaceCapsuleProjection raise {
-  ignore(self)
+) -> WorkspaceCapsuleProjection {
   guard valid_id(project_id) else {
     raise Invalid(
       code="workspace_project_id_invalid",
       message="workspace project id must be a portable flat identifier",
     )
   }
+  let capsules = [
+    @workspace.combine_videos_capsule(project_id, "mooncast", ""),
+    @workspace.brief_to_delivery_capsule(project_id, "mooncast", ""),
+  ]
+  for
+    key in self.store.list_keys(
+      prefix="workspace-template-promotion-",
+      suffix=".json",
+    ) {
+    let value : @workspace.WorkspaceTemplatePromotion? = load_value(
+      self.store,
+      key,
+    )
+    if value is Some(item) &&
+      item.project_id == project_id &&
+      capsules
+      .iter()
+      .all(capsule => {
+        capsule.capsule_id != item.capsule.capsule_id ||
+        capsule.version != item.capsule.version
+      }) {
+      capsules.push(item.capsule)
+    }
+  }
+  for
+    key in self.store.list_keys(
+      prefix="workspace-capsule-publication-",
+      suffix=".json",
+    ) {
+    let value : @workspace.CapsulePublication? = load_value(self.store, key)
+    if value is Some(item) &&
+      item.capsule.graph.project_id == project_id &&
+      capsules
+      .iter()
+      .all(capsule => {
+        capsule.capsule_id != item.capsule.capsule_id ||
+        capsule.version != item.capsule.version
+      }) {
+      capsules.push(item.capsule)
+    }
+  }
+  capsules.sort_by((left, right) => {
+    let title_order = left.title.compare(right.title)
+    if title_order == 0 {
+      right.version.compare(left.version)
+    } else {
+      title_order
+    }
+  })
   {
     contract: "mooncast.workspace-capsules.v1",
-    capsules: [
-      @workspace.combine_videos_capsule(project_id, "mooncast", ""),
-      @workspace.brief_to_delivery_capsule(project_id, "mooncast", ""),
-    ],
+    capsules,
+    publication_authority: false,
+  }
+}
+
+///|
+pub async fn StudioService::list_workspace_graphs(
+  self : StudioService,
+  project_id : String,
+) -> WorkspaceGraphListProjection {
+  guard valid_id(project_id) else {
+    raise Invalid(
+      code="workspace_project_id_invalid",
+      message="workspace project id must be a portable flat identifier",
+    )
+  }
+  let graphs : Array[@workspace.WorkspaceGraph] = []
+  for
+    key in self.store.list_keys(
+      prefix="workspace-graph-",
+      suffix="-latest.json",
+    ) {
+    let value : @workspace.WorkspaceGraph? = load_value(self.store, key)
+    if value is Some(graph) && graph.project_id == project_id {
+      graphs.push(graph)
+    }
+  }
+  graphs.sort_by((left, right) => left.title.compare(right.title))
+  {
+    contract: "mooncast.workspace-graph-list.v1",
+    project_id,
+    graphs,
     publication_authority: false,
   }
 }

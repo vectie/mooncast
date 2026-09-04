@@ -47,9 +47,13 @@ fn category_for_tool(tool_id : String) -> String {
 
 ///|
 fn execution_owner_for_tool(tool : @pack.ToolDeclaration) -> String {
-  match tool.authority {
-    ExternalEffect | PhysicalEffect => "moonflow"
-    _ => "mooncast"
+  if node_kind_for_tool(tool.id) == HumanGateNode {
+    "human"
+  } else {
+    match tool.authority {
+      ExternalEffect | PhysicalEffect => "moonflow"
+      _ => "mooncast"
+    }
   }
 }
 
@@ -383,7 +387,11 @@ fn control_node_definition(
       },
     ],
     authority,
-    execution_owner: "mooncast",
+    execution_owner: if node_kind == HumanGateNode {
+      "human"
+    } else {
+      "mooncast"
+    },
     idempotent: true,
     review_required,
     evidence_outputs: ["workspace/runs"],

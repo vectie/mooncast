@@ -38,6 +38,8 @@ async test "workspace HTTP surface exposes catalog capsules graphs and plans" {
   assert_eq(saved.status, 201)
   let reopened = service.get_workspace_graph("workspace-test", "combine-videos")
   assert_eq(reopened, capsule.graph)
+  let graph_list = service.list_workspace_graphs("workspace-test")
+  assert_eq(graph_list.graphs.map(graph => graph.graph_id), ["combine-videos"])
   let revision_two = {
     ..capsule.graph,
     revision: 2,
@@ -252,6 +254,11 @@ async test "workspace recipes dispatch collaboration sharing and publishing are 
   )
   assert_true(publication.immutable_digest.has_prefix("sha256:"))
   assert_false(publication.immutable_digest.has_prefix("sha256:sha256:"))
+  assert_true(
+    service.workspace_capsules("workspace-features").capsules.any(capsule => {
+      capsule.capsule_id == publication.capsule.capsule_id
+    }),
+  )
   let features = service.workspace_features("workspace-features")
   assert_eq(features.comments.length(), 1)
   assert_eq(features.shares.length(), 1)

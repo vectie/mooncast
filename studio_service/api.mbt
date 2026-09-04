@@ -386,6 +386,8 @@ async fn StudioService::dispatch_unsafe(
       json_value_response(200, self.workspace_catalog())
     (Get, ["api", "workspace", "projects", project_id, "capsules"]) =>
       json_value_response(200, self.workspace_capsules(project_id))
+    (Get, ["api", "workspace", "projects", project_id, "graphs"]) =>
+      json_value_response(200, self.list_workspace_graphs(project_id))
     (
       Post,
       [
@@ -513,6 +515,22 @@ async fn StudioService::dispatch_unsafe(
     (Post, ["api", "workspace", "runs", run_id, "claim"]) => {
       let input : WorkspaceRunClaimRequest = decode_body(request)
       json_value_response(200, self.claim_workspace_run_node(run_id, input))
+    }
+    (Post, ["api", "workspace", "runs", run_id, "advance"]) => {
+      let input : WorkspaceRunAdvanceRequest = decode_body(request)
+      json_value_response(200, self.advance_workspace_run(run_id, input))
+    }
+    (Get, ["api", "workspace", "runs", run_id, "outputs", node_id]) =>
+      json_value_response(
+        200,
+        self.get_workspace_native_output(run_id, node_id),
+      )
+    (Post, ["api", "workspace", "runs", run_id, "nodes", node_id, "decision"]) => {
+      let input : WorkspaceHumanDecisionRequest = decode_body(request)
+      json_value_response(
+        200,
+        self.decide_workspace_human_gate(run_id, node_id, input),
+      )
     }
     (Post, ["api", "workspace", "runs", run_id, "actions", action]) => {
       let input : WorkspaceRunActionRequest = decode_body(request)
