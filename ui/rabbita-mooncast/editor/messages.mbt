@@ -3,6 +3,9 @@ enum Msg {
   Bootstrap
   ProjectsLoaded(Result[Json, Error])
   SelectProject(String)
+  SwitchWorkspaceLens(WorkspaceLens)
+  SelectWorkspaceRecipe(WorkspaceRecipe)
+  SelectWorkspaceNode(String)
   OpenProject
   ProductionProjectChanged(String)
   ImportProduction

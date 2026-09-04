@@ -77,6 +77,20 @@ fn update(
           )
       }
     SelectProject(project_id) => (@rabbita.none, { ..model, project_id, })
+    SwitchWorkspaceLens(workspace_lens) =>
+      (@rabbita.none, { ..model, workspace_lens, })
+    SelectWorkspaceRecipe(selected_workspace_recipe) => {
+      let selected_workspace_node = match selected_workspace_recipe {
+        CombineVideosRecipe => "concat"
+        BriefToDeliveryRecipe => "generate"
+      }
+      (
+        @rabbita.none,
+        { ..model, selected_workspace_recipe, selected_workspace_node },
+      )
+    }
+    SelectWorkspaceNode(selected_workspace_node) =>
+      (@rabbita.none, { ..model, selected_workspace_node, })
     OpenProject => {
       let generation = model.open_generation + 1
       (

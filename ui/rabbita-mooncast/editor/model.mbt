@@ -20,6 +20,19 @@ enum TimelineDragMode {
 } derive(Eq)
 
 ///|
+enum WorkspaceLens {
+  GraphLens
+  EditorLens
+  ReviewLens
+} derive(Debug, Eq)
+
+///|
+enum WorkspaceRecipe {
+  CombineVideosRecipe
+  BriefToDeliveryRecipe
+} derive(Debug, Eq)
+
+///|
 struct TimelineDrag {
   clip_id : String
   mode : TimelineDragMode
@@ -348,6 +361,9 @@ struct Model {
   busy : Bool
   projects : Array[@api.ProjectSummary]
   project_id : String
+  workspace_lens : WorkspaceLens
+  selected_workspace_recipe : WorkspaceRecipe
+  selected_workspace_node : String
   production_project_id : String
   workspace : @api.WorkspaceSnapshot?
   selected_take_id : String
@@ -444,6 +460,9 @@ fn initial_model() -> Model {
     busy: false,
     projects: [],
     project_id: "project-mc3a",
+    workspace_lens: GraphLens,
+    selected_workspace_recipe: CombineVideosRecipe,
+    selected_workspace_node: "concat",
     production_project_id: "",
     workspace: None,
     selected_take_id: "",

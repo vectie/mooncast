@@ -7,11 +7,30 @@ fn project_header(
     @html.div(class="brand") <| [
       @html.span(class="brand-mark", "M"),
       @html.div <| [
-        @html.strong("Mooncast Cut Editor"),
-        @html.small("Governed project → episode → scene → shot → asset"),
+        @html.strong("Mooncast Creative Workspace"),
+        @html.small("Graph → generate → edit → review → deliver"),
       ],
     ],
     @html.nav(class="project-controls") <| [
+      @html.a(href="/apps/mooncast/studio", "Studio"),
+      @html.button(
+        type_="button",
+        class=if model.workspace_lens == GraphLens { "is-active" } else { "" },
+        on_click=dispatch(SwitchWorkspaceLens(GraphLens)),
+        "Graph",
+      ),
+      @html.button(
+        type_="button",
+        class=if model.workspace_lens == EditorLens { "is-active" } else { "" },
+        on_click=dispatch(SwitchWorkspaceLens(EditorLens)),
+        "Editor",
+      ),
+      @html.button(
+        type_="button",
+        class=if model.workspace_lens == ReviewLens { "is-active" } else { "" },
+        on_click=dispatch(SwitchWorkspaceLens(ReviewLens)),
+        "Review",
+      ),
       @html.select(on_change=dispatch.map(value => SelectProject(value))) <| model.projects.map(project => {
           @html.option(
             value=project.project_id,
