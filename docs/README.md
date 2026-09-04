@@ -2,6 +2,11 @@
 
 - [Product contract](PRODUCT_CONTRACT.md) — current maturity, cut-editor
   boundary and commercial gate.
+- [Third-iteration cfy feature comparison](cfy-feature-comparison-third-iteration.md)
+  — feature-only comparison, product lessons and prioritized creative-workspace
+  roadmap.
+- [Creative workspace implementation journey](creative-workspace-implementation-journey.md)
+  — implemented foundations and earlier cfy gap-closure passes.
 - [Responsibility and testability](RESPONSIBILITY_AND_TESTABILITY.md) —
   platform/pack ownership.
 - [Commercial intake](contract-quote-capacity-intake.md) — lead, quote,

@@ -91,6 +91,19 @@ boundary, but now closes the practical workspace gaps found in that pass.
   node definitions, typed ports, manifest-backed outcomes, structured
   parameters, collaboration identity and the workspace assistant in one state.
 
+## Third-round feature comparison
+
+The third comparison deliberately moves beyond foundation and hardening work.
+It evaluates creator-visible feature depth: generation, transformation,
+parameter controls, previews, templates, App Mode, asset discovery, editor
+round-tripping and agentic iteration.
+
+The detailed findings and prioritized roadmap are maintained in
+[Third-iteration cfy feature comparison](cfy-feature-comparison-third-iteration.md).
+The primary conclusion is that Mooncast should retain its high-level governed
+production graph while adding a lower-level creative-compute graph inside
+versioned Creative Capsules.
+
 ## Deliberate authority boundaries
 
 The workspace does not fabricate external infrastructure. Presence is renewable
