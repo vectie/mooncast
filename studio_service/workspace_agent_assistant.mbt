@@ -70,23 +70,52 @@ pub async fn StudioService::assist_workspace_graph(
   } else {
     diagnosis.push("No prior run evidence is available for diagnosis.")
   }
-  let proposed : @workspace.WorkspaceGraph? = if normalized.contains("layout") ||
+  let proposed : (@workspace.WorkspaceGraph, Array[String], String)? = if normalized.contains(
+      "layout",
+    ) ||
     normalized.contains("organize") {
-    Some(workspace_agent_layout(graph))
+    Some(
+      (
+        workspace_agent_layout(graph),
+        graph.nodes.map(node => node.node_id),
+        "Organize the graph into a readable grid.",
+      ),
+    )
   } else if normalized.contains("bypass") || normalized.contains("repair") {
     workspace_agent_set_flag(
       graph,
       request.target_node_id,
       "workspace:bypassed",
-    )
+    ).map(proposed => {
+      (
+        proposed,
+        [request.target_node_id],
+        "Bypass the selected node while preserving it in graph history.",
+      )
+    })
   } else if normalized.contains("mute") {
-    workspace_agent_set_flag(graph, request.target_node_id, "workspace:muted")
+    workspace_agent_set_flag(graph, request.target_node_id, "workspace:muted").map(proposed => {
+        (
+          proposed,
+          [request.target_node_id],
+          "Mute the selected node while preserving it in graph history.",
+        )
+      },
+    )
   } else {
-    None
+    @workspace.suggest_creative_graph_edit(
+      graph,
+      self.workspace_catalog().definitions,
+      request.target_node_id,
+      request.instruction,
+    ).map(suggestion => {
+      (suggestion.graph, suggestion.affected_node_ids, suggestion.summary)
+    })
   }
   let proposal = match proposed {
     None => None
-    Some(proposed_graph) => {
+    Some((proposed_graph, affected_node_ids, summary)) => {
+      diagnosis.push(summary)
       let proposal_id = @runtime.new_id(prefix="workspace-agent-proposal")
       let proposal : @workspace.AgentGraphProposal = {
         contract: "mooncast.agent-graph-proposal.v1",
@@ -99,12 +128,8 @@ pub async fn StudioService::assist_workspace_graph(
           created_by: "mooncast-workspace-assistant",
           created_at: now_string(),
         },
-        explanation: request.instruction,
-        affected_node_ids: if request.target_node_id.is_blank() {
-          proposed_graph.nodes.map(node => node.node_id)
-        } else {
-          [request.target_node_id]
-        },
+        explanation: summary + " Requested by: " + request.instruction,
+        affected_node_ids,
         provider_ids: [],
         expected_cost_cny: 0.0,
         required_approvals: [request.actor],
@@ -117,7 +142,7 @@ pub async fn StudioService::assist_workspace_graph(
   }
   if proposal is None {
     diagnosis.push(
-      "No mutation was proposed. Supported reviewed changes are auto layout, mute, bypass, and repair of the selected node.",
+      "No mutation was proposed. Supported reviewed changes include layout, mute, bypass, repair, creative aspect ratios, and bounded variant counts.",
     )
   }
   {

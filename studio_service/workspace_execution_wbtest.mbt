@@ -111,3 +111,33 @@ async test "workspace coordinator walks native nodes and pauses at human gates" 
     1,
   )
 }
+
+///|
+async test "workspace assistant proposes creative parameter iterations" {
+  let root = "/tmp/mooncast-workspace-creative-agent-" +
+    @async.now().to_string()
+  let service = StudioService::new(root)
+  let graph = @workspace.brief_to_delivery_capsule(
+      "creative-agent-project", "operator", "created",
+    ).graph
+  ignore(service.save_workspace_graph(graph))
+  let assisted = service.assist_workspace_graph(graph.project_id, {
+    graph_id: graph.graph_id,
+    target_node_id: "review",
+    instruction: "Make this vertical and mobile-first",
+    actor: "creative-director",
+  })
+  let proposal = assisted.proposal.unwrap()
+  assert_eq(proposal.affected_node_ids, ["generate"])
+  assert_true(proposal.explanation.contains("9:16"))
+  assert_true(
+    proposal.proposed_graph.nodes
+    .iter()
+    .find_first(node => node.node_id == "generate")
+    .unwrap().parameters.any(parameter => {
+      parameter.key == "aspect_ratio" && parameter.value == "9:16".to_json()
+    }),
+  )
+  assert_false(assisted.execute_authority)
+  assert_false(assisted.publication_authority)
+}

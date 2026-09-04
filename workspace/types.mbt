@@ -396,6 +396,15 @@ pub(all) struct AgentGraphProposal {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+/// A pure, reviewable creative edit inferred from a bounded workspace-agent
+/// instruction. It never carries execution or publication authority.
+pub(all) struct CreativeGraphSuggestion {
+  graph : WorkspaceGraph
+  summary : String
+  affected_node_ids : Array[String]
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 /// Addressable workspace objects. Comments, presence, shares, search results,
 /// and activity all use this finite target vocabulary instead of loose URLs.
 pub(all) enum WorkspaceTargetKind {
