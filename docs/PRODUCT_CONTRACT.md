@@ -38,16 +38,16 @@ orchestration, provider credentials or final publication authority.
 | Typed workspace graph, validation and deterministic selected-output planning | available |
 | Durable workspace graph revisions, runs, retries and restart recovery | available |
 | Immutable workspace assets with lineage, provider receipts, cost and QC | available |
-| Creative Capsules and project-owned capsule installation | available; two initial recipes |
-| Bounded variants/map/select/merge/policy/human/subgraph controls | available as typed graph primitives |
+| Creative Capsules and project-owned capsule installation | available; built-ins plus promoted/published versions are installable |
+| Bounded variants/map/select/merge/policy/human/subgraph controls | available with native execution semantics and exact-version subgraph expansion |
 | Graph, Editor and Review lenses | available locally |
-| Infinite canvas interaction, typed connect, catalog palette, parameters, undo/redo and asset drop | available locally |
-| Exact-saved-revision whole/selected execution, cache reuse, claims/actions and event replay | available |
+| Infinite canvas interaction, typed connect, selectable/deletable edges, multi-select copy/paste/group, mute/bypass, auto-layout, structured parameters, undo/redo and immutable asset drop | available locally |
+| Exact-saved-revision whole/selected execution, native graph walking, explicit external/human blockers, cache reuse, claims/actions and event replay | available |
 | Paginated/tagged asset library, compare, promotion, branch, guarded hide and run template promotion | available |
-| Comments, server-timed presence leases, activity, search and expiring/revocable client-review shares | available; deployment/identity remains host-owned |
-| MoonClaw stored proposals, stale-aware graph diffs and exact-base application | available through review-gated API and loopback tools |
+| Comments, renewable named presence, activity, search and expiring/revocable client-review pages | available; deployment/identity remains host-owned |
+| In-workspace assistant diagnosis, bounded repair/layout proposals, stale-aware graph diffs and exact-base application | available through review-gated API and loopback tools |
 | MoonFlow `adapter.v2` plus deterministic workspace dispatch/receipt boundary | available; workers remain separately deployed |
-| Capsule publishing and simplified App view | available in the workspace catalogue |
+| Capsule publishing and simplified App view | available in the installable workspace catalogue |
 | Text/image/video/voice/music provider ports | available as contracts |
 | Real-provider complete episode | conditional and not yet commercially proven |
 | External publication | separately authorized |

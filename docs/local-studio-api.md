@@ -617,11 +617,18 @@ The workspace API is served by the same native loopback process. Important
 operational routes are:
 
 - `GET /api/workspace/catalog`
+- `GET /api/workspace/projects/{project_id}/graphs`
+- `GET /api/workspace/projects/{project_id}/capsules`
 - `POST /api/workspace/projects/{project_id}/capsules/{capsule_id}/install`
+- `POST /api/workspace/projects/{project_id}/graphs/{graph_id}/nodes/{node_id}/expand-capsule`
 - `POST /api/workspace/projects/{project_id}/graphs/{graph_id}/revisions`
 - `POST /api/workspace/projects/{project_id}/graphs/{graph_id}/runs`
 - `GET /api/workspace/projects/{project_id}/runs?state=&offset=&limit=`
 - `POST /api/workspace/runs/{run_id}/claim`
+- `POST /api/workspace/runs/{run_id}/advance`
+- `GET /api/workspace/runs/{run_id}/outputs/{node_id}`
+- `GET /api/workspace/runs/{run_id}/decisions/{node_id}`
+- `POST /api/workspace/runs/{run_id}/nodes/{node_id}/decision`
 - `POST /api/workspace/runs/{run_id}/actions/{cancel|retry}`
 - `GET /api/workspace/runs/{run_id}/events?after={event_id}` (SSE)
 - `GET /api/workspace/runs/{run_id}/events/replay?after={event_id}` (JSON)
@@ -630,10 +637,12 @@ operational routes are:
 - `POST /api/workspace/assets/{artifact_id}/{version}/delete`
 - `GET /api/workspace/projects/{project_id}/proposals/{proposal_id}`
 - `POST /api/workspace/projects/{project_id}/proposals/{proposal_id}/apply`
+- `POST /api/workspace/projects/{project_id}/agent/assist`
 - `POST /api/workspace/comments/drafts`
 - `POST /api/workspace/presence/leases`
 - `POST /api/workspace/shares/secure`
 - `GET /api/workspace/shares/{share_id}/access?token={token}`
+- `GET /workspace/review/{share_id}?token={token}`
 - `POST /api/workspace/shares/{share_id}/revoke`
 
 Graph writes are revision checked. Run requests freeze the exact saved graph,

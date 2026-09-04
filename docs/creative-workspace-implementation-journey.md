@@ -21,21 +21,21 @@ Mooncast's rights and review rules.
 | Jobs were fragmented by feature | A durable run record projects every planned node, attempt, retry, progress value, cache hit and restart recovery. |
 | Results were files rather than creative assets | Workspace artifacts are immutable versions with preview URI, digest, parents, producing graph/run/node, prompt, provider receipt, rights, QC, cost, duration and annotations. |
 | Recipes had no reusable contract | Creative Capsules declare public ports, exposed parameters, constraints, examples, compatibility and immutable source graphs; installation creates a new project-owned lineage. |
-| Control flow risked becoming arbitrary scripting | Added only bounded variants, map, rank/select, merge, policy, human-approval and subgraph primitives. |
+| Control flow risked becoming arbitrary scripting | Added bounded variants, map, rank/select, merge and policy semantics plus named human decisions. Reusable subgraphs expand an exact installed capsule version into a new parent-graph revision with mapped ports and parameters. |
 | Agent changes could silently mutate work | MoonClaw-facing proposals contain a graph diff, providers, cost and approvals and apply only against the exact base revision. Agents cannot satisfy human gates. |
 | Graph saves overwrote prior state | Every revision is stored immutably plus a latest pointer, with a history endpoint returning revisions in order. |
 | Review-required generation looked like a human gate | External generation remains an operation owned by MoonFlow; only explicit review/approve/accept/decide tools become human gates. |
 | Studio, Editor and Review felt disconnected | The Rabbita app now presents Graph, Editor and Review as persistent lenses with recipe/asset rail, canvas, inspector and run/activity drawer. |
 | The provider recipe card was decorative | Recipe selection now switches the actual six-node canvas and inspector ownership between local concat and provider-backed delivery graphs. |
-| The canvas was a static diagram | Nodes now support pointer dragging, keyboard nudging, typed connection editing, zoom, overflow panning and durable revisioned positions. Asset cards support both HTML drag/drop and an accessible add-to-graph action. |
+| The canvas was a static diagram | Nodes now support pointer dragging, keyboard nudging, typed connection editing, selectable/deletable edges, multi-select copy/paste/group, mute/bypass, auto-layout, zoom, overflow panning and durable revisioned positions. Asset cards bind the exact immutable artifact ID, version, digest, URI and kind. |
 | Execution exposed only a whole-graph path | Recipe launch accepts public inputs and optional selected output nodes, freezes the exact plan, and creates one durable run. The UI exposes both full-recipe and run-through-selected-node actions. |
 | Provider work could be mistaken for success when queued | External nodes create deterministic dispatch records. Only an imported receipt advances the dispatch/run; prepared or queued work never implies generation success. |
-| Run progress was opaque | Every transition now appends a durable run event. SSE and JSON replay resume after an event id, while the MoonBit UI explicitly replays unseen events. Events carry the complete per-node durable run projection. |
-| Assets lacked workspace actions | Project-scoped artifact APIs and UI actions now cover indexed search/pagination, multi-select comparison, tags, governed promotion, lineage-preserving branches and reference-checked soft deletion. Successful local concat outputs are registered as immutable workspace artifacts. |
-| Recipes were not operational outside the graph | Capsules can be generated from validated graphs, published immutably to a project/workspace catalogue, rendered in simplified App view, and promoted from successful runs. |
-| MoonClaw and MoonFlow were only architectural names | The loopback MoonClaw tool surface can inspect, propose, compare, fork, run, dispatch and promote workspace work. MoonFlow integration is a durable outbox/receipt boundary and does not embed another runtime. |
-| Creative artifact types all opened the same inspector | Script, storyboard/image comparison, audio/transcript, timeline/media, review and delivery lenses now render contextual controls from the same selected graph node. |
-| Collaboration was future-only | Durable comments, server-timed renewable presence leases, activity history, graph compare/fork, read-only or client-review shares, cross-workspace search and run-to-template promotion now have typed contracts and service routes. The UI displays active collaborators and selected-node comments. Shares contain only token digests and never grant publication authority. |
+| Run progress was opaque | Every transition now appends a durable run event. SSE and JSON replay resume after an event id. The UI browses/reopens project run history and shows per-node attempts, errors, retries and outputs. |
+| Assets lacked workspace actions | Project-scoped artifact APIs and UI actions now cover server-backed query/kind filters, pagination, multi-select comparison with retained results, tags, governed promotion, lineage-preserving branches and reference-checked soft deletion. Successful outputs are indexed as immutable workspace artifacts. |
+| Recipes were not operational outside the graph | Capsules generated from successful runs and published versions are returned by the installable project catalogue, alongside built-ins, and render in simplified App view. |
+| MoonClaw and MoonFlow were only architectural names | The workspace contains a bounded assistant journey for diagnosis and review-gated auto-layout/mute/bypass/repair proposals. MoonFlow remains the durable outbox/receipt boundary for separately deployed provider workers. |
+| Creative artifact types all opened the same inspector | Script, storyboard/image comparison, timeline/media, review and delivery lenses are selected from declared artifact types and review semantics rather than hard-coded node IDs. |
+| Collaboration was future-only | Durable comments, continuously renewed named presence leases, activity history, graph compare/fork, human-readable read-only client-review pages, cross-workspace search and run-to-template promotion now have typed contracts and service routes. Shares contain only token digests and never grant publication authority. |
 | Desktop packaging could omit the new surface | Rebuilt the Rabbita release and validated the unchanged least-authority Lepusa bundle contract. |
 
 ## Second-round cfy comparison and fixes
@@ -60,6 +60,10 @@ boundary, but now closes the practical workspace gaps found in that pass.
 | Graph editing lacked recovery ergonomics | Revision-local undo/redo, delete, duplicate, collapse, keyboard save/undo/redo/duplicate/delete and generic versioned parameter editing are available. |
 | Workspace logic kept growing inside existing monoliths | New graph-runtime, asset-library, collaboration and run-operation responsibilities live in separate MoonBit files; UI graph-state transformations and views are separated from transport/event handling. No non-MoonBit automation was introduced. |
 | Desktop release could drift from the host contract | The Lepusa 0.1.6-verified contract remains the release source of truth: fixed loopback origin, supervised native sidecar, health check, Rabbita/static resources, bundled ffmpeg/ffprobe and only localhost/file-dialog grants. cfy itself has no Lepusa manifest to copy. |
+| Saved graphs and user capsules were undiscoverable | Projects now list saved graphs, and promoted or published capsule versions re-enter the installable catalogue without replacing built-ins. |
+| Runs stopped at queue/claim contracts | The native coordinator walks supported input, control, validation, project-envelope, delivery-envelope and registration nodes to quiescence, persists content-addressed outputs, and reports actionable blockers for provider, human or unavailable executors. |
+| Client review links opened raw JSON | Secure links now open a token-validated, read-only HTML evidence page for graph, run or artifact targets. |
+| Reusable subgraph nodes were only placeholders | The inspector loads all installable capsule versions and expands the selected exact version into durable child nodes and edges, rewiring public inputs/outputs and preserving graph history. |
 
 ## Verification evidence
 
@@ -71,25 +75,28 @@ boundary, but now closes the practical workspace gaps found in that pass.
   collaboration, sharing, search and publishing.
 - Rabbita workspace tests cover durable graph transforms, undo/redo, typed
   connections and exact-revision run requests.
-- Studio service tests cover graph install/revision/run/cache, scheduler claims,
-  reconnect replay, asset indexing/tags/deletion, secure shares and exact-base
-  proposal application (7 focused tests pass).
+- Studio service tests cover graph install/revision/run/cache, native graph
+  walking, human decisions, scheduler claims, reconnect replay, asset
+  indexing/tags/deletion, secure review pages, assistant proposals and
+  exact-base proposal application.
 - Workspace-domain tests cover validation, planning, diffs, artifacts,
   collaboration and provider dispatch (14 tests pass); Rabbita's focused
-  workspace suite passes 7 tests.
-- Integrated verification passes 66 native repository tests and 12 Rabbita
-  tests; the production Vite bundle and native release sidecar both build.
+  workspace suite passes 11 tests.
+- Integrated verification passes 68 native repository tests and 16 Rabbita
+  tests. Both MoonBit projects check with zero warnings; the production Vite
+  bundle and native release sidecar both build.
 - Lepusa 0.1.6 strict macOS verification: native launch, bundle,
   release-readiness and package-readiness all pass with zero audit warnings.
-- Native UI smoke: both recipes switch visibly; the provider graph shows
-  MoonFlow ownership, and the Review lens remains backed by the same app state.
+- Native UI smoke: the rebuilt release renders the saved graph, 106 governed
+  node definitions, typed ports, manifest-backed outcomes, structured
+  parameters, collaboration identity and the workspace assistant in one state.
 
 ## Deliberate authority boundaries
 
-The workspace feature set is present, but it does not fabricate external
-infrastructure. Presence is renewable project state rather than a hosted
-identity service. Client-review shares are revocable capability records rather
-than internet deployment. Provider dispatch remains pending until a real
-MoonFlow worker returns a receipt. Capsule publication publishes inside the
-workspace catalogue and never authorizes a third-party destination. Those are
-intentional least-authority boundaries, not missing workspace behavior.
+The workspace does not fabricate external infrastructure. Presence is renewable
+project state rather than a hosted identity service. Client-review pages are
+revocable local capability views rather than internet deployment. Provider
+dispatch remains pending until a real MoonFlow worker returns a receipt.
+Capsule publication remains internal and never authorizes a third-party
+destination. Public macOS signing and notarization still require
+publisher-owned credentials.
