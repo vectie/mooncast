@@ -386,6 +386,24 @@ async fn StudioService::dispatch_unsafe(
       json_value_response(200, self.workspace_catalog())
     (Get, ["api", "workspace", "projects", project_id, "capsules"]) =>
       json_value_response(200, self.workspace_capsules(project_id))
+    (
+      Post,
+      [
+        "api",
+        "workspace",
+        "projects",
+        project_id,
+        "capsules",
+        capsule_id,
+        "install",
+      ],
+    ) => {
+      let input : WorkspaceCapsuleInstallRequest = decode_body(request)
+      json_value_response(
+        200,
+        self.install_workspace_capsule(project_id, capsule_id, input),
+      )
+    }
     (Post, ["api", "workspace", "graphs", "validate"]) => {
       let graph : @workspace.WorkspaceGraph = decode_body(request)
       json_value_response(200, self.validate_workspace_graph(graph))
@@ -406,6 +424,24 @@ async fn StudioService::dispatch_unsafe(
     }
     (Get, ["api", "workspace", "projects", project_id, "graphs", graph_id]) =>
       json_value_response(200, self.get_workspace_graph(project_id, graph_id))
+    (
+      Post,
+      [
+        "api",
+        "workspace",
+        "projects",
+        project_id,
+        "graphs",
+        graph_id,
+        "revisions",
+      ],
+    ) => {
+      let input : WorkspaceGraphRevisionRequest = decode_body(request)
+      json_value_response(
+        201,
+        self.revise_workspace_graph(project_id, graph_id, input),
+      )
+    }
     (
       Post,
       ["api", "workspace", "projects", project_id, "graphs", graph_id, "fork"],
@@ -439,6 +475,24 @@ async fn StudioService::dispatch_unsafe(
     (Post, ["api", "workspace", "recipes", capsule_id, "runs"]) => {
       let input : WorkspaceRecipeRunRequest = decode_body(request)
       json_value_response(201, self.start_workspace_recipe(capsule_id, input))
+    }
+    (
+      Post,
+      [
+        "api",
+        "workspace",
+        "projects",
+        project_id,
+        "graphs",
+        graph_id,
+        "runs",
+      ],
+    ) => {
+      let input : WorkspaceGraphRunRequest = decode_body(request)
+      json_value_response(
+        201,
+        self.start_workspace_graph_run(project_id, graph_id, input),
+      )
     }
     (Post, ["api", "workspace", "runs"]) => {
       let input : WorkspaceRunCreateRequest = decode_body(request)
@@ -536,6 +590,22 @@ async fn StudioService::dispatch_unsafe(
       let input : WorkspaceShareCreateRequest = decode_body(request)
       json_value_response(201, self.create_workspace_share(input))
     }
+    (Post, ["api", "workspace", "shares", "secure"]) => {
+      let input : WorkspaceSecureShareRequest = decode_body(request)
+      json_value_response(201, self.create_secure_workspace_share(input))
+    }
+    (Get, ["api", "workspace", "shares", share_id, "access"]) =>
+      json_value_response(
+        200,
+        self.access_workspace_share(
+          share_id,
+          control_tower_query_value(request.query, "token").unwrap_or(""),
+        ),
+      )
+    (Post, ["api", "workspace", "shares", share_id, "revoke"]) => {
+      let input : WorkspaceShareRevokeRequest = decode_body(request)
+      json_value_response(200, self.revoke_workspace_share(share_id, input))
+    }
     (Post, ["api", "workspace", "capsules", "publish"]) => {
       let input : WorkspaceCapsulePublishRequest = decode_body(request)
       json_value_response(201, self.publish_workspace_capsule(input))
@@ -567,6 +637,24 @@ async fn StudioService::dispatch_unsafe(
     (Post, ["api", "workspace", "proposals", "apply"]) => {
       let input : WorkspaceProposalApplyRequest = decode_body(request)
       json_value_response(200, self.apply_workspace_proposal(input))
+    }
+    (
+      Post,
+      [
+        "api",
+        "workspace",
+        "projects",
+        project_id,
+        "proposals",
+        proposal_id,
+        "apply",
+      ],
+    ) => {
+      let input : WorkspaceProposalApplyByIdRequest = decode_body(request)
+      json_value_response(
+        200,
+        self.apply_saved_workspace_proposal(project_id, proposal_id, input),
+      )
     }
     (Post, ["api", "workspace", "proposals"]) => {
       let input : @workspace.AgentGraphProposal = decode_body(request)

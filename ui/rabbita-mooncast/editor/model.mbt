@@ -33,6 +33,118 @@ enum WorkspaceRecipe {
 } derive(Debug, Eq)
 
 ///|
+enum WorkspaceArtifactKind {
+  TextArtifact
+  ImageArtifact
+  AudioArtifact
+  VideoArtifact
+  MediaCollection
+  ShotCollection
+  TimelineArtifact
+  ReviewDecisionArtifact
+  DeliveryPackageArtifact
+  DataArtifact
+  AnyArtifact
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+enum WorkspacePortCardinality {
+  One
+  Many
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+enum WorkspaceNodeKindSummary {
+  InputNode
+  OperationNode
+  ControlNode
+  HumanGateNode
+  OutputNode
+  CapsuleNode
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+enum WorkspaceAuthoritySummary {
+  CognitiveMaintenance
+  ExternalEffect
+  Observe
+  PhysicalEffect
+  SandboxExecution
+  WorkspaceMutation
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+struct WorkspacePortSummary {
+  port_id : String
+  label : String
+  schema_id : String
+  artifact_kind : WorkspaceArtifactKind
+  cardinality : WorkspacePortCardinality
+  required : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+struct WorkspaceDefinitionSummary {
+  definition_id : String
+  display_name : String
+  category : String
+  node_kind : WorkspaceNodeKindSummary
+  tool_id : String
+  inputs : Array[WorkspacePortSummary]
+  outputs : Array[WorkspacePortSummary]
+  authority : WorkspaceAuthoritySummary
+  execution_owner : String
+  idempotent : Bool
+  review_required : Bool
+  evidence_outputs : Array[String]
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+struct WorkspaceNodeParameterSummary {
+  key : String
+  value : Json
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+struct WorkspaceGraphNodeSummary {
+  node_id : String
+  definition_id : String
+  title : String
+  x : Int
+  y : Int
+  parameters : Array[WorkspaceNodeParameterSummary]
+  collapsed : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+struct WorkspaceGraphEdgeSummary {
+  edge_id : String
+  source_node_id : String
+  source_port_id : String
+  target_node_id : String
+  target_port_id : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+struct WorkspaceGraphSummary {
+  contract : String
+  graph_id : String
+  project_id : String
+  revision : Int
+  title : String
+  nodes : Array[WorkspaceGraphNodeSummary]
+  edges : Array[WorkspaceGraphEdgeSummary]
+  output_node_ids : Array[String]
+  created_by : String
+  created_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+struct WorkspaceCatalogPayload {
+  definitions : Array[WorkspaceDefinitionSummary]
+} derive(FromJson)
+
+///|
 struct WorkspaceNodePosition {
   recipe : WorkspaceRecipe
   node_id : String
@@ -42,7 +154,6 @@ struct WorkspaceNodePosition {
 
 ///|
 struct WorkspaceCanvasDrag {
-  recipe : WorkspaceRecipe
   node_id : String
   origin_client_x : Int
   origin_client_y : Int
@@ -79,6 +190,7 @@ struct WorkspaceRunPayload {
 #warnings("-unused_field")
 struct WorkspaceProposalSummary {
   proposal_id : String
+  base_graph_revision : Int
   explanation : String
   affected_node_ids : Array[String]
   provider_ids : Array[String]
@@ -86,6 +198,22 @@ struct WorkspaceProposalSummary {
   required_approvals : Array[String]
   applied : Bool
   created_by : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceShareSummary {
+  share_id : String
+  expires_at : String
+  revoked : Bool
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceShareCreatedPayload {
+  share : WorkspaceShareSummary
+  access_path : String
+  token : String
 } derive(FromJson)
 
 ///|
@@ -442,6 +570,15 @@ struct Model {
   workspace_lens : WorkspaceLens
   selected_workspace_recipe : WorkspaceRecipe
   selected_workspace_node : String
+  workspace_catalog : Array[WorkspaceDefinitionSummary]
+  workspace_graph : WorkspaceGraphSummary?
+  workspace_graph_undo : Array[WorkspaceGraphSummary]
+  workspace_graph_redo : Array[WorkspaceGraphSummary]
+  workspace_graph_dirty : Bool
+  workspace_graph_saving : Bool
+  workspace_pending_run : String
+  workspace_node_palette_search : String
+  workspace_connect_port : String
   workspace_node_positions : Array[WorkspaceNodePosition]
   workspace_canvas_drag : WorkspaceCanvasDrag?
   workspace_canvas_zoom : Double
@@ -458,6 +595,7 @@ struct Model {
   workspace_run_id : String
   workspace_run_state : String
   workspace_proposals : Array[WorkspaceProposalSummary]
+  workspace_share_url : String
   production_project_id : String
   workspace : @api.WorkspaceSnapshot?
   selected_take_id : String
@@ -557,6 +695,15 @@ fn initial_model() -> Model {
     workspace_lens: GraphLens,
     selected_workspace_recipe: CombineVideosRecipe,
     selected_workspace_node: "concat",
+    workspace_catalog: [],
+    workspace_graph: None,
+    workspace_graph_undo: [],
+    workspace_graph_redo: [],
+    workspace_graph_dirty: false,
+    workspace_graph_saving: false,
+    workspace_pending_run: "",
+    workspace_node_palette_search: "",
+    workspace_connect_port: "",
     workspace_node_positions: [
       { recipe: CombineVideosRecipe, node_id: "intake", x: 40, y: 80 },
       { recipe: CombineVideosRecipe, node_id: "probe", x: 300, y: 80 },
@@ -586,6 +733,7 @@ fn initial_model() -> Model {
     workspace_run_id: "",
     workspace_run_state: "idle",
     workspace_proposals: [],
+    workspace_share_url: "",
     production_project_id: "",
     workspace: None,
     selected_take_id: "",

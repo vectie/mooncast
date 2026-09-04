@@ -57,8 +57,22 @@ fn update(
           let proposals = @http.get(
             "/api/workspace/projects/" + project_id + "/proposals",
           ).expect_json(value => dispatch(WorkspaceProposalsLoaded(value)))
+          let catalog = @http.get("/api/workspace/catalog").expect_json(value => {
+            dispatch(WorkspaceCatalogLoaded(value))
+          })
+          let graph = @http.post(
+            "/api/workspace/projects/" +
+            project_id +
+            "/capsules/combine-videos/install",
+          )
+          .with_json({
+            "graph_id": "combine-videos",
+            "title": "Combine videos",
+            "actor": "Mooncast operator",
+          })
+          .expect_json(value => dispatch(WorkspaceGraphLoaded(value)))
           (
-            @rabbita.batch([opened, proposals]),
+            @rabbita.batch([opened, proposals, catalog, graph]),
             {
               ..model,
               projects,
@@ -80,6 +94,71 @@ fn update(
               retry: Some(RetryOpen(model.project_id)),
             },
           )
+      }
+    WorkspaceCatalogLoaded(result) =>
+      match result {
+        Err(_) =>
+          (@rabbita.none, { ..model, error: "Could not load the governed node catalog." })
+        Ok(response) => {
+          let decoded : WorkspaceCatalogPayload? = Some(
+            @json.from_json(response),
+          ) catch {
+            _ => None
+          }
+          match decoded {
+            Some(value) =>
+              (
+                @rabbita.none,
+                {
+                  ..model,
+                  workspace_catalog: value.definitions,
+                  workspace_activity: model.workspace_activity +
+                  ["\{value.definitions.length()} governed node definitions loaded"],
+                },
+              )
+            None =>
+              (@rabbita.none, { ..model, error: "Node catalog response was invalid." })
+          }
+        }
+      }
+    WorkspaceGraphLoaded(result) =>
+      match result {
+        Err(_) =>
+          (
+            @rabbita.none,
+            { ..model, loading: false, error: "Could not install or load the workspace graph." },
+          )
+        Ok(response) => {
+          let decoded : WorkspaceGraphSummary? = Some(@json.from_json(response)) catch {
+            _ => None
+          }
+          match decoded {
+            Some(graph) =>
+              (
+                @rabbita.none,
+                {
+                  ..model,
+                  workspace_graph: Some(graph),
+                  workspace_graph_undo: [],
+                  workspace_graph_redo: [],
+                  workspace_graph_dirty: false,
+                  workspace_graph_saving: false,
+                  selected_workspace_node: graph.nodes
+                  .get(0)
+                  .map(node => node.node_id)
+                  .unwrap_or(""),
+                  loading: false,
+                  status: "Loaded saved graph revision \{graph.revision}.",
+                  error: "",
+                },
+              )
+            None =>
+              (
+                @rabbita.none,
+                { ..model, loading: false, error: "Workspace graph response was invalid." },
+              )
+          }
+        }
       }
     WorkspaceProposalsLoaded(result) =>
       match result {
@@ -113,11 +192,154 @@ fn update(
         CombineVideosRecipe => "concat"
         BriefToDeliveryRecipe => "generate"
       }
+      let capsule_id = workspace_recipe_id(selected_workspace_recipe)
       (
-        @rabbita.none,
-        { ..model, selected_workspace_recipe, selected_workspace_node },
+        @http.post(
+          "/api/workspace/projects/" +
+          model.project_id +
+          "/capsules/" +
+          capsule_id +
+          "/install",
+        )
+        .with_json({
+          "graph_id": capsule_id,
+          "title": workspace_recipe_title(selected_workspace_recipe),
+          "actor": "Mooncast operator",
+        })
+        .expect_json(result => dispatch(WorkspaceGraphLoaded(result))),
+        {
+          ..model,
+          selected_workspace_recipe,
+          selected_workspace_node,
+          loading: true,
+          status: "Loading saved recipe graph…",
+          error: "",
+        },
       )
     }
+    WorkspaceNodePaletteChanged(workspace_node_palette_search) =>
+      (@rabbita.none, { ..model, workspace_node_palette_search, })
+    AddWorkspaceNode(definition_id) =>
+      match workspace_definition(model, definition_id) {
+        Some(definition) =>
+          (@rabbita.none, workspace_graph_add_node(model, definition))
+        None =>
+          (@rabbita.none, { ..model, error: "That node definition is unavailable." })
+      }
+    DeleteSelectedWorkspaceNode =>
+      (@rabbita.none, workspace_graph_delete_selected(model))
+    DuplicateSelectedWorkspaceNode =>
+      (@rabbita.none, workspace_graph_duplicate_selected(model))
+    ToggleSelectedWorkspaceNodeCollapsed =>
+      (@rabbita.none, workspace_graph_toggle_collapsed(model))
+    WorkspaceGraphUndo =>
+      match model.workspace_graph_undo.last() {
+        None => (@rabbita.none, model)
+        Some(previous) => {
+          let undo = model.workspace_graph_undo.copy()
+          ignore(undo.pop())
+          (
+            @rabbita.none,
+            {
+              ..model,
+              workspace_graph: Some(previous),
+              workspace_graph_undo: undo,
+              workspace_graph_redo: model.workspace_graph
+              .map(value => model.workspace_graph_redo + [value])
+              .unwrap_or(model.workspace_graph_redo),
+              workspace_graph_dirty: true,
+              status: "Undid graph edit.",
+              error: "",
+            },
+          )
+        }
+      }
+    WorkspaceGraphRedo =>
+      match model.workspace_graph_redo.last() {
+        None => (@rabbita.none, model)
+        Some(next) => {
+          let redo = model.workspace_graph_redo.copy()
+          ignore(redo.pop())
+          (
+            @rabbita.none,
+            {
+              ..model,
+              workspace_graph: Some(next),
+              workspace_graph_undo: model.workspace_graph
+              .map(value => model.workspace_graph_undo + [value])
+              .unwrap_or(model.workspace_graph_undo),
+              workspace_graph_redo: redo,
+              workspace_graph_dirty: true,
+              status: "Redid graph edit.",
+              error: "",
+            },
+          )
+        }
+      }
+    SaveWorkspaceGraph(continuation) =>
+      match model.workspace_graph {
+        None => (@rabbita.none, { ..model, error: "No graph is loaded." })
+        Some(graph) =>
+          (
+            @http.post(
+              "/api/workspace/projects/" +
+              graph.project_id +
+              "/graphs/" +
+              graph.graph_id +
+              "/revisions",
+            )
+            .with_json(workspace_graph_revision_body(graph))
+            .expect_json(result => {
+              dispatch(WorkspaceGraphSaved(continuation, result))
+            }),
+            {
+              ..model,
+              workspace_graph_saving: true,
+              workspace_pending_run: continuation,
+              status: "Validating and saving graph revision…",
+              error: "",
+            },
+          )
+      }
+    WorkspaceGraphSaved(continuation, result) =>
+      match result {
+        Err(_) =>
+          (
+            @rabbita.none,
+            {
+              ..model,
+              workspace_graph_saving: false,
+              error: "Graph save failed. Reload before retrying if another editor changed it.",
+            },
+          )
+        Ok(response) => {
+          let decoded : WorkspaceGraphSummary? = Some(@json.from_json(response)) catch {
+            _ => None
+          }
+          guard decoded is Some(graph) else {
+            return (
+              @rabbita.none,
+              { ..model, workspace_graph_saving: false, error: "Saved graph response was invalid." },
+            )
+          }
+          let saved = {
+            ..model,
+            workspace_graph: Some(graph),
+            workspace_graph_dirty: false,
+            workspace_graph_saving: false,
+            workspace_pending_run: "",
+            status: "Saved graph revision \{graph.revision}.",
+            error: "",
+          }
+          if continuation == "all" {
+            (start_workspace_graph_http(dispatch, saved, false), { ..saved, busy: true })
+          } else if continuation == "selected" {
+            (start_workspace_graph_http(dispatch, saved, true), { ..saved, busy: true })
+          } else {
+            (@rabbita.none, saved)
+          }
+        }
+      }
     SelectWorkspaceNode(selected_workspace_node) => {
       let lease = fresh_key(model, "presence")
       let body : Json = {
@@ -144,13 +366,13 @@ fn update(
       }
     WorkspaceCanvasPointerDown(node_id, mouse) => {
       let position = workspace_node_position(model, node_id)
+      let prepared = begin_workspace_graph_edit(model)
       (
         @rabbita.none,
         {
-          ..model,
+          ..prepared,
           selected_workspace_node: node_id,
           workspace_canvas_drag: Some({
-            recipe: model.selected_workspace_recipe,
             node_id,
             origin_client_x: mouse.client_pos().x,
             origin_client_y: mouse.client_pos().y,
@@ -172,14 +394,7 @@ fn update(
             0,
             drag.origin_y + mouse.client_pos().y - drag.origin_client_y,
           )
-          let positions = model.workspace_node_positions.map(value => {
-            if value.recipe == drag.recipe && value.node_id == drag.node_id {
-              { ..value, x, y }
-            } else {
-              value
-            }
-          })
-          (@rabbita.none, { ..model, workspace_node_positions: positions })
+          (@rabbita.none, workspace_graph_move_node(model, drag.node_id, x, y))
         }
       }
     WorkspaceCanvasPointerReleased => {
@@ -195,19 +410,16 @@ fn update(
     }
     WorkspaceNodeNudged(node_id, delta_x, delta_y) => {
       let position = workspace_node_position(model, node_id)
-      let positions = model.workspace_node_positions.map(value => {
-        if value.recipe == model.selected_workspace_recipe &&
-          value.node_id == node_id {
-          {
-            ..value,
-            x: Int::max(0, position.x + delta_x),
-            y: Int::max(0, position.y + delta_y),
-          }
-        } else {
-          value
-        }
-      })
-      (@rabbita.none, { ..model, workspace_node_positions: positions })
+      let prepared = begin_workspace_graph_edit(model)
+      (
+        @rabbita.none,
+        workspace_graph_move_node(
+          prepared,
+          node_id,
+          position.x + delta_x,
+          position.y + delta_y,
+        ),
+      )
     }
     WorkspaceZoomChanged(delta) =>
       (
@@ -220,53 +432,68 @@ fn update(
           ),
         },
       )
-    WorkspacePortActivated(node_id) => {
-      if model.workspace_connect_from.is_blank() {
+    WorkspacePortActivated(node_id, port_id, is_output) => {
+      if is_output {
         return (
           @rabbita.none,
           {
             ..model,
             workspace_connect_from: node_id,
+            workspace_connect_port: port_id,
             status: "Choose a compatible input port.",
+            error: "",
           },
         )
       }
+      if model.workspace_connect_from.is_blank() {
+        return (
+          @rabbita.none,
+          { ..model, error: "Choose an output port before choosing an input." },
+        )
+      }
       let source = model.workspace_connect_from
-      if !workspace_connection_allowed(
-          model.selected_workspace_recipe,
-          source,
-          node_id,
-        ) {
+      let source_port_id = model.workspace_connect_port
+      let source_kind = visible_workspace_nodes(model)
+        .iter()
+        .find_first(value => value.node_id == source)
+        .bind(value => {
+          value.outputs
+          .iter()
+          .find_first(port => port.port_id == source_port_id)
+        })
+        .map(port => port.artifact_kind)
+      let target_kind = visible_workspace_nodes(model)
+        .iter()
+        .find_first(value => value.node_id == node_id)
+        .bind(value => value.inputs.iter().find_first(port => port.port_id == port_id))
+        .map(port => port.artifact_kind)
+      if source_kind is None ||
+        target_kind is None ||
+        !workspace_port_accepts(target_kind.unwrap(), source_kind.unwrap()) {
         return (
           @rabbita.none,
           {
             ..model,
             workspace_connect_from: "",
+            workspace_connect_port: "",
             error: "Typed ports are incompatible; the connection was not created.",
           },
         )
       }
-      let connection : WorkspaceConnection = {
-        recipe: model.selected_workspace_recipe,
-        source_node_id: source,
-        target_node_id: node_id,
-      }
-      let connections = if model.workspace_connections.any(value => {
-          value.recipe == connection.recipe &&
-          value.source_node_id == connection.source_node_id &&
-          value.target_node_id == connection.target_node_id
-        }) {
-        model.workspace_connections
-      } else {
-        model.workspace_connections + [connection]
-      }
+      let connected = workspace_graph_connect(
+        model,
+        source,
+        source_port_id,
+        node_id,
+        port_id,
+      )
       (
         @rabbita.none,
         {
-          ..model,
-          workspace_connections: connections,
+          ..connected,
           workspace_connect_from: "",
-          workspace_activity: model.workspace_activity +
+          workspace_connect_port: "",
+          workspace_activity: connected.workspace_activity +
           ["Connected " + source + " → " + node_id + " (typed)"],
           status: "Typed connection added.",
           error: "",
@@ -285,45 +512,13 @@ fn update(
         return (@rabbita.none, model)
       }
       let title = model.workspace_dragged_asset
-      if model.workspace_asset_nodes.any(value => {
-          value.recipe == model.selected_workspace_recipe &&
-          value.title == title
-        }) {
-        return (
-          @rabbita.none,
-          {
-            ..model,
-            workspace_dragged_asset: "",
-            status: "Asset input already exists on this graph.",
-          },
-        )
-      }
-      let node_id = fresh_key(model, "asset-input")
-      let x = 60 + model.workspace_asset_nodes.length() * 230
-      let y = 290
       (
         @rabbita.none,
         {
-          ..model,
-          workspace_asset_nodes: model.workspace_asset_nodes +
-          [
-            {
-              recipe: model.selected_workspace_recipe,
-              node_id,
-              title,
-              artifact_kind: "video",
-              x,
-              y,
-            },
-          ],
-          workspace_node_positions: model.workspace_node_positions +
-          [{ recipe: model.selected_workspace_recipe, node_id, x, y }],
+          ..workspace_graph_add_asset_node(model, title),
           workspace_dragged_asset: "",
-          selected_workspace_node: node_id,
           workspace_activity: model.workspace_activity +
           ["Created typed video input node from " + title],
-          status: "Asset input node created. Connect its output to a compatible port.",
-          error: "",
         },
       )
     }
@@ -526,29 +721,29 @@ fn update(
       )
     }
     ShareWorkspaceRun => {
-      let share_id = fresh_key(model, "share")
       let target_id = if model.utility_concat.job_id.is_blank() {
-        "workspace-draft"
+        model.workspace_graph
+        .map(graph => graph.graph_id)
+        .unwrap_or("workspace-draft")
       } else {
         model.utility_concat.job_id
       }
       let body : Json = {
-        "share_id": share_id,
         "project_id": model.project_id,
-        "target_kind": "RunTarget",
+        "target_kind": if model.utility_concat.job_id.is_blank() {
+          "GraphTarget"
+        } else {
+          "RunTarget"
+        },
         "target_id": target_id,
         "mode": "client-review",
-        "token": "mooncast-ui-review-token-" + share_id,
-        "expires_at": "operator-controlled",
         "created_by": "Mooncast operator",
-        "created_at": share_id,
+        "lifetime_seconds": 604800,
       }
       (
-        @http.post("/api/workspace/shares")
+        @http.post("/api/workspace/shares/secure")
         .with_json(body)
-        .expect_json(result => {
-          dispatch(WorkspaceActionFinished("share", result))
-        }),
+        .expect_json(result => dispatch(WorkspaceSecureShareCreated(result))),
         {
           ..model,
           busy: true,
@@ -558,94 +753,150 @@ fn update(
         },
       )
     }
-    StartWorkspaceSelectedOutput =>
-      match model.selected_workspace_recipe {
-        CombineVideosRecipe => update(dispatch, StartUtilityConcat, model)
-        BriefToDeliveryRecipe => {
-          guard !model.workspace_public_input.trim().is_blank() else {
+    WorkspaceSecureShareCreated(result) =>
+      match result {
+        Err(_) =>
+          (
+            @rabbita.none,
+            { ..model, busy: false, error: "Secure review link could not be created." },
+          )
+        Ok(response) => {
+          let decoded : WorkspaceShareCreatedPayload? = Some(
+            @json.from_json(response),
+          ) catch {
+            _ => None
+          }
+          guard decoded is Some(created) else {
             return (
               @rabbita.none,
-              {
-                ..model,
-                error: "Enter the public creative brief before starting this recipe.",
-              },
+              { ..model, busy: false, error: "Secure share response was invalid." },
             )
-          }
-          let run_id = fresh_key(model, "workspace-run-selected")
-          let body : Json = {
-            "project_id": model.project_id,
-            "run_id": run_id,
-            "created_by": "Mooncast operator",
-            "created_at": run_id,
-            "provider": "moonflow",
-            "model": "policy-routed",
-            "policy_digest": "sha256:workspace-default-policy",
-            "maximum_retries": 2,
-            "public_inputs": [
-              { "port_id": "brief", "value": model.workspace_public_input },
-            ],
-            "requested_output_node_ids": [model.selected_workspace_node],
           }
           (
-            @http.post(
-              "/api/workspace/recipes/brief-to-generated-delivery/runs",
-            )
-            .with_json(body)
-            .expect_json(result => dispatch(WorkspaceRecipeStarted(result))),
+            @rabbita.none,
             {
               ..model,
-              busy: true,
-              request_sequence: model.request_sequence + 1,
-              status: "Freezing the graph through the selected output…",
+              busy: false,
+              workspace_share_url: created.access_path,
+              status: "Created a revocable review link. Its token is shown only in this response.",
+              workspace_activity: model.workspace_activity +
+              ["Secure client-review share created"],
               error: "",
             },
           )
         }
       }
-    StartWorkspaceRecipe =>
-      match model.selected_workspace_recipe {
-        CombineVideosRecipe => update(dispatch, StartUtilityConcat, model)
-        BriefToDeliveryRecipe => {
-          guard !model.workspace_public_input.trim().is_blank() else {
-            return (
-              @rabbita.none,
-              {
-                ..model,
-                error: "Enter the public creative brief before starting this recipe.",
-              },
-            )
-          }
-          let run_id = fresh_key(model, "workspace-run")
-          let body : Json = {
-            "project_id": model.project_id,
-            "run_id": run_id,
-            "created_by": "Mooncast operator",
-            "created_at": run_id,
-            "provider": "moonflow",
-            "model": "policy-routed",
-            "policy_digest": "sha256:workspace-default-policy",
-            "maximum_retries": 2,
-            "public_inputs": [
-              { "port_id": "brief", "value": model.workspace_public_input },
-            ],
-            "requested_output_node_ids": [],
-          }
+    ApplyWorkspaceProposal(proposal_id) =>
+      (
+        @http.post(
+          "/api/workspace/projects/" +
+          model.project_id +
+          "/proposals/" +
+          proposal_id +
+          "/apply",
+        )
+        .with_json({ "actor": "Mooncast operator" })
+        .expect_json(result => dispatch(WorkspaceProposalApplied(result))),
+        {
+          ..model,
+          busy: true,
+          status: "Applying reviewed proposal to the exact base revision…",
+          error: "",
+        },
+      )
+    WorkspaceProposalApplied(result) =>
+      match result {
+        Err(_) =>
           (
-            @http.post(
-              "/api/workspace/recipes/brief-to-generated-delivery/runs",
-            )
-            .with_json(body)
-            .expect_json(result => dispatch(WorkspaceRecipeStarted(result))),
+            @rabbita.none,
             {
               ..model,
-              busy: true,
-              request_sequence: model.request_sequence + 1,
-              status: "Validating and freezing provider recipe…",
+              busy: false,
+              error: "Proposal could not be applied. Refresh it if the graph revision changed.",
+            },
+          )
+        Ok(response) => {
+          let decoded : WorkspaceGraphSummary? = Some(@json.from_json(response)) catch {
+            _ => None
+          }
+          guard decoded is Some(graph) else {
+            return (
+              @rabbita.none,
+              { ..model, busy: false, error: "Applied proposal response was invalid." },
+            )
+          }
+          let proposals = @http.get(
+            "/api/workspace/projects/" + model.project_id + "/proposals",
+          ).expect_json(value => dispatch(WorkspaceProposalsLoaded(value)))
+          (
+            proposals,
+            {
+              ..model,
+              busy: false,
+              workspace_graph: Some(graph),
+              workspace_graph_undo: [],
+              workspace_graph_redo: [],
+              workspace_graph_dirty: false,
+              status: "Applied proposal as graph revision {graph.revision}.",
+              workspace_activity: model.workspace_activity +
+              ["Reviewed agent proposal applied"],
               error: "",
             },
           )
         }
       }
+    StartWorkspaceSelectedOutput => {
+      if model.selected_workspace_recipe == BriefToDeliveryRecipe &&
+        model.workspace_public_input.trim().is_blank() {
+        return (
+          @rabbita.none,
+          {
+            ..model,
+            error: "Enter the public creative brief before starting this recipe.",
+          },
+        )
+      }
+      let prepared = workspace_graph_bind_public_input(model)
+      if prepared.workspace_graph_dirty {
+        update(dispatch, SaveWorkspaceGraph("selected"), prepared)
+      } else {
+        (
+          start_workspace_graph_http(dispatch, prepared, true),
+          {
+            ..prepared,
+            busy: true,
+            status: "Freezing the saved graph through the selected output…",
+            error: "",
+          },
+        )
+      }
+    }
+    StartWorkspaceRecipe => {
+      if model.selected_workspace_recipe == BriefToDeliveryRecipe &&
+        model.workspace_public_input.trim().is_blank() {
+        return (
+          @rabbita.none,
+          {
+            ..model,
+            error: "Enter the public creative brief before starting this recipe.",
+          },
+        )
+      }
+      let prepared = workspace_graph_bind_public_input(model)
+      if prepared.workspace_graph_dirty {
+        update(dispatch, SaveWorkspaceGraph("all"), prepared)
+      } else {
+        (
+          start_workspace_graph_http(dispatch, prepared, false),
+          {
+            ..prepared,
+            busy: true,
+            status: "Validating and freezing the saved graph revision…",
+            error: "",
+          },
+        )
+      }
+    }
     WorkspaceRecipeStarted(result) =>
       match result {
         Ok(response) => {
@@ -662,18 +913,20 @@ fn update(
               },
             )
           }
-          (
-            @rabbita.none,
-            {
-              ..model,
-              busy: false,
-              workspace_run_id: run.run_id,
-              workspace_run_state: run.state.stringify(),
-              status: "Run queued. Ready nodes can now be claimed by MoonClaw or dispatched to MoonFlow.",
-              workspace_activity: model.workspace_activity +
-              ["Provider recipe validated, frozen, and queued"],
-            },
-          )
+          let started = {
+            ..model,
+            busy: false,
+            workspace_run_id: run.run_id,
+            workspace_run_state: run.state.stringify(),
+            status: "Run queued from the exact saved graph revision.",
+            workspace_activity: model.workspace_activity +
+            ["Saved graph revision validated, frozen, and queued"],
+          }
+          if model.selected_workspace_recipe == CombineVideosRecipe {
+            update(dispatch, StartUtilityConcat, started)
+          } else {
+            (@rabbita.none, started)
+          }
         }
         Err(_) =>
           (
@@ -758,8 +1011,25 @@ fn update(
       let proposals = @http.get(
         "/api/workspace/projects/" + model.project_id + "/proposals",
       ).expect_json(result => dispatch(WorkspaceProposalsLoaded(result)))
+      let catalog = @http.get("/api/workspace/catalog").expect_json(result => {
+        dispatch(WorkspaceCatalogLoaded(result))
+      })
+      let capsule_id = workspace_recipe_id(model.selected_workspace_recipe)
+      let graph = @http.post(
+        "/api/workspace/projects/" +
+        model.project_id +
+        "/capsules/" +
+        capsule_id +
+        "/install",
+      )
+      .with_json({
+        "graph_id": capsule_id,
+        "title": workspace_recipe_title(model.selected_workspace_recipe),
+        "actor": "Mooncast operator",
+      })
+      .expect_json(result => dispatch(WorkspaceGraphLoaded(result)))
       (
-        @rabbita.batch([opened, proposals]),
+        @rabbita.batch([opened, proposals, catalog, graph]),
         {
           ..model,
           workspace: None,

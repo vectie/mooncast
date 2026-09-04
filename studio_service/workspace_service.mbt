@@ -516,6 +516,14 @@ pub async fn StudioService::apply_workspace_run_command(
         )
     }
     save_value(self.store, workspace_run_key(run_id), updated)
+    if command.command == "succeed" {
+      self.remember_workspace_node_output(
+        updated,
+        command.node_id,
+        command.output_digest,
+        command.output_ref,
+      )
+    }
     updated
   })
 }
@@ -1101,6 +1109,14 @@ pub async fn StudioService::apply_workspace_dispatch_receipt(
         )
     }
     save_value(self.store, workspace_run_key(updated.run_id), run_updated)
+    if updated.state == @workspace.SucceededDispatch {
+      self.remember_workspace_node_output(
+        run_updated,
+        updated.node_id,
+        updated.output_digest,
+        updated.output_ref,
+      )
+    }
     updated
   })
 }

@@ -1,10 +1,14 @@
 ///|
 struct WorkspaceNodeView {
   node_id : String
+  definition_id : String
   title : String
   detail : String
   owner : String
   authority : String
+  inputs : Array[WorkspacePortSummary]
+  outputs : Array[WorkspacePortSummary]
+  collapsed : Bool
 }
 
 ///|
@@ -14,90 +18,138 @@ fn workspace_nodes(recipe : WorkspaceRecipe) -> Array[WorkspaceNodeView] {
       [
         {
           node_id: "intake",
+          definition_id: "workspace.folder-intake",
           title: "Folder intake",
           detail: "Digest-pin ordered local videos",
           owner: "Mooncast",
           authority: "Workspace mutation",
+          inputs: [],
+          outputs: [],
+          collapsed: false,
         },
         {
           node_id: "probe",
+          definition_id: "workspace.media-probe",
           title: "Probe media",
           detail: "Inspect streams, codecs and duration",
           owner: "Mooncast",
           authority: "Sandbox execution",
+          inputs: [],
+          outputs: [],
+          collapsed: false,
         },
         {
           node_id: "normalize",
+          definition_id: "workspace.media-normalize",
           title: "Normalize streams",
           detail: "Reconcile incompatible media safely",
           owner: "Mooncast",
           authority: "Sandbox execution",
+          inputs: [],
+          outputs: [],
+          collapsed: false,
         },
         {
           node_id: "concat",
+          definition_id: "workspace.media-concat",
           title: "Concatenate video",
           detail: "Assemble sources in frozen order",
           owner: "Mooncast",
           authority: "Sandbox execution",
+          inputs: [],
+          outputs: [],
+          collapsed: false,
         },
         {
           node_id: "verify",
+          definition_id: "workspace.media-verify",
           title: "Verify output",
           detail: "Probe the final output and receipt",
           owner: "Mooncast",
           authority: "Sandbox execution",
+          inputs: [],
+          outputs: [],
+          collapsed: false,
         },
         {
           node_id: "register",
+          definition_id: "workspace.artifact-register",
           title: "Register artifact",
           detail: "Save immutable lineage and preview",
           owner: "Mooncast",
           authority: "Workspace mutation",
+          inputs: [],
+          outputs: [],
+          collapsed: false,
         },
       ]
     BriefToDeliveryRecipe =>
       [
         {
           node_id: "brief",
+          definition_id: "workspace.brief-input",
           title: "Creative brief",
           detail: "Define outcome, audience and constraints",
           owner: "Mooncast",
           authority: "Observe",
+          inputs: [],
+          outputs: [],
+          collapsed: false,
         },
         {
           node_id: "validate",
+          definition_id: "tool:brief.validate",
           title: "Validate brief",
           detail: "Check the governed creative contract",
           owner: "Mooncast",
           authority: "Sandbox execution",
+          inputs: [],
+          outputs: [],
+          collapsed: false,
         },
         {
           node_id: "project",
+          definition_id: "tool:project.create",
           title: "Create project",
           detail: "Materialize a versioned production graph",
           owner: "Mooncast",
           authority: "Workspace mutation",
+          inputs: [],
+          outputs: [],
+          collapsed: false,
         },
         {
           node_id: "generate",
+          definition_id: "tool:shots.generate",
           title: "Generate shots",
           detail: "Dispatch provider work with receipts",
           owner: "MoonFlow",
           authority: "External effect",
+          inputs: [],
+          outputs: [],
+          collapsed: false,
         },
         {
           node_id: "review",
+          definition_id: "tool:asset.review",
           title: "Human asset review",
           detail: "A named reviewer accepts or rejects",
           owner: "Human",
           authority: "Human gate",
+          inputs: [],
+          outputs: [],
+          collapsed: false,
         },
         {
           node_id: "delivery",
+          definition_id: "tool:delivery.package",
           title: "Package delivery",
           detail: "Assemble only accepted artifacts",
           owner: "Mooncast",
           authority: "Sandbox execution",
+          inputs: [],
+          outputs: [],
+          collapsed: false,
         },
       ]
   }
@@ -105,30 +157,20 @@ fn workspace_nodes(recipe : WorkspaceRecipe) -> Array[WorkspaceNodeView] {
 
 ///|
 fn selected_workspace_node(model : Model) -> WorkspaceNodeView {
-  let built_in = workspace_nodes(model.selected_workspace_recipe)
-  match
-    built_in
-    .iter()
-    .find_first(node => node.node_id == model.selected_workspace_node) {
+  let nodes = visible_workspace_nodes(model)
+  match nodes.iter().find_first(node => node.node_id == model.selected_workspace_node) {
     Some(node) => node
-    None =>
-      match
-        model.workspace_asset_nodes
-        .iter()
-        .find_first(value => {
-          value.recipe == model.selected_workspace_recipe &&
-          value.node_id == model.selected_workspace_node
-        }) {
-        Some(asset) =>
-          {
-            node_id: asset.node_id,
-            title: asset.title,
-            detail: "Versioned " + asset.artifact_kind + " asset input",
-            owner: "Mooncast",
-            authority: "Observe",
-          }
-        None => built_in[0]
-      }
+    None => nodes.get(0).unwrap_or({
+      node_id: "",
+      definition_id: "",
+      title: "No node selected",
+      detail: "Add a manifest-backed node from the palette.",
+      owner: "none",
+      authority: "None",
+      inputs: [],
+      outputs: [],
+      collapsed: false,
+    })
   }
 }
 
@@ -137,6 +179,14 @@ fn workspace_node_position(
   model : Model,
   node_id : String,
 ) -> WorkspaceNodePosition {
+  if workspace_graph_node(model, node_id) is Some(node) {
+    return {
+      recipe: model.selected_workspace_recipe,
+      node_id,
+      x: node.x,
+      y: node.y,
+    }
+  }
   model.workspace_node_positions
   .iter()
   .find_first(value => {
@@ -188,10 +238,8 @@ fn workspace_connection_allowed(
 
 ///|
 fn workspace_node_state(model : Model, node_id : String) -> String {
-  if model.workspace_asset_nodes.any(value => {
-      value.recipe == model.selected_workspace_recipe &&
-      value.node_id == node_id
-    }) {
+  if workspace_graph_node(model, node_id) is Some(node) &&
+    node.node_id.has_prefix("node-") {
     return "ready"
   }
   let phase = model.utility_concat.phase
@@ -295,6 +343,71 @@ fn workspace_recipe_rail(
       @html.span("Provider-backed · human-gated · 6 nodes"),
     ],
     @html.div(class="workspace-section-heading") <| [
+      @html.h2("Node palette"),
+      @html.span("\{model.workspace_catalog.length()} governed"),
+    ],
+    @html.label(class="workspace-search") <| [
+      @html.span("Find a tool or control"),
+      @html.input(
+        input_type=@html.Search,
+        value=model.workspace_node_palette_search,
+        placeholder="Search 97 pack capabilities…",
+        on_input=dispatch.map(value => WorkspaceNodePaletteChanged(value)),
+      ),
+    ],
+    @html.div(class="workspace-node-palette") <| workspace_palette_definitions(model)
+    .map(definition => {
+      @html.button(
+        type_="button",
+        on_click=dispatch(AddWorkspaceNode(definition.definition_id)),
+        title=definition.tool_id,
+      ) <| [
+        @html.strong(definition.display_name),
+        @html.small(
+          definition.category + " · " + workspace_authority_label(definition.authority),
+        ),
+      ]
+    }),
+    @html.div(class="workspace-graph-actions") <| [
+      @html.button(
+        type_="button",
+        disabled=!model.workspace_graph_dirty || model.workspace_graph_saving,
+        on_click=dispatch(SaveWorkspaceGraph("")),
+        "Save revision",
+      ),
+      @html.button(
+        type_="button",
+        disabled=model.workspace_graph_undo.is_empty(),
+        on_click=dispatch(WorkspaceGraphUndo),
+        "Undo",
+      ),
+      @html.button(
+        type_="button",
+        disabled=model.workspace_graph_redo.is_empty(),
+        on_click=dispatch(WorkspaceGraphRedo),
+        "Redo",
+      ),
+      @html.button(
+        type_="button",
+        disabled=model.selected_workspace_node.is_blank(),
+        on_click=dispatch(DuplicateSelectedWorkspaceNode),
+        "Duplicate",
+      ),
+      @html.button(
+        type_="button",
+        disabled=model.selected_workspace_node.is_blank(),
+        on_click=dispatch(ToggleSelectedWorkspaceNodeCollapsed),
+        "Collapse",
+      ),
+      @html.button(
+        class="danger",
+        type_="button",
+        disabled=model.selected_workspace_node.is_blank(),
+        on_click=dispatch(DeleteSelectedWorkspaceNode),
+        "Delete",
+      ),
+    ],
+    @html.div(class="workspace-section-heading") <| [
       @html.h2("Assets"),
       @html.span("\{model.utility_concat.files.length()} selected"),
     ],
@@ -378,17 +491,16 @@ fn workspace_node_card(
     ""
   }
   let position = workspace_node_position(model, node.node_id)
-  let is_asset_input = model.workspace_asset_nodes.any(value => {
-    value.recipe == model.selected_workspace_recipe &&
-    value.node_id == node.node_id
-  })
   let connecting = if model.workspace_connect_from == node.node_id {
     " is-connecting"
   } else {
     ""
   }
   @html.div(
-    class="workspace-node state-" + state + selection_class,
+    class="workspace-node state-" +
+    state +
+    selection_class +
+    (if node.collapsed { " is-collapsed" } else { "" }),
     style=["left: \{position.x}px", "top: \{position.y}px"],
     on_mousedown=mouse => {
       dispatch(WorkspaceCanvasPointerDown(node.node_id, mouse))
@@ -406,32 +518,36 @@ fn workspace_node_card(
       @html.strong(node.title),
       @html.small(node.detail),
     ],
-    if is_asset_input ||
-      workspace_input_kind(model.selected_workspace_recipe, node.node_id) ==
-      "none" {
-      @html.nothing
-    } else {
+    @html.div(class="workspace-node-inputs") <| node.inputs.map(port => {
       @html.button(
         class="node-port input-port",
         type_="button",
-        title="Connect typed input: " +
-          workspace_input_kind(model.selected_workspace_recipe, node.node_id),
-        on_click=dispatch(WorkspacePortActivated(node.node_id)),
-        attrs=@html.Attrs::build().aria_label("Connect input to " + node.title),
-        "in",
+        title="Connect " + workspace_artifact_kind_label(port.artifact_kind) + " input",
+        on_click=dispatch(WorkspacePortActivated(node.node_id, port.port_id, false)),
+        attrs=@html.Attrs::build().aria_label(
+          "Connect " + port.label + " input to " + node.title,
+        ),
+        port.label,
       )
-    },
-    @html.button(
-      class="node-port output-port",
-      type_="button",
-      title="Start connection: " +
-        workspace_output_kind(model.selected_workspace_recipe, node.node_id),
-      on_click=dispatch(WorkspacePortActivated(node.node_id)),
-      attrs=@html.Attrs::build().aria_label(
-        "Start connection from " + node.title,
-      ),
-      "out",
-    ),
+    }),
+    @html.div(class="workspace-node-outputs") <| node.outputs.map(port => {
+      @html.button(
+        class="node-port output-port" +
+        (if model.workspace_connect_from == node.node_id &&
+          model.workspace_connect_port == port.port_id {
+          " is-connecting"
+        } else {
+          ""
+        }),
+        type_="button",
+        title="Start " + workspace_artifact_kind_label(port.artifact_kind) + " connection",
+        on_click=dispatch(WorkspacePortActivated(node.node_id, port.port_id, true)),
+        attrs=@html.Attrs::build().aria_label(
+          "Start connection from " + node.title + " " + port.label,
+        ),
+        port.label,
+      )
+    }),
     @html.div(class="node-keyboard-move") <| [
       @html.button(
         type_="button",
@@ -524,57 +640,42 @@ fn workspace_canvas(
   dispatch : @rabbita.Emit[Msg],
   model : Model,
 ) -> @rabbita.Html {
-  let (title, output, locality) = match model.selected_workspace_recipe {
-    CombineVideosRecipe =>
-      ("Combine videos", "Register artifact", "Local provider")
-    BriefToDeliveryRecipe =>
-      ("Brief to generated delivery", "Package delivery", "MoonFlow providers")
+  let graph = model.workspace_graph
+  let title = graph.map(value => value.title).unwrap_or(
+    workspace_recipe_title(model.selected_workspace_recipe),
+  )
+  let locality = if graph.map(value => value.graph_id).unwrap_or("") ==
+    "combine-videos" {
+    "Local provider"
+  } else {
+    "MoonFlow providers"
   }
-  let built_in_nodes = workspace_nodes(model.selected_workspace_recipe)
-  let asset_nodes = model.workspace_asset_nodes
-    .filter(value => value.recipe == model.selected_workspace_recipe)
-    .map(value => {
-      node_id: value.node_id,
-      title: value.title,
-      detail: "Dropped " + value.artifact_kind + " asset",
-      owner: "Mooncast",
-      authority: "Observe",
-    })
-  let nodes = built_in_nodes + asset_nodes
-  let built_in_edges = built_in_nodes.mapi((index, node) => {
-    if index + 1 < built_in_nodes.length() {
+  let nodes = visible_workspace_nodes(model)
+  let edges = graph.map(value => value.edges).unwrap_or([])
+  let canvas_children = edges.map(edge => {
       workspace_edge_view(
         model,
-        node.node_id,
-        built_in_nodes[index + 1].node_id,
+        edge.source_node_id,
+        edge.target_node_id,
         false,
       )
-    } else {
-      @html.nothing
-    }
-  })
-  let extra_edges = model.workspace_connections
-    .filter(value => value.recipe == model.selected_workspace_recipe)
-    .map(value => {
-      workspace_edge_view(
-        model,
-        value.source_node_id,
-        value.target_node_id,
-        true,
-      )
-    })
-  let canvas_children = built_in_edges +
-    extra_edges +
-    nodes.map(node => workspace_node_card(dispatch, model, node))
+    }) + nodes.map(node => workspace_node_card(dispatch, model, node))
   @html.section(class="workspace-canvas") <| [
     @html.header(class="canvas-toolbar") <| [
       @html.div <| [
         @html.strong(title),
-        @html.small("Graph r1 · valid · selected output: " + output),
+        @html.small(
+          "Graph r" +
+          graph.map(value => value.revision.to_string()).unwrap_or("—") +
+          (if model.workspace_graph_dirty { " · unsaved edits" } else { " · saved" }),
+        ),
       ],
       @html.div(class="tag-row") <| [
         status_tag("pass", "Typed ports"),
-        status_tag("pass", "Acyclic"),
+        status_tag(
+          if model.workspace_graph_dirty { "hold" } else { "pass" },
+          if model.workspace_graph_dirty { "Validate on save" } else { "Validated" },
+        ),
         status_tag("neutral", locality),
         status_tag("hold", "No publication authority"),
         @html.button(
@@ -770,7 +871,9 @@ fn workspace_inspector(
           @html.strong(proposal.proposal_id),
           @html.p(proposal.explanation),
           @html.small(
-            "Nodes: " +
+            "Base revision " +
+            proposal.base_graph_revision.to_string() +
+            " · nodes: " +
             proposal.affected_node_ids.join(", ") +
             " · providers: " +
             providers,
@@ -793,6 +896,16 @@ fn workspace_inspector(
               "Exact-revision review required"
             },
           ),
+          if proposal.applied {
+            @html.span("")
+          } else {
+            @html.button(
+              type_="button",
+              disabled=model.busy,
+              on_click=dispatch(ApplyWorkspaceProposal(proposal.proposal_id)),
+              "Review and apply exact revision",
+            )
+          },
         ]
       }
     },
@@ -836,6 +949,16 @@ fn workspace_inspector(
         on_click=dispatch(ShareWorkspaceRun),
         "Create client review link",
       ),
+      if model.workspace_share_url.is_blank() {
+        @html.span("")
+      } else {
+        @html.a(
+          href=model.workspace_share_url,
+          target=@html.Blank,
+          rel="noreferrer",
+          "Open latest secure review link",
+        )
+      },
     ],
   ]
 }

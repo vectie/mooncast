@@ -3,6 +3,17 @@ enum Msg {
   Bootstrap
   ProjectsLoaded(Result[Json, Error])
   WorkspaceProposalsLoaded(Result[Json, Error])
+  WorkspaceCatalogLoaded(Result[Json, Error])
+  WorkspaceGraphLoaded(Result[Json, Error])
+  SaveWorkspaceGraph(String)
+  WorkspaceGraphSaved(String, Result[Json, Error])
+  WorkspaceNodePaletteChanged(String)
+  AddWorkspaceNode(String)
+  DeleteSelectedWorkspaceNode
+  DuplicateSelectedWorkspaceNode
+  ToggleSelectedWorkspaceNodeCollapsed
+  WorkspaceGraphUndo
+  WorkspaceGraphRedo
   SelectProject(String)
   SwitchWorkspaceLens(WorkspaceLens)
   SelectWorkspaceRecipe(WorkspaceRecipe)
@@ -13,7 +24,7 @@ enum Msg {
   WorkspaceCanvasPointerReleased
   WorkspaceNodeNudged(String, Int, Int)
   WorkspaceZoomChanged(Double)
-  WorkspacePortActivated(String)
+  WorkspacePortActivated(String, String, Bool)
   WorkspaceAssetDragStarted(String)
   WorkspaceAssetAddRequested(String)
   WorkspaceAssetDropped
@@ -28,6 +39,9 @@ enum Msg {
   BranchWorkspaceAsset
   PublishWorkspaceCapsule
   ShareWorkspaceRun
+  WorkspaceSecureShareCreated(Result[Json, Error])
+  ApplyWorkspaceProposal(String)
+  WorkspaceProposalApplied(Result[Json, Error])
   StartWorkspaceRecipe
   StartWorkspaceSelectedOutput
   WorkspaceRecipeStarted(Result[Json, Error])

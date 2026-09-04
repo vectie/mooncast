@@ -417,6 +417,14 @@ pub(all) struct WorkspaceProposalApplyRequest {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+/// Applies a stored proposal to the current saved graph. Keeping the graph and
+/// proposal bodies off the client prevents a stale browser from substituting
+/// either side of the reviewed change.
+pub(all) struct WorkspaceProposalApplyByIdRequest {
+  actor : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 pub(all) struct WorkspaceCatalogProjection {
   contract : String
   definitions : Array[@workspace.NodeDefinition]
@@ -457,6 +465,43 @@ pub(all) struct WorkspaceGraphForkRequest {
   title : String
   created_by : String
   created_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// Installs a catalog capsule as the durable graph for a project. Repeating the
+/// same request returns the existing graph rather than creating a second
+/// lineage.
+pub(all) struct WorkspaceCapsuleInstallRequest {
+  graph_id : String
+  title : String
+  actor : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// A graph edit is submitted against an exact saved revision. The service
+/// owns the new revision number and timestamp so browser clocks and stale tabs
+/// cannot manufacture graph history.
+pub(all) struct WorkspaceGraphRevisionRequest {
+  expected_revision : Int
+  title : String
+  nodes : Array[@workspace.WorkflowNode]
+  edges : Array[@workspace.WorkflowEdge]
+  output_node_ids : Array[String]
+  actor : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// Starts the exact saved graph revision instead of re-instantiating a catalog
+/// recipe behind the editor's back.
+pub(all) struct WorkspaceGraphRunRequest {
+  expected_revision : Int
+  run_id : String
+  created_by : String
+  provider : String
+  model : String
+  policy_digest : String
+  maximum_retries : Int
+  requested_output_node_ids : Array[String]
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
@@ -528,6 +573,45 @@ pub(all) struct WorkspaceShareCreateRequest {
   expires_at : String
   created_by : String
   created_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// Secure share creation keeps token generation and expiry on the native host.
+pub(all) struct WorkspaceSecureShareRequest {
+  project_id : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  mode : String
+  created_by : String
+  lifetime_seconds : Int
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+/// The raw token is returned exactly once. Durable storage contains only its
+/// digest.
+pub(all) struct WorkspaceShareCreatedProjection {
+  contract : String
+  share : @workspace.WorkspaceShare
+  access_path : String
+  token : String
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceShareRevokeRequest {
+  actor : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceShareAccessProjection {
+  contract : String
+  share_id : String
+  project_id : String
+  target_kind : @workspace.WorkspaceTargetKind
+  target_id : String
+  mode : String
+  expires_at : String
+  publication_authority : Bool
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
