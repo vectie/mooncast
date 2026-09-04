@@ -189,7 +189,10 @@ fn workspace_graph_add_node(
 }
 
 ///|
-fn workspace_graph_add_asset_node(model : Model, title : String) -> Model {
+fn workspace_graph_add_asset_node(
+  model : Model,
+  entry : WorkspaceAssetEntrySummary,
+) -> Model {
   guard workspace_definition(model, "workspace.asset-input") is Some(definition) else {
     return {
       ..model,
@@ -201,20 +204,28 @@ fn workspace_graph_add_asset_node(model : Model, title : String) -> Model {
     workspace_graph_node(added, added.selected_workspace_node) is Some(node) else {
     return added
   }
-  let parameter : WorkspaceNodeParameterSummary = {
-    key: "asset-label",
-    value: title.to_json(),
-  }
+  let artifact = entry.artifact
+  let parameters : Array[WorkspaceNodeParameterSummary] = [
+    { key: "artifact-id", value: artifact.artifact_id.to_json() },
+    { key: "artifact-version", value: artifact.version.to_string().to_json() },
+    { key: "artifact-digest", value: artifact.digest.to_json() },
+    { key: "artifact-uri", value: artifact.uri.to_json() },
+    { key: "artifact-kind", value: artifact.kind.to_json() },
+  ]
   {
     ..replace_workspace_graph(
       added,
       workspace_graph_with_node(graph, {
         ..node,
-        title,
-        parameters: [parameter],
+        title: artifact.artifact_id + " v" + artifact.version.to_string(),
+        parameters,
       }),
     ),
-    status: "Created a versioned asset input node. Bind the durable artifact before running.",
+    status: "Bound immutable asset version " +
+    artifact.artifact_id +
+    " v" +
+    artifact.version.to_string() +
+    ".",
   }
 }
 
@@ -241,6 +252,32 @@ fn workspace_graph_bind_public_input(model : Model) -> Model {
 }
 
 ///|
+fn workspace_asset_library_url(model : Model) -> String {
+  let query = model.workspace_asset_query
+    .trim()
+    .to_owned()
+    .replace_all(old=" ", new="%20")
+  "/api/workspace/projects/" +
+  model.project_id +
+  "/assets?limit=" +
+  model.workspace_asset_limit.to_string() +
+  "&offset=" +
+  model.workspace_asset_offset.to_string() +
+  (if query.is_blank() { "" } else { "&q=" + query }) +
+  (if model.workspace_asset_kind.is_blank() {
+    ""
+  } else {
+    "&kind=" + model.workspace_asset_kind
+  }) +
+  (if model.workspace_asset_tag.trim().is_blank() {
+    ""
+  } else {
+    "&tag=" +
+    model.workspace_asset_tag.trim().to_owned().replace_all(old=" ", new="%20")
+  })
+}
+
+///|
 fn workspace_graph_delete_selected(model : Model) -> Model {
   guard model.workspace_graph is Some(graph) &&
     graph.nodes.any(node => node.node_id == model.selected_workspace_node) else {
@@ -263,6 +300,166 @@ fn workspace_graph_delete_selected(model : Model) -> Model {
     .map(node => node.node_id)
     .unwrap_or(""),
     status: "Deleted node and its connections.",
+    error: "",
+  }
+}
+
+///|
+fn workspace_graph_delete_selected_edge(model : Model) -> Model {
+  guard model.workspace_graph is Some(graph) &&
+    graph.edges.any(edge => edge.edge_id == model.selected_workspace_edge) else {
+    return model
+  }
+  let prepared = begin_workspace_graph_edit(model)
+  {
+    ..replace_workspace_graph(prepared, {
+      ..graph,
+      edges: graph.edges.filter(edge => {
+        edge.edge_id != model.selected_workspace_edge
+      }),
+    }),
+    selected_workspace_edge: "",
+    status: "Deleted selected connection.",
+    error: "",
+  }
+}
+
+///|
+fn workspace_graph_copy_selection(model : Model) -> Model {
+  guard model.workspace_graph is Some(graph) else { return model }
+  let ids = if model.selected_workspace_node_ids.is_empty() {
+    [model.selected_workspace_node]
+  } else {
+    model.selected_workspace_node_ids
+  }
+  let nodes = graph.nodes.filter(node => ids.contains(node.node_id))
+  let edges = graph.edges.filter(edge => {
+    ids.contains(edge.source_node_id) && ids.contains(edge.target_node_id)
+  })
+  {
+    ..model,
+    workspace_clipboard_nodes: nodes,
+    workspace_clipboard_edges: edges,
+    status: "Copied {nodes.length()} node(s) and {edges.length()} internal edge(s).",
+    error: "",
+  }
+}
+
+///|
+fn workspace_graph_paste_selection(model : Model) -> Model {
+  guard model.workspace_graph is Some(graph) &&
+    !model.workspace_clipboard_nodes.is_empty() else {
+    return model
+  }
+  let nodes = graph.nodes.copy()
+  let edges = graph.edges.copy()
+  let pasted_ids : Array[String] = []
+  for index, source in model.workspace_clipboard_nodes {
+    let node_id = workspace_graph_unique_id(
+      { ..graph, nodes: nodes.copy(), edges: edges.copy() },
+      "node",
+    )
+    nodes.push({
+      ..source,
+      node_id,
+      title: source.title + " copy",
+      x: source.x + 48,
+      y: source.y + 48,
+    })
+    pasted_ids.push(node_id)
+    ignore(index)
+  }
+  for source_edge in model.workspace_clipboard_edges {
+    let mut source_index = -1
+    let mut target_index = -1
+    for index, source_node in model.workspace_clipboard_nodes {
+      if source_node.node_id == source_edge.source_node_id {
+        source_index = index
+      }
+      if source_node.node_id == source_edge.target_node_id {
+        target_index = index
+      }
+    }
+    if source_index >= 0 && target_index >= 0 {
+      edges.push({
+        ..source_edge,
+        edge_id: workspace_graph_unique_id(
+          { ..graph, nodes: nodes.copy(), edges: edges.copy() },
+          "edge",
+        ),
+        source_node_id: pasted_ids[source_index],
+        target_node_id: pasted_ids[target_index],
+      })
+    }
+  }
+  let prepared = begin_workspace_graph_edit(model)
+  {
+    ..replace_workspace_graph(prepared, { ..graph, nodes, edges }),
+    selected_workspace_node: pasted_ids[0],
+    selected_workspace_node_ids: pasted_ids,
+    status: "Pasted {pasted_ids.length()} node(s) with internal connections.",
+    error: "",
+  }
+}
+
+///|
+fn workspace_graph_group_selection(model : Model) -> Model {
+  guard model.workspace_graph is Some(graph) &&
+    model.selected_workspace_node_ids.length() >= 2 else {
+    return { ..model, error: "Select at least two nodes to create a group." }
+  }
+  let group_id = workspace_graph_unique_id(graph, "group")
+  let nodes = graph.nodes.map(node => {
+    if !model.selected_workspace_node_ids.contains(node.node_id) {
+      return node
+    }
+    let parameters = node.parameters.filter(parameter => {
+      parameter.key != "workspace:group"
+    })
+    parameters.push({ key: "workspace:group", value: group_id.to_json() })
+    { ..node, parameters, }
+  })
+  let prepared = begin_workspace_graph_edit(model)
+  {
+    ..replace_workspace_graph(prepared, { ..graph, nodes, }),
+    status: "Grouped selected nodes as " + group_id + ".",
+    error: "",
+  }
+}
+
+///|
+fn workspace_graph_toggle_mode(model : Model, key : String) -> Model {
+  guard model.workspace_graph is Some(graph) &&
+    workspace_graph_node(model, model.selected_workspace_node) is Some(node) else {
+    return model
+  }
+  let parameters = node.parameters.filter(parameter => parameter.key != key)
+  let enabled = !node.parameters.any(parameter => {
+    parameter.key == key && parameter.value == true.to_json()
+  })
+  parameters.push({ key, value: enabled.to_json() })
+  let prepared = begin_workspace_graph_edit(model)
+  {
+    ..replace_workspace_graph(
+      prepared,
+      workspace_graph_with_node(graph, { ..node, parameters, }),
+    ),
+    status: key + (if enabled { " enabled." } else { " disabled." }),
+    error: "",
+  }
+}
+
+///|
+fn workspace_graph_auto_layout(model : Model) -> Model {
+  guard model.workspace_graph is Some(graph) else { return model }
+  let nodes : Array[WorkspaceGraphNodeSummary] = []
+  for index, node in graph.nodes {
+    nodes.push({ ..node, x: 48 + index % 4 * 280, y: 96 + index / 4 * 190 })
+  }
+  let prepared = begin_workspace_graph_edit(model)
+  {
+    ..replace_workspace_graph(prepared, { ..graph, nodes, }),
+    status: "Applied deterministic grid layout.",
     error: "",
   }
 }
@@ -314,8 +511,18 @@ fn workspace_graph_set_parameter(model : Model) -> Model {
     workspace_graph_node(model, model.selected_workspace_node) is Some(node) else {
     return { ..model, error: "Choose a node and enter a parameter key." }
   }
+  let value : Json = match model.workspace_parameter_type {
+    "boolean" =>
+      (model.workspace_parameter_value.trim().to_lower() == "true").to_json()
+    "number" => parse_number(model.workspace_parameter_value, 0.0).to_json()
+    "json" =>
+      @json.parse(model.workspace_parameter_value) catch {
+        _ => return { ..model, error: "Parameter JSON is invalid." }
+      }
+    _ => model.workspace_parameter_value.to_json()
+  }
   let parameters = node.parameters.filter(parameter => parameter.key != key)
-  parameters.push({ key, value: model.workspace_parameter_value.to_json() })
+  parameters.push({ key, value })
   let prepared = begin_workspace_graph_edit(model)
   {
     ..replace_workspace_graph(
@@ -379,8 +586,13 @@ fn workspace_graph_connect(
   target_port_id : String,
 ) -> Model {
   guard model.workspace_graph is Some(graph) else { return model }
+  let edges = if model.selected_workspace_edge.is_blank() {
+    graph.edges.copy()
+  } else {
+    graph.edges.filter(edge => edge.edge_id != model.selected_workspace_edge)
+  }
   if source_node_id == target_node_id ||
-    graph.edges.any(edge => {
+    edges.any(edge => {
       edge.source_node_id == source_node_id &&
       edge.source_port_id == source_port_id &&
       edge.target_node_id == target_node_id &&
@@ -400,18 +612,24 @@ fn workspace_graph_connect(
     target_port_id,
   }
   let prepared = begin_workspace_graph_edit(model)
-  replace_workspace_graph(prepared, { ..graph, edges: graph.edges + [edge] })
+  {
+    ..replace_workspace_graph(prepared, { ..graph, edges: edges + [edge] }),
+    selected_workspace_edge: edge_id,
+  }
 }
 
 ///|
-fn workspace_graph_revision_body(graph : WorkspaceGraphSummary) -> Json {
+fn workspace_graph_revision_body(
+  graph : WorkspaceGraphSummary,
+  actor : String,
+) -> Json {
   {
     "expected_revision": graph.revision,
     "title": graph.title,
     "nodes": graph.nodes,
     "edges": graph.edges,
     "output_node_ids": graph.output_node_ids,
-    "actor": "Mooncast operator",
+    "actor": actor,
   }
 }
 
@@ -419,11 +637,12 @@ fn workspace_graph_revision_body(graph : WorkspaceGraphSummary) -> Json {
 fn workspace_graph_run_body(
   graph : WorkspaceGraphSummary,
   selected_node_id : String,
+  actor : String,
 ) -> Json {
   {
     "expected_revision": graph.revision,
     "run_id": "",
-    "created_by": "Mooncast operator",
+    "created_by": actor,
     "provider": if graph.graph_id == "combine-videos" {
       "local"
     } else {
@@ -499,6 +718,7 @@ fn start_workspace_graph_http(
           } else {
             ""
           },
+          model.workspace_actor_name,
         ),
       )
       .expect_json(result => dispatch(WorkspaceRecipeStarted(result)))

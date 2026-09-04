@@ -1045,6 +1045,12 @@ fn editor_subscriptions(
     !model.workspace_run_state.contains("CancelledRun") {
     subscriptions.push(@sub.every(1000, dispatch(PollWorkspaceRun)))
   }
+  if !model.selected_workspace_node.is_blank() {
+    subscriptions.push(@sub.every(30000, dispatch(RenewWorkspacePresence)))
+  }
+  if !model.selected_workspace_node.is_blank() {
+    subscriptions.push(@sub.every(30000, dispatch(RenewWorkspacePresence)))
+  }
   match model.preview_job {
     Some(job) if preview_state(job) == "queued" ||
       preview_state(job) == "running" ||

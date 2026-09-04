@@ -254,6 +254,27 @@ fn workspace_node_state(model : Model, node_id : String) -> String {
 }
 
 ///|
+fn workspace_outcome_definitions(
+  model : Model,
+) -> Array[WorkspaceDefinitionSummary] {
+  let values : Array[WorkspaceDefinitionSummary] = []
+  for definition in model.workspace_catalog {
+    let id = definition.tool_id.to_lower()
+    if id.contains("generate") ||
+      id.contains("delivery") ||
+      id.contains("localize") ||
+      id.contains("script") ||
+      id.contains("publish") {
+      values.push(definition)
+      if values.length() >= 6 {
+        break
+      }
+    }
+  }
+  values
+}
+
+///|
 fn workspace_recipe_rail(
   dispatch : @rabbita.Emit[Msg],
   model : Model,
@@ -380,11 +401,103 @@ fn workspace_recipe_rail(
         on_click=dispatch(DeleteSelectedWorkspaceNode),
         "Delete",
       ),
+      @html.button(
+        type_="button",
+        disabled=model.selected_workspace_node.is_blank(),
+        on_click=dispatch(ToggleWorkspaceNodeSelection),
+        if model.selected_workspace_node_ids.contains(
+            model.selected_workspace_node,
+          ) {
+          "Remove from set"
+        } else {
+          "Add to set"
+        },
+      ),
+      @html.button(
+        type_="button",
+        disabled=model.selected_workspace_node_ids.is_empty(),
+        on_click=dispatch(CopyWorkspaceNodes),
+        "Copy set",
+      ),
+      @html.button(
+        type_="button",
+        disabled=model.workspace_clipboard_nodes.is_empty(),
+        on_click=dispatch(PasteWorkspaceNodes),
+        "Paste",
+      ),
+      @html.button(
+        type_="button",
+        disabled=model.selected_workspace_node_ids.length() < 2,
+        on_click=dispatch(GroupWorkspaceNodes),
+        "Group",
+      ),
+      @html.button(
+        type_="button",
+        disabled=model.selected_workspace_node.is_blank(),
+        on_click=dispatch(ToggleWorkspaceNodeMode("workspace:muted")),
+        "Mute",
+      ),
+      @html.button(
+        type_="button",
+        disabled=model.selected_workspace_node.is_blank(),
+        on_click=dispatch(ToggleWorkspaceNodeMode("workspace:bypassed")),
+        "Bypass",
+      ),
+      @html.button(
+        class="danger",
+        type_="button",
+        disabled=model.selected_workspace_edge.is_blank(),
+        on_click=dispatch(DeleteSelectedWorkspaceEdge),
+        "Delete edge",
+      ),
     ],
     @html.div(class="workspace-section-heading") <| [
       @html.h2("Assets"),
       @html.span(
         "\{model.selected_workspace_asset_ids.length()} selected · \{model.workspace_asset_total} total",
+      ),
+    ],
+    @html.div(class="workspace-asset-filters") <| [
+      @html.input(
+        input_type=@html.Search,
+        value=model.workspace_asset_query,
+        placeholder="Search assets…",
+        on_input=dispatch.map(value => WorkspaceAssetQueryChanged(value)),
+      ),
+      @html.select(
+        on_change=dispatch.map(value => WorkspaceAssetKindChanged(value)),
+      ) <| [
+        @html.option(
+          value="",
+          selected=model.workspace_asset_kind == "",
+          "All kinds",
+        ),
+        @html.option(
+          value="VideoArtifact",
+          selected=model.workspace_asset_kind == "VideoArtifact",
+          "Video",
+        ),
+        @html.option(
+          value="ImageArtifact",
+          selected=model.workspace_asset_kind == "ImageArtifact",
+          "Image",
+        ),
+        @html.option(
+          value="AudioArtifact",
+          selected=model.workspace_asset_kind == "AudioArtifact",
+          "Audio",
+        ),
+        @html.option(
+          value="TextArtifact",
+          selected=model.workspace_asset_kind == "TextArtifact",
+          "Text",
+        ),
+      ],
+      @html.input(
+        input_type=@html.Search,
+        value=model.workspace_asset_tag,
+        placeholder="Filter tag…",
+        on_input=dispatch.map(value => WorkspaceAssetTagChanged(value)),
       ),
     ],
     @html.ul(class="workspace-asset-list") <| (if model.workspace_assets.is_empty() {
@@ -470,17 +583,47 @@ fn workspace_recipe_rail(
         "Hide",
       ),
     ],
+    if model.workspace_asset_comparison.is_blank() {
+      @html.nothing
+    } else {
+      @html.p(
+        class="workspace-comparison-result",
+        model.workspace_asset_comparison,
+      )
+    },
+    @html.div(class="workspace-pagination") <| [
+      @html.button(
+        type_="button",
+        disabled=model.workspace_asset_offset == 0,
+        on_click=dispatch(WorkspaceAssetPageChanged(-1)),
+        "Previous",
+      ),
+      @html.span(
+        "\{model.workspace_asset_offset + 1}–\{Int::min(model.workspace_asset_offset + model.workspace_assets.length(), model.workspace_asset_total)} of \{model.workspace_asset_total}",
+      ),
+      @html.button(
+        type_="button",
+        disabled=!model.workspace_asset_has_more,
+        on_click=dispatch(WorkspaceAssetPageChanged(1)),
+        "Next",
+      ),
+    ],
     @html.div(class="workspace-section-heading") <| [
       @html.h2("More outcomes"),
       @html.span("Manifest-backed"),
     ],
-    @html.ul(class="workspace-capability-list") <| [
-      @html.li("Brief → social clip"),
-      @html.li("Long-form episode"),
-      @html.li("Generate asset variants"),
-      @html.li("Localize campaign"),
-      @html.li("Review → delivery package"),
-    ],
+    @html.ul(class="workspace-capability-list") <| workspace_outcome_definitions(
+      model,
+    ).map(definition => {
+      @html.li <| [
+        @html.button(
+          type_="button",
+          title=definition.tool_id,
+          on_click=dispatch(AddWorkspaceNode(definition.definition_id)),
+          definition.display_name,
+        ),
+      ]
+    }),
     @html.div(class="workspace-section-heading") <| [
       @html.h2("Activity"),
       @html.span("\{model.workspace_activity.length()} events"),
@@ -503,6 +646,8 @@ fn workspace_node_card(
   let state = workspace_node_state(model, node.node_id)
   let selection_class = if model.selected_workspace_node == node.node_id {
     " is-selected"
+  } else if model.selected_workspace_node_ids.contains(node.node_id) {
+    " is-multiselected"
   } else {
     ""
   }
@@ -591,20 +736,28 @@ fn workspace_node_card(
 
 ///|
 fn workspace_edge_view(
+  dispatch : @rabbita.Emit[Msg],
   model : Model,
-  source_id : String,
-  target_id : String,
+  edge : WorkspaceGraphEdgeSummary,
   extra : Bool,
 ) -> @rabbita.Html {
-  let source = workspace_node_position(model, source_id)
-  let target = workspace_node_position(model, target_id)
+  let source = workspace_node_position(model, edge.source_node_id)
+  let target = workspace_node_position(model, edge.target_node_id)
   let left = source.x + 190
   let top = source.y + 62
   let width = Int::max(24, target.x - left)
-  @html.div(
-    class=if extra { "canvas-edge is-extra" } else { "canvas-edge" },
+  @html.button(
+    type_="button",
+    class="canvas-edge" +
+      (if extra { " is-extra" } else { "" }) +
+      (if model.selected_workspace_edge == edge.edge_id {
+        " is-selected"
+      } else {
+        ""
+      }),
     style=["left: \{left}px", "top: \{top}px", "width: \{width}px"],
-    title=source_id + " → " + target_id,
+    title=edge.source_node_id + " → " + edge.target_node_id,
+    on_click=dispatch(SelectWorkspaceEdge(edge.edge_id)),
   ) <| [
     @html.span("›"),
   ]
@@ -677,12 +830,7 @@ fn workspace_canvas(
   let nodes = visible_workspace_nodes(model)
   let edges = graph.map(value => value.edges).unwrap_or([])
   let canvas_children = edges.map(edge => {
-      workspace_edge_view(
-        model,
-        edge.source_node_id,
-        edge.target_node_id,
-        false,
-      )
+      workspace_edge_view(dispatch, model, edge, false)
     }) +
     nodes.map(node => workspace_node_card(dispatch, model, node))
   @html.section(class="workspace-canvas") <| [
@@ -737,6 +885,11 @@ fn workspace_canvas(
             "App view"
           },
         ),
+        @html.button(
+          type_="button",
+          on_click=dispatch(AutoLayoutWorkspaceGraph),
+          "Auto layout",
+        ),
       ],
     ],
     if model.workspace_app_view {
@@ -778,8 +931,29 @@ fn workspace_specialized_editor(
   model : Model,
   node : WorkspaceNodeView,
 ) -> @rabbita.Html {
-  match node.node_id {
-    "brief" | "validate" =>
+  let lens = if node.outputs.any(port => port.artifact_kind == TextArtifact) {
+    "text"
+  } else if node.outputs.any(port => {
+      port.artifact_kind == ImageArtifact ||
+      port.artifact_kind == ShotCollection
+    }) {
+    "compare"
+  } else if workspace_definition(model, node.definition_id)
+    .map(definition => {
+      definition.node_kind == HumanGateNode || definition.review_required
+    })
+    .unwrap_or(false) {
+    "review"
+  } else if node.outputs.any(port => {
+      port.artifact_kind == DeliveryPackageArtifact
+    }) ||
+    node.definition_id == "workspace.artifact-register" {
+    "delivery"
+  } else {
+    "timeline"
+  }
+  match lens {
+    "text" =>
       @html.div(class="specialized-editor script-lens") <| [
         @html.span(class="eyebrow", "Script lens"),
         @html.textarea(
@@ -791,7 +965,7 @@ fn workspace_specialized_editor(
         ),
         @html.small("Versioned text becomes the public recipe input."),
       ]
-    "generate" => {
+    "compare" => {
       let selected = model.workspace_assets.filter(entry => {
         model.selected_workspace_asset_ids.contains(entry.artifact.artifact_id)
       })
@@ -826,8 +1000,23 @@ fn workspace_specialized_editor(
           "Named human decision required. Agents cannot approve their own output.",
         ),
         status_tag("hold", "Awaiting reviewer"),
+        @html.div(class="workspace-review-actions") <| [
+          @html.button(
+            type_="button",
+            disabled=model.busy || model.workspace_run_id.is_blank(),
+            on_click=dispatch(DecideWorkspaceHumanGate("approve")),
+            "Approve",
+          ),
+          @html.button(
+            class="danger",
+            type_="button",
+            disabled=model.busy || model.workspace_run_id.is_blank(),
+            on_click=dispatch(DecideWorkspaceHumanGate("reject")),
+            "Reject",
+          ),
+        ],
       ]
-    "delivery" | "register" => {
+    "delivery" => {
       let selected = model.selected_workspace_asset_ids
         .last()
         .bind(id => {
@@ -920,8 +1109,38 @@ fn workspace_inspector(
       ),
       @html.input(
         value=model.workspace_parameter_value,
-        placeholder="string value",
+        placeholder="parameter value",
         on_input=dispatch.map(value => WorkspaceParameterValueChanged(value)),
+      ),
+      @html.select(
+        on_change=dispatch.map(value => WorkspaceParameterTypeChanged(value)),
+      ) <| [
+        @html.option(
+          value="string",
+          selected=model.workspace_parameter_type == "string",
+          "Text",
+        ),
+        @html.option(
+          value="boolean",
+          selected=model.workspace_parameter_type == "boolean",
+          "Boolean",
+        ),
+        @html.option(
+          value="number",
+          selected=model.workspace_parameter_type == "number",
+          "Number",
+        ),
+        @html.option(
+          value="json",
+          selected=model.workspace_parameter_type == "json",
+          "JSON",
+        ),
+      ],
+      @html.small(
+        "Input schemas: " +
+        node.inputs.map(port => port.schema_id).join(", ") +
+        " · output schemas: " +
+        node.outputs.map(port => port.schema_id).join(", "),
       ),
       @html.button(
         type_="button",
@@ -931,6 +1150,13 @@ fn workspace_inspector(
     ],
     @html.div(class="workspace-collaboration") <| [
       @html.span(class="eyebrow", "Live collaboration"),
+      @html.label <| [
+        @html.span("Your display name"),
+        @html.input(
+          value=model.workspace_actor_name,
+          on_input=dispatch.map(value => WorkspaceActorChanged(value)),
+        ),
+      ],
       @html.p(
         if model.workspace_presence.any(value => value.target_id == node.node_id) {
           model.workspace_presence
@@ -950,6 +1176,72 @@ fn workspace_inspector(
           @html.span(comment.body),
         ]
       }),
+    ],
+    match
+      model.workspace_run_nodes
+      .iter()
+      .find_first(run_node => run_node.node_id == node.node_id) {
+      None => @html.nothing
+      Some(run_node) =>
+        @html.div(class="workspace-attempt-evidence") <| [
+          @html.span(class="eyebrow", "Attempt evidence"),
+          @html.small(
+            "Retries " +
+            run_node.retry_count.to_string() +
+            "/" +
+            run_node.maximum_retries.to_string(),
+          ),
+          @html.ul <| run_node.attempts.map(attempt => {
+            @html.li <| [
+              @html.strong("Attempt " + attempt.attempt.to_string()),
+              @html.span(
+                if attempt.error_code.is_blank() {
+                  match attempt.state {
+                    Blocked => "blocked"
+                    Ready => "ready"
+                    Running => "running"
+                    Cached => "cached"
+                    Succeeded => "succeeded"
+                    Failed => "failed"
+                    Cancelled => "cancelled"
+                  }
+                } else {
+                  attempt.error_code + " · " + attempt.error_message
+                },
+              ),
+              if attempt.output_ref.is_blank() {
+                @html.nothing
+              } else {
+                @html.a(
+                  href=attempt.output_ref,
+                  target=@html.Blank,
+                  "Open output",
+                )
+              },
+            ]
+          }),
+        ]
+    },
+    @html.div(class="workspace-agent-card") <| [
+      @html.span(class="eyebrow", "Workspace assistant"),
+      @html.textarea(
+        value=model.workspace_agent_instruction,
+        rows=3,
+        placeholder="Diagnose this run, auto layout, mute, bypass, or repair the selected node…",
+        on_input=dispatch.map(value => WorkspaceAgentInstructionChanged(value)),
+        "",
+      ),
+      @html.button(
+        type_="button",
+        disabled=model.busy ||
+          model.workspace_agent_instruction.trim().is_blank(),
+        on_click=dispatch(AskWorkspaceAgent),
+        "Inspect and propose",
+      ),
+      @html.ul <| model.workspace_agent_diagnosis.map(item => @html.li(item)),
+      @html.small(
+        "Assistant changes are immutable proposals. A named operator must inspect and apply them; execution and publication authority remain false.",
+      ),
     ],
     match model.workspace_proposals.last() {
       None =>
@@ -1186,7 +1478,7 @@ fn workspace_graph_view(
             type_="button",
             disabled=model.busy,
             on_click=dispatch(ClaimWorkspaceNode),
-            "Claim next local node",
+            "Advance native nodes",
           ),
           @html.button(
             type_="button",
@@ -1203,6 +1495,40 @@ fn workspace_graph_view(
           ),
         ]
       },
+      if model.workspace_run_blockers.is_empty() {
+        @html.nothing
+      } else {
+        @html.ul(class="workspace-run-blockers") <| model.workspace_run_blockers.map(blocker => {
+            @html.li <| [
+              @html.strong(blocker.node_id + " · " + blocker.execution_owner),
+              @html.span(blocker.reason),
+              @html.small(blocker.required_action),
+            ]
+          },
+        )
+      },
+      @html.div(class="workspace-run-history") <| [
+        @html.span(class="eyebrow", "Run history"),
+        if model.workspace_run_history.is_empty() {
+          @html.small("No saved runs for this project yet.")
+        } else {
+          @html.ul <| model.workspace_run_history.map(run => {
+            @html.li <| [
+              @html.button(
+                type_="button",
+                class=if run.run_id == model.workspace_run_id {
+                  "is-selected"
+                } else {
+                  ""
+                },
+                on_click=dispatch(OpenWorkspaceRun(run.run_id)),
+                run.run_id + " · " + run.state.stringify(),
+              ),
+              @html.small(run.updated_at),
+            ]
+          })
+        },
+      ],
     ],
   ]
 }

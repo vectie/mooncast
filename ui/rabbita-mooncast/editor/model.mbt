@@ -173,12 +173,27 @@ enum WorkspaceNodeRunState {
 
 ///|
 #warnings("-unused_field")
+struct WorkspaceNodeAttemptSummary {
+  attempt : Int
+  state : WorkspaceNodeRunState
+  started_at : String
+  finished_at : String
+  output_digest : String
+  output_ref : String
+  error_code : String
+  error_message : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
 struct WorkspaceNodeRunSummary {
   node_id : String
   state : WorkspaceNodeRunState
   progress_numerator : Int
   progress_denominator : Int
   retry_count : Int
+  maximum_retries : Int
+  attempts : Array[WorkspaceNodeAttemptSummary]
 } derive(FromJson)
 
 ///|
@@ -204,6 +219,30 @@ struct WorkspaceRunEventSummary {
 struct WorkspaceRunEventPayload {
   events : Array[WorkspaceRunEventSummary]
   last_event_id : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceRunBlockerSummary {
+  node_id : String
+  execution_owner : String
+  reason : String
+  required_action : String
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceRunAdvancePayload {
+  run : WorkspaceRunPayload
+  executed_node_ids : Array[String]
+  blockers : Array[WorkspaceRunBlockerSummary]
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceRunListPayload {
+  runs : Array[WorkspaceRunPayload]
+  total : Int
 } derive(FromJson)
 
 ///|
@@ -243,6 +282,7 @@ struct WorkspaceAssetArtifactSummary {
   version : Int
   kind : WorkspaceArtifactKind
   digest : String
+  uri : String
   preview_uri : String
   provider : String
   node_id : String
@@ -268,6 +308,14 @@ struct WorkspaceAssetLibraryPayload {
   offset : Int
   limit : Int
   has_more : Bool
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceArtifactComparisonPayload {
+  baseline_artifact_id : String
+  comparable : Bool
+  differences : Array[String]
 } derive(FromJson)
 
 ///|
@@ -301,6 +349,14 @@ struct WorkspaceFeaturesPayload {
 #warnings("-unused_field")
 struct WorkspaceProposalPayload {
   proposals : Array[WorkspaceProposalSummary]
+} derive(FromJson)
+
+///|
+#warnings("-unused_field")
+struct WorkspaceAgentAssistPayload {
+  diagnosis : Array[String]
+  execute_authority : Bool
+  publication_authority : Bool
 } derive(FromJson)
 
 ///|
@@ -671,21 +727,33 @@ struct Model {
   workspace_lens : WorkspaceLens
   selected_workspace_recipe : WorkspaceRecipe
   selected_workspace_node : String
+  selected_workspace_node_ids : Array[String]
+  selected_workspace_edge : String
   workspace_catalog : Array[WorkspaceDefinitionSummary]
   workspace_graph : WorkspaceGraphSummary?
   workspace_graph_undo : Array[WorkspaceGraphSummary]
   workspace_graph_redo : Array[WorkspaceGraphSummary]
+  workspace_clipboard_nodes : Array[WorkspaceGraphNodeSummary]
+  workspace_clipboard_edges : Array[WorkspaceGraphEdgeSummary]
   workspace_graph_dirty : Bool
   workspace_graph_saving : Bool
   workspace_node_palette_search : String
   workspace_parameter_key : String
   workspace_parameter_value : String
+  workspace_parameter_type : String
   workspace_connect_port : String
   workspace_canvas_drag : WorkspaceCanvasDrag?
   workspace_canvas_zoom : Double
   workspace_assets : Array[WorkspaceAssetEntrySummary]
   selected_workspace_asset_ids : Array[String]
   workspace_asset_total : Int
+  workspace_asset_offset : Int
+  workspace_asset_limit : Int
+  workspace_asset_has_more : Bool
+  workspace_asset_query : String
+  workspace_asset_kind : String
+  workspace_asset_tag : String
+  workspace_asset_comparison : String
   workspace_dragged_asset : String
   workspace_connect_from : String
   workspace_app_view : Bool
@@ -699,11 +767,17 @@ struct Model {
   workspace_run_id : String
   workspace_run_state : String
   workspace_run_nodes : Array[WorkspaceNodeRunSummary]
+  workspace_run_blockers : Array[WorkspaceRunBlockerSummary]
+  workspace_run_history : Array[WorkspaceRunPayload]
   workspace_run_last_event_id : String
   workspace_proposals : Array[WorkspaceProposalSummary]
   workspace_proposal_review : WorkspaceProposalReviewPayload?
+  workspace_agent_instruction : String
+  workspace_agent_diagnosis : Array[String]
   workspace_share_url : String
   workspace_share_id : String
+  workspace_actor_id : String
+  workspace_actor_name : String
   production_project_id : String
   workspace : @api.WorkspaceSnapshot?
   selected_take_id : String
@@ -803,21 +877,33 @@ fn initial_model() -> Model {
     workspace_lens: GraphLens,
     selected_workspace_recipe: CombineVideosRecipe,
     selected_workspace_node: "concat",
+    selected_workspace_node_ids: ["concat"],
+    selected_workspace_edge: "",
     workspace_catalog: [],
     workspace_graph: None,
     workspace_graph_undo: [],
     workspace_graph_redo: [],
+    workspace_clipboard_nodes: [],
+    workspace_clipboard_edges: [],
     workspace_graph_dirty: false,
     workspace_graph_saving: false,
     workspace_node_palette_search: "",
     workspace_parameter_key: "",
     workspace_parameter_value: "",
+    workspace_parameter_type: "string",
     workspace_connect_port: "",
     workspace_canvas_drag: None,
     workspace_canvas_zoom: 1.0,
     workspace_assets: [],
     selected_workspace_asset_ids: [],
     workspace_asset_total: 0,
+    workspace_asset_offset: 0,
+    workspace_asset_limit: 20,
+    workspace_asset_has_more: false,
+    workspace_asset_query: "",
+    workspace_asset_kind: "",
+    workspace_asset_tag: "",
+    workspace_asset_comparison: "",
     workspace_dragged_asset: "",
     workspace_connect_from: "",
     workspace_app_view: false,
@@ -831,11 +917,17 @@ fn initial_model() -> Model {
     workspace_run_id: "",
     workspace_run_state: "idle",
     workspace_run_nodes: [],
+    workspace_run_blockers: [],
+    workspace_run_history: [],
     workspace_run_last_event_id: "",
     workspace_proposals: [],
     workspace_proposal_review: None,
+    workspace_agent_instruction: "",
+    workspace_agent_diagnosis: [],
     workspace_share_url: "",
     workspace_share_id: "",
+    workspace_actor_id: "local-operator",
+    workspace_actor_name: "Local operator",
     production_project_id: "",
     workspace: None,
     selected_take_id: "",

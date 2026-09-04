@@ -42,6 +42,8 @@ test "persisted run state drives generic nodes without masking active concat pro
     progress_numerator: 1,
     progress_denominator: 3,
     retry_count: 0,
+    maximum_retries: 2,
+    attempts: [],
   }
   let generic = {
     ..base,
@@ -59,6 +61,8 @@ test "persisted run state drives generic nodes without masking active concat pro
         progress_numerator: 0,
         progress_denominator: 1,
         retry_count: 0,
+        maximum_retries: 2,
+        attempts: [],
       },
     ],
   }
@@ -215,7 +219,182 @@ test "typed graph connections and run body target the saved revision" {
     model, "source", "output", "target", "input",
   )
   assert_eq(connected.workspace_graph.unwrap().edges.length(), 1)
-  let body = workspace_graph_run_body(graph, "target").stringify()
+  let body = workspace_graph_run_body(graph, "target", "operator").stringify()
   assert_true(body.contains("\"expected_revision\":7"))
   assert_true(body.contains("\"requested_output_node_ids\":[\"target\"]"))
+}
+
+///|
+test "asset nodes bind the exact immutable artifact version" {
+  let definition = test_workspace_definition("workspace.asset-input", false)
+  let graph : WorkspaceGraphSummary = {
+    contract: "mooncast.workspace-graph.v1",
+    graph_id: "asset-graph",
+    project_id: "asset-project",
+    revision: 1,
+    title: "Asset graph",
+    nodes: [],
+    edges: [],
+    output_node_ids: [],
+    created_by: "operator",
+    created_at: "created",
+  }
+  let entry : WorkspaceAssetEntrySummary = {
+    artifact: {
+      artifact_id: "clip-47",
+      version: 3,
+      kind: VideoArtifact,
+      digest: "sha256:exact",
+      uri: "/api/assets/clip-47/3",
+      preview_uri: "/api/assets/clip-47/3/preview",
+      provider: "mooncast-native",
+      node_id: "concat",
+      qc_state: "passed",
+      rights_state: "cleared",
+      created_at: "created",
+    },
+    tags: ["source"],
+    deleted: false,
+    updated_at: "updated",
+  }
+  let bound = workspace_graph_add_asset_node(
+    {
+      ..initial_model(),
+      workspace_catalog: [definition],
+      workspace_graph: Some(graph),
+    },
+    entry,
+  )
+  let node = bound.workspace_graph.unwrap().nodes[0]
+  assert_eq(node.title, "clip-47 v3")
+  assert_true(
+    node.parameters.any(parameter => {
+      parameter.key == "artifact-id" && parameter.value == "clip-47".to_json()
+    }),
+  )
+  assert_true(
+    node.parameters.any(parameter => {
+      parameter.key == "artifact-version" && parameter.value == "3".to_json()
+    }),
+  )
+  assert_true(
+    node.parameters.any(parameter => {
+      parameter.key == "artifact-digest" &&
+      parameter.value == "sha256:exact".to_json()
+    }),
+  )
+  assert_true(
+    node.parameters.any(parameter => {
+      parameter.key == "artifact-uri" &&
+      parameter.value == "/api/assets/clip-47/3".to_json()
+    }),
+  )
+}
+
+///|
+test "canvas editing can reconnect copy group and lay out graph nodes" {
+  let source_definition = test_workspace_definition("test.source", false)
+  let target_definition = test_workspace_definition("test.target", true)
+  let graph : WorkspaceGraphSummary = {
+    contract: "mooncast.workspace-graph.v1",
+    graph_id: "canvas-graph",
+    project_id: "canvas-project",
+    revision: 2,
+    title: "Canvas graph",
+    nodes: [
+      {
+        node_id: "source",
+        definition_id: source_definition.definition_id,
+        title: "Source",
+        x: 900,
+        y: 800,
+        parameters: [],
+        collapsed: false,
+      },
+      {
+        node_id: "target-a",
+        definition_id: target_definition.definition_id,
+        title: "Target A",
+        x: 1000,
+        y: 900,
+        parameters: [],
+        collapsed: false,
+      },
+      {
+        node_id: "target-b",
+        definition_id: target_definition.definition_id,
+        title: "Target B",
+        x: 1100,
+        y: 1000,
+        parameters: [],
+        collapsed: false,
+      },
+    ],
+    edges: [
+      {
+        edge_id: "old-edge",
+        source_node_id: "source",
+        source_port_id: "output",
+        target_node_id: "target-a",
+        target_port_id: "input",
+      },
+    ],
+    output_node_ids: ["target-a"],
+    created_by: "operator",
+    created_at: "created",
+  }
+  let model = {
+    ..initial_model(),
+    workspace_catalog: [source_definition, target_definition],
+    workspace_graph: Some(graph),
+    selected_workspace_node: "source",
+    selected_workspace_node_ids: ["source", "target-a"],
+    selected_workspace_edge: "old-edge",
+  }
+  let reconnected = workspace_graph_connect(
+    model, "source", "output", "target-b", "input",
+  )
+  assert_eq(reconnected.workspace_graph.unwrap().edges.length(), 1)
+  assert_eq(
+    reconnected.workspace_graph.unwrap().edges[0].target_node_id,
+    "target-b",
+  )
+  let copied = workspace_graph_copy_selection({
+    ..reconnected,
+    selected_workspace_node_ids: ["source", "target-b"],
+  })
+  let pasted = workspace_graph_paste_selection(copied)
+  assert_eq(pasted.workspace_graph.unwrap().nodes.length(), 5)
+  assert_eq(pasted.workspace_graph.unwrap().edges.length(), 2)
+  let grouped = workspace_graph_group_selection(pasted)
+  assert_true(
+    grouped.workspace_graph.unwrap().nodes
+    .filter(node => {
+      grouped.selected_workspace_node_ids.contains(node.node_id) &&
+      node.parameters.any(parameter => parameter.key == "workspace:group")
+    })
+    .length() ==
+    2,
+  )
+  let laid_out = workspace_graph_auto_layout(grouped)
+  assert_eq(laid_out.workspace_graph.unwrap().nodes[0].x, 48)
+  assert_eq(laid_out.workspace_graph.unwrap().nodes[0].y, 96)
+}
+
+///|
+test "asset library URL includes query kind tag and pagination" {
+  let url = workspace_asset_library_url({
+    ..initial_model(),
+    project_id: "project-1",
+    workspace_asset_query: "launch clip",
+    workspace_asset_kind: "VideoArtifact",
+    workspace_asset_tag: "hero take",
+    workspace_asset_offset: 20,
+    workspace_asset_limit: 10,
+  })
+  assert_true(url.contains("q=launch%20clip"))
+  assert_true(url.contains("kind=VideoArtifact"))
+  assert_true(url.contains("tag=hero%20take"))
+  assert_true(url.contains("offset=20"))
+  assert_true(url.contains("limit=10"))
 }

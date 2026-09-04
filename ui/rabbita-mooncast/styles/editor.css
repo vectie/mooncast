@@ -235,9 +235,16 @@ a { color: var(--accent); }
 .node-keyboard-move { position: absolute; left: 10px; bottom: 7px; display: flex; gap: 4px; opacity: .35; }
 .node-keyboard-move:focus-within, .workspace-node:hover .node-keyboard-move { opacity: 1; }
 .node-keyboard-move button { min-width: 28px; min-height: 24px; padding: 0 7px; }
-.canvas-edge { position: absolute; z-index: 1; height: 2px; background: #3e9a8b; pointer-events: none; }
+.canvas-edge { position: absolute; z-index: 1; height: 10px; border: 0; border-radius: 999px; background: linear-gradient(transparent 4px, #3e9a8b 4px, #3e9a8b 6px, transparent 6px); cursor: pointer; }
 .canvas-edge span { position: absolute; right: -2px; top: -14px; color: var(--accent); font-size: 1.4rem; }
 .canvas-edge.is-extra { height: 1px; background: var(--accent-2); box-shadow: 0 0 8px rgba(130,147,255,.45); }
+.canvas-edge.is-selected { background: linear-gradient(transparent 3px, #f6b94a 3px, #f6b94a 7px, transparent 7px); box-shadow: 0 0 0 2px rgba(246,185,74,.2); }
+.workspace-node.is-multiselected { box-shadow: 0 0 0 2px rgba(130,147,255,.7); }
+.workspace-asset-filters, .workspace-pagination, .workspace-review-actions { display: flex; gap: .45rem; align-items: center; }
+.workspace-asset-filters > * { min-width: 0; flex: 1; }
+.workspace-comparison-result, .workspace-run-blockers li, .workspace-attempt-evidence, .workspace-run-history { border: 1px solid var(--line); border-radius: 10px; padding: .6rem; background: rgba(255,255,255,.025); }
+.workspace-run-blockers, .workspace-run-history ul, .workspace-attempt-evidence ul { list-style: none; padding: 0; margin: .45rem 0 0; display: grid; gap: .4rem; }
+.workspace-run-blockers li, .workspace-run-history li, .workspace-attempt-evidence li { display: grid; gap: .2rem; }
 .canvas-help { margin: 16px; padding: 12px; display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 8px; background: rgba(12,17,30,.88); }
 .canvas-help span { color: var(--muted); font-size: .75rem; }
 .workspace-agent-card, .workspace-evidence-card { margin-top: 12px; padding: 12px; display: grid; gap: 7px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }

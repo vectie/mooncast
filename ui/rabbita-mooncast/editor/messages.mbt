@@ -6,6 +6,10 @@ enum Msg {
   WorkspaceCatalogLoaded(Result[Json, Error])
   WorkspaceGraphLoaded(Result[Json, Error])
   WorkspaceAssetsLoaded(Result[Json, Error])
+  WorkspaceAssetQueryChanged(String)
+  WorkspaceAssetKindChanged(String)
+  WorkspaceAssetTagChanged(String)
+  WorkspaceAssetPageChanged(Int)
   WorkspaceFeaturesLoaded(Result[Json, Error])
   SaveWorkspaceGraph(String)
   WorkspaceGraphSaved(String, Result[Json, Error])
@@ -16,6 +20,7 @@ enum Msg {
   ToggleSelectedWorkspaceNodeCollapsed
   WorkspaceParameterKeyChanged(String)
   WorkspaceParameterValueChanged(String)
+  WorkspaceParameterTypeChanged(String)
   SetWorkspaceNodeParameter
   DeleteWorkspaceNodeParameter(String)
   WorkspaceGraphUndo
@@ -24,7 +29,17 @@ enum Msg {
   SwitchWorkspaceLens(WorkspaceLens)
   SelectWorkspaceRecipe(WorkspaceRecipe)
   SelectWorkspaceNode(String)
+  ToggleWorkspaceNodeSelection
+  SelectWorkspaceEdge(String)
+  DeleteSelectedWorkspaceEdge
+  CopyWorkspaceNodes
+  PasteWorkspaceNodes
+  GroupWorkspaceNodes
+  ToggleWorkspaceNodeMode(String)
+  AutoLayoutWorkspaceGraph
   WorkspacePresenceRenewed(Result[Json, Error])
+  RenewWorkspacePresence
+  WorkspaceActorChanged(String)
   WorkspaceCanvasPointerDown(String, @common.Mouse)
   WorkspaceCanvasPointerMoved(@common.Mouse)
   WorkspaceCanvasPointerReleased
@@ -45,6 +60,7 @@ enum Msg {
   WorkspacePublicInputChanged(String)
   PostWorkspaceNodeComment
   CompareWorkspaceAssets
+  WorkspaceAssetComparisonLoaded(Result[Json, Error])
   PromoteWorkspaceAsset
   BranchWorkspaceAsset
   PublishWorkspaceCapsule
@@ -56,13 +72,21 @@ enum Msg {
   ReviewWorkspaceProposal(String)
   WorkspaceProposalReviewLoaded(Result[Json, Error])
   WorkspaceProposalApplied(Result[Json, Error])
+  WorkspaceAgentInstructionChanged(String)
+  AskWorkspaceAgent
+  WorkspaceAgentAssisted(Result[Json, Error])
   StartWorkspaceRecipe
   StartWorkspaceSelectedOutput
   WorkspaceRecipeStarted(Result[Json, Error])
   PollWorkspaceRun
   WorkspaceRunPolled(Result[Json, Error])
   WorkspaceRunEventsLoaded(Result[Json, Error])
+  WorkspaceRunHistoryLoaded(Result[Json, Error])
+  OpenWorkspaceRun(String)
   ClaimWorkspaceNode
+  WorkspaceRunAdvanced(Result[Json, Error])
+  DecideWorkspaceHumanGate(String)
+  WorkspaceHumanDecisionFinished(Result[Json, Error])
   CancelWorkspaceRun
   RetryWorkspaceNode
   WorkspaceActionFinished(String, Result[Json, Error])
