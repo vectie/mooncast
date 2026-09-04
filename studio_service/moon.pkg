@@ -8,6 +8,7 @@ import {
   "moonbitlang/core/string",
   "moonbitlang/x/crypto",
   "vectie/mooncast" @mooncast_pack,
+  "vectie/mooncast/workspace",
   "vectie/moonlib/fsx",
   "vectie/moonlib/os" @moonlib_os,
   "vectie/moonlib/pack",

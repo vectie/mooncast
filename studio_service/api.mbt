@@ -382,6 +382,66 @@ async fn StudioService::dispatch_unsafe(
   }
   let segments = path_segments(request.path)
   match (request.request_method, segments) {
+    (Get, ["api", "workspace", "catalog"]) =>
+      json_value_response(200, self.workspace_catalog())
+    (Get, ["api", "workspace", "projects", project_id, "capsules"]) =>
+      json_value_response(200, self.workspace_capsules(project_id))
+    (Post, ["api", "workspace", "graphs", "validate"]) => {
+      let graph : @workspace.WorkspaceGraph = decode_body(request)
+      json_value_response(200, self.validate_workspace_graph(graph))
+    }
+    (Post, ["api", "workspace", "projects", project_id, "graphs"]) => {
+      let graph : @workspace.WorkspaceGraph = decode_body(request)
+      guard graph.project_id == project_id else {
+        raise Invalid(
+          code="workspace_project_mismatch",
+          message="workspace graph project does not match route project",
+        )
+      }
+      json_value_response(201, self.save_workspace_graph(graph))
+    }
+    (Get, ["api", "workspace", "projects", project_id, "graphs", graph_id]) =>
+      json_value_response(200, self.get_workspace_graph(project_id, graph_id))
+    (
+      Get,
+      [
+        "api",
+        "workspace",
+        "projects",
+        project_id,
+        "graphs",
+        graph_id,
+        "history",
+      ],
+    ) =>
+      json_value_response(
+        200,
+        self.workspace_graph_history(project_id, graph_id),
+      )
+    (Post, ["api", "workspace", "plans"]) => {
+      let input : WorkspacePlanRequest = decode_body(request)
+      json_value_response(201, self.freeze_workspace_plan(input))
+    }
+    (Post, ["api", "workspace", "runs"]) => {
+      let input : WorkspaceRunCreateRequest = decode_body(request)
+      json_value_response(201, self.create_workspace_run(input))
+    }
+    (Get, ["api", "workspace", "runs", run_id]) =>
+      json_value_response(200, self.get_workspace_run(run_id))
+    (Post, ["api", "workspace", "runs", run_id, "commands"]) => {
+      let input : WorkspaceRunCommand = decode_body(request)
+      json_value_response(200, self.apply_workspace_run_command(run_id, input))
+    }
+    (Get, ["api", "workspace", "artifacts"]) =>
+      json_value_response(200, self.list_workspace_artifacts())
+    (Post, ["api", "workspace", "artifacts"]) => {
+      let artifact : @workspace.WorkspaceArtifact = decode_body(request)
+      json_value_response(201, self.save_workspace_artifact(artifact))
+    }
+    (Post, ["api", "workspace", "proposals", "apply"]) => {
+      let input : WorkspaceProposalApplyRequest = decode_body(request)
+      json_value_response(200, self.apply_workspace_proposal(input))
+    }
     (Get, ["api", "config"]) =>
       json_value_response(200, {
         mode: "moonbit-native-canonical",

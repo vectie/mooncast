@@ -361,6 +361,71 @@ pub(all) struct UtilityConcatJob {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+pub(all) struct WorkspacePlanRequest {
+  graph : @workspace.WorkspaceGraph
+  requested_output_node_ids : Array[String]
+  context : @workspace.ExecutionContext
+  frozen_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceRunCreateRequest {
+  plan : @workspace.ExecutionPlan
+  run_id : String
+  created_by : String
+  created_at : String
+  maximum_retries : Int
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceRunCommand {
+  command : String
+  node_id : String
+  numerator : Int
+  denominator : Int
+  output_digest : String
+  output_ref : String
+  error_code : String
+  error_message : String
+  recorded_at : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceProposalApplyRequest {
+  base : @workspace.WorkspaceGraph
+  proposal : @workspace.AgentGraphProposal
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceCatalogProjection {
+  contract : String
+  definitions : Array[@workspace.NodeDefinition]
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceCapsuleProjection {
+  contract : String
+  capsules : Array[@workspace.CreativeCapsule]
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceArtifactProjection {
+  contract : String
+  artifacts : Array[@workspace.WorkspaceArtifact]
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceGraphHistoryProjection {
+  contract : String
+  graph_id : String
+  revisions : Array[@workspace.WorkspaceGraph]
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 pub(all) struct EditorJobView {
   job : @editor_jobs.EditorJob
   render_plan : @editor_plan.RenderPlan
