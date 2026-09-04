@@ -297,7 +297,7 @@ fn main {
           None => "var/native"
         }
     }
-    let server = @async_http.Server::new(
+    let server = @async_http.Server(
       @socket.Addr::parse(host + ":" + port.to_string()),
       reuse_addr=true,
     )

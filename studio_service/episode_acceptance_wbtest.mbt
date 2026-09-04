@@ -411,7 +411,7 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
     approved_assets_by_shot=asset_map,
     approved_animatic_digest=exact_animatic.rendered.video_digest,
   ) catch {
-    error => fail("\{to_repr(error)}")
+    error => fail("\{Repr(error)}")
   }
   let run = service.run_pending_shots_feature(
     project_id,

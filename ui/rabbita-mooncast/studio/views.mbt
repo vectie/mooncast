@@ -1517,7 +1517,7 @@ fn render_asset_factory(
 ) -> @rabbita.Html {
   match model.project {
     None => render_create_project(dispatch, model)
-    Some(project) => {
+    Some(_) => {
       let workspace = model.asset_factory
       let plan_count = workspace.map(value => value.plans.length()).unwrap_or(0)
       let variant_count = workspace.map(value => value.variants.length()).unwrap_or(0)

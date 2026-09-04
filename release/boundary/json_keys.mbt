@@ -86,7 +86,7 @@ fn scan_json_object(
   start : Int,
   duplicates : Array[String],
 ) -> Int raise JsonKeyScanError {
-  let seen : Map[String, Unit] = {}
+  let seen : Map[String, Unit] = Map([])
   let mut cursor = skip_json_space(text, start + 1)
   if cursor < text.length() && text[cursor] == '}' {
     return cursor + 1

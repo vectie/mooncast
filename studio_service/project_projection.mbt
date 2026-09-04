@@ -17,7 +17,7 @@ pub fn omit_null_fields(value : Json) -> Json {
     Null => Json::null()
     Array(values) => Json::array(values.map(omit_null_fields))
     Object(fields) => {
-      let normalized : Map[String, Json] = {}
+      let normalized : Map[String, Json] = Map([])
       for key, child in fields {
         match child {
           Null => ()
@@ -443,7 +443,7 @@ fn gates_json(snapshot : @kernel.ProjectSnapshot) -> Json {
     "G6": "Publication authority",
     "G7": "Performance and economics",
   }
-  let values : Map[String, Json] = {}
+  let values : Map[String, Json] = Map([])
   for gate in @governance.gate_sequence() {
     let id = gate.to_string()
     let receipts = snapshot.gate_receipts.filter(item => item.gate == gate)
@@ -623,7 +623,7 @@ fn routing_decisions_json(snapshot : @kernel.ProjectSnapshot) -> Json {
 
 ///|
 fn grouped_attempts_json(snapshot : @kernel.ProjectSnapshot) -> Json {
-  let values : Map[String, Json] = {}
+  let values : Map[String, Json] = Map([])
   for shot in @project.flattened_shots(snapshot.graph) {
     values[shot.shot_id] = snapshot.generation_attempts
       .filter(item => item.shot_id == shot.shot_id)
@@ -648,7 +648,7 @@ fn grouped_attempts_json(snapshot : @kernel.ProjectSnapshot) -> Json {
 
 ///|
 fn grouped_findings_json(snapshot : @kernel.ProjectSnapshot) -> Json {
-  let values : Map[String, Json] = {}
+  let values : Map[String, Json] = Map([])
   for shot in @project.flattened_shots(snapshot.graph) {
     values[shot.shot_id] = snapshot.qc_findings
       .filter(item => item.shot_id == shot.shot_id)
@@ -686,7 +686,7 @@ fn qc_dimension_name(value : @governance.QcDimension) -> String {
 
 ///|
 fn grouped_qc_decisions_json(snapshot : @kernel.ProjectSnapshot) -> Json {
-  let values : Map[String, Json] = {}
+  let values : Map[String, Json] = Map([])
   for shot in @project.flattened_shots(snapshot.graph) {
     let decisions : Array[Json] = []
     for decision in snapshot.qc_decisions {
@@ -774,7 +774,7 @@ pub async fn StudioService::studio_project_projection(
   let snapshot = record.snapshot
   let experience = self.project_experience(record)
   let production = @kernel.projection(snapshot)
-  let creative_history : Map[String, Json] = {}
+  let creative_history : Map[String, Json] = Map([])
   for
     kind in [
       @creative.Brief,

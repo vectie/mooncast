@@ -496,7 +496,7 @@ async fn main {
   match result {
     Ok(_) => ()
     Err(error) => {
-      @stdio.stderr.write("mooncast-producer-tool: \{to_repr(error)}\n")
+      @stdio.stderr.write("mooncast-producer-tool: \{Repr(error)}\n")
       @sys.exit(1)
     }
   }

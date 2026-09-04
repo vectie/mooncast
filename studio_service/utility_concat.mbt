@@ -599,8 +599,7 @@ pub async fn StudioService::run_utility_concat(
     return running
   }
   let terminal = try self.execute_utility_concat(running) catch {
-    error =>
-      running.failed("utility concat execution failed: \{to_repr(error)}")
+    error => running.failed("utility concat execution failed: \{Repr(error)}")
   } noraise {
     completed => completed
   }

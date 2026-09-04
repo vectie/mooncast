@@ -90,9 +90,9 @@ fn manifest_shape_issues(
     object_string(root, "product_id") != Some("mooncast") {
     issues.push("pack.json: id and product_id must both be mooncast")
   }
-  let declared_schemas : Map[String, Unit] = {}
+  let declared_schemas : Map[String, Unit] = Map([])
   for section in artifact_sections {
-    let seen_ids : Map[String, Unit] = {}
+    let seen_ids : Map[String, Unit] = Map([])
     match root.get(section) {
       Some(Json::Array(values)) =>
         for index, reference in values {
@@ -111,7 +111,7 @@ fn manifest_shape_issues(
         issues.push("pack.json:\{section}: contract section must be an array")
     }
   }
-  let uninstall_seen : Map[String, Unit] = {}
+  let uninstall_seen : Map[String, Unit] = Map([])
   match root.get("uninstall_contract") {
     Some(reference) =>
       issues.push_iter(
@@ -125,7 +125,7 @@ fn manifest_shape_issues(
         "pack.json:uninstall_contract: contract reference must be an object",
       )
   }
-  let tool_ids : Map[String, Unit] = {}
+  let tool_ids : Map[String, Unit] = Map([])
   match root.get("tools") {
     Some(Json::Array(tools)) =>
       for index, tool in tools {
@@ -193,13 +193,11 @@ async fn validate_manifest(root : String) -> Array[String] {
     return ["pack.json: missing, non-regular, or symlinked static manifest"]
   }
   let text = @fs.read_file(path).text() catch {
-    error => return ["pack.json: unreadable strict UTF-8: \{to_repr(error)}"]
+    error => return ["pack.json: unreadable strict UTF-8: \{Repr(error)}"]
   }
   let duplicates : Array[String] = duplicate_json_keys(text) catch {
     error => {
-      issues.push(
-        "pack.json: duplicate-key scan failed closed: \{to_repr(error)}",
-      )
+      issues.push("pack.json: duplicate-key scan failed closed: \{Repr(error)}")
       []
     }
   }
@@ -208,7 +206,7 @@ async fn validate_manifest(root : String) -> Array[String] {
   }
   let static_manifest = @json.parse(text) catch {
     error => {
-      issues.push("pack.json: invalid strict JSON: \{to_repr(error)}")
+      issues.push("pack.json: invalid strict JSON: \{Repr(error)}")
       return issues
     }
   }
@@ -216,7 +214,7 @@ async fn validate_manifest(root : String) -> Array[String] {
     @pack.encode_manifest(@mooncast.manifest()),
   ) catch {
     error => {
-      issues.push("compiled manifest is invalid JSON: \{to_repr(error)}")
+      issues.push("compiled manifest is invalid JSON: \{Repr(error)}")
       return issues
     }
   }

@@ -708,7 +708,7 @@ fn update(
             _ => None
           }
           guard reference is Some(Object(fields)) &&
-            fields.get("version") is Some(Number(version)) &&
+            fields.get("version") is Some(Number(version, ..)) &&
             fields.get("digest") is Some(String(plan_digest)) else {
             return (@rabbita.none, { ..model, error: Some("Current animatic plan is malformed.") })
           }

@@ -155,7 +155,7 @@ pub async fn send_json(request : JsonRequest) -> JsonResponse {
   guard valid_headers(request.headers) else { raise InvalidUrl }
   @async.with_timeout(request.timeout_ms, () => {
     let (origin, path) = split_https_url(request.url)
-    let client = @http.Client::new(origin)
+    let client = @http.Client(origin)
     defer client.close()
     let headers = request.headers
     headers["Accept"] = "application/json"
@@ -197,7 +197,7 @@ pub async fn send_loopback_json(request : JsonRequest) -> JsonResponse {
   guard valid_headers(request.headers) else { raise InvalidUrl }
   @async.with_timeout(request.timeout_ms, () => {
     let (origin, path) = split_loopback_http_url(request.url)
-    let client = @http.Client::new(origin)
+    let client = @http.Client(origin)
     defer client.close()
     let headers = request.headers
     headers["Accept"] = "application/json"

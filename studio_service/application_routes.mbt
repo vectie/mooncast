@@ -1456,7 +1456,7 @@ async fn StudioService::routed_execution_projection(
   // the wire projection so list, create, get and action responses share the
   // same array contract consumed by Studio.
   let shots : Array[Json] = []
-  let jobs : Map[String, Json] = {}
+  let jobs : Map[String, Json] = Map([])
   for binding in execution.shots {
     match self.execution_application.load_job(binding.job_id) {
       Some(record) => {

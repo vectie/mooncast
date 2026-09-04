@@ -36,13 +36,12 @@ struct ControlTowerAssignmentInput {
 } derive(ToJson, FromJson)
 
 ///|
-struct ProjectCommercialBinding {
-  conversion : @commerce.QuoteConversion
+priv struct ProjectCommercialBinding {
   quote : @commerce.ScopedQuote
 }
 
 ///|
-struct PortfolioReservation {
+priv struct PortfolioReservation {
   reservation : @commerce.CapacityReservation
   resource : @commerce.CapacityResource?
   project_id : String
@@ -99,7 +98,7 @@ fn current_project_binding(
   let conversion = conversions[conversions.length() - 1]
   let quotes = commercial.quotes.filter(item => item.quote == conversion.quote)
   if quotes.length() == 1 {
-    Some({ conversion, quote: quotes[0] })
+    Some({ quote: quotes[0] })
   } else {
     None
   }

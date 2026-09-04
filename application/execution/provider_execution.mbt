@@ -60,7 +60,7 @@ fn execution_command(
 fn headers_for(
   config : ProviderAdapterConfig,
 ) -> Map[String, String] raise ProviderApplicationError {
-  let headers : Map[String, String] = {}
+  let headers : Map[String, String] = Map([])
   for name, reference in config.secret_refs {
     let env = match env_name(reference) {
       Some(value) => value

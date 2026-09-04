@@ -40,7 +40,7 @@ pub fn StudioService::new(
   let service : StudioService = {
     root,
     store: @host_store.AtomicStore::new(root),
-    mutation_lock: @semaphore.Semaphore::new(1),
+    mutation_lock: @semaphore.Semaphore(1),
     editor_repository: @editor_store.EditorRepository::new(
       root + "/editor/repository",
     ),

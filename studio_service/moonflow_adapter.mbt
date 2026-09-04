@@ -481,7 +481,13 @@ async fn moonflow_write_immutable_json(
     return "sha256:" + sha256_text(text)
   }
   @fsx.make_directory(@pathx.dirname(path), recursive=true, exists_ok=true)
-  @fs.write_file(path, text, create=0o600, sync=Full)
+  @fs.write_file(
+    path,
+    text,
+    create_mode=CreateOrTruncate,
+    permission=0o600,
+    sync=Full,
+  )
   "sha256:" + sha256_text(text)
 }
 
@@ -2005,7 +2011,7 @@ async fn StudioService::moonflow_finish_attempt(
       envelope.binding,
     )
   catch {
-    error => Err("\{to_repr(error)}")
+    error => Err("\{Repr(error)}")
   } noraise {
     value => Ok(value)
   }

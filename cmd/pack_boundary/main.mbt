@@ -4,9 +4,7 @@ async fn main {
   let root = if args.length() > 1 { args[1] } else { "." }
   let issues = @boundary.scan(root) catch {
     error => {
-      @stdio.stderr.write(
-        "pack boundary scan failed closed: \{to_repr(error)}\n",
-      )
+      @stdio.stderr.write("pack boundary scan failed closed: \{Repr(error)}\n")
       @sys.exit(1)
       return
     }

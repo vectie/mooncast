@@ -903,10 +903,10 @@ fn drag_delta(model : Model, drag : TimelineDrag, mouse_x : Int) -> Int {
         value,
         item,
       ) => Int::min(value, item.duration_ticks - frame_ticks(model)))
-      let extend = chosen.fold(init=clip.source_in_tick, (value, item) => {
+      let extend_tick = chosen.fold(init=clip.source_in_tick, (value, item) => {
         Int::min(value, item.source_in_tick)
       })
-      Int::min(shrink, Int::max(-extend, snapped))
+      Int::min(shrink, Int::max(-extend_tick, snapped))
     }
     DragTrimEnd => {
       let shrink = chosen.fold(init=clip.duration_ticks - frame_ticks(model), (

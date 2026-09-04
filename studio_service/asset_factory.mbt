@@ -16,7 +16,7 @@ async fn StudioService::approved_asset_map(
   project_id : String,
   project_revision : Int,
 ) -> Map[String, Array[@project.Asset]] {
-  let result : Map[String, Array[@project.Asset]] = {}
+  let result : Map[String, Array[@project.Asset]] = Map([])
   match self.asset_factory.current_plan(project_id) {
     None => result
     Some(plan) => {

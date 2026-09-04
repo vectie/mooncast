@@ -220,7 +220,7 @@ async fn scan_source_tree(
         let text : String? = Some(@fs.read_file(child).text()) catch {
           error => {
             issues.push(
-              "\{child_relative}: source is not readable strict UTF-8: \{to_repr(error)}",
+              "\{child_relative}: source is not readable strict UTF-8: \{Repr(error)}",
             )
             None
           }
@@ -237,7 +237,7 @@ async fn scan_source_tree(
         let resolved : String? = Some(@fs.realpath(child)) catch {
           error => {
             issues.push(
-              "\{child_relative}: source symlink cannot be resolved: \{to_repr(error)}",
+              "\{child_relative}: source symlink cannot be resolved: \{Repr(error)}",
             )
             None
           }

@@ -2384,8 +2384,8 @@ fn update(
         @rabbita.none,
         { ..model, filters: { ..model.filters, placement: value } },
       )
-    SelectClip(clip_id, extend) => {
-      let selection = if extend {
+    SelectClip(clip_id, extend_selection) => {
+      let selection = if extend_selection {
         if model.selected_clip_ids.contains(clip_id) {
           model.selected_clip_ids.filter(id => id != clip_id)
         } else {
@@ -2413,7 +2413,7 @@ fn update(
       }
       (@rabbita.none, next)
     }
-    SelectAdjacentClip(direction, extend) => {
+    SelectAdjacentClip(direction, extend_selection) => {
       guard selected_clip(model) is Some(clip) else {
         return (@rabbita.none, model)
       }
@@ -2423,7 +2423,11 @@ fn update(
       let ordered = track.clips
       let index = clip_position(ordered, clip.clip_id)
       let next = Int::min(Int::max(0, index + direction), ordered.length() - 1)
-      update(dispatch, SelectClip(ordered[next].clip_id, extend), model)
+      update(
+        dispatch,
+        SelectClip(ordered[next].clip_id, extend_selection),
+        model,
+      )
     }
     SelectTransition(id) =>
       (

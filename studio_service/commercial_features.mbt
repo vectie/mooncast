@@ -458,7 +458,7 @@ fn quote_projection(
     .iter()
     .find_first(item => item.authority == "production")
   let client = decisions.iter().find_first(item => item.authority == "client")
-  let approvals : Map[String, Json] = {}
+  let approvals : Map[String, Json] = Map([])
   match commercial {
     Some(value) => approvals["commercial"] = value.to_json()
     None => ()
