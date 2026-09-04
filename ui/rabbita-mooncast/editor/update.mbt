@@ -168,7 +168,7 @@ fn update(
                   ..model,
                   workspace_capsules: value.capsules,
                   workspace_activity: model.workspace_activity +
-                  ["{value.capsules.length()} installable capsules loaded"],
+                  ["\{value.capsules.length()} installable capsules loaded"],
                 },
               )
             None => (@rabbita.none, model)
