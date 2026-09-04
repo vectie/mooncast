@@ -76,6 +76,8 @@ pub fn set_graph_node_parameter(WorkspaceGraph, String, NodeParameter) -> Worksp
 
 pub fn specialized_lens_for(ArtifactKind) -> SpecializedLens
 
+pub fn suggest_creative_graph_edit(WorkspaceGraph, Array[NodeDefinition], String, String) -> CreativeGraphSuggestion?
+
 pub fn validate_graph(WorkspaceGraph, Array[NodeDefinition]) -> GraphValidation
 
 pub fn validate_node_parameters(NodeDefinition, Array[NodeParameter]) -> NodeParameterValidation
@@ -208,6 +210,12 @@ pub(all) struct CreativeCapsule {
   minimum_mooncast_version : String
   created_by : String
   created_at : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CreativeGraphSuggestion {
+  graph : WorkspaceGraph
+  summary : String
+  affected_node_ids : Array[String]
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct ExecutionContext {
