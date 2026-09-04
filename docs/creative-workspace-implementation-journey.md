@@ -79,10 +79,10 @@ boundary, but now closes the practical workspace gaps found in that pass.
   walking, human decisions, scheduler claims, reconnect replay, asset
   indexing/tags/deletion, secure review pages, assistant proposals and
   exact-base proposal application.
-- Workspace-domain tests cover validation, planning, diffs, artifacts,
-  collaboration and provider dispatch (14 tests pass); Rabbita's focused
-  workspace suite passes 11 tests.
-- Integrated verification passes 68 native repository tests and 16 Rabbita
+- Workspace-domain tests cover validation, planning, typed parameter defaults,
+  bounded creative suggestions, diffs, artifacts, collaboration and provider
+  dispatch (20 tests pass); Rabbita's focused workspace suite passes 18 tests.
+- Integrated verification passes 75 native repository tests and 18 Rabbita
   tests. Both MoonBit projects check with zero warnings; the production Vite
   bundle and native release sidecar both build.
 - Lepusa 0.1.6 strict macOS verification: native launch, bundle,
@@ -103,6 +103,34 @@ The detailed findings and prioritized roadmap are maintained in
 The primary conclusion is that Mooncast should retain its high-level governed
 production graph while adding a lower-level creative-compute graph inside
 versioned Creative Capsules.
+
+## Third-round implementation upgrade
+
+The first implementation pass after the feature audit added a declarative
+creative-parameter system in MoonBit. Node definitions now describe value
+semantics, controls, defaults, ranges, options and advanced fields. Pure graph
+functions validate those values and materialize defaults into frozen plans,
+which makes parameters part of deterministic graph, tool and cache identity.
+
+Both the inspector and App Mode render directly from that contract. A single
+typed edit updates the versioned graph and appears in both places. The local
+Combine videos App is bound to the existing immutable utility-concat flow, and
+completed images, video and audio use their actual workspace preview URIs in
+the rail and comparison lens.
+
+The rendered verification pass also found that workspace bootstrap was
+incorrectly conditional on an existing editor project. That made a fresh
+install show a decorative fallback and zero governed nodes. Bootstrap now
+loads the catalog, capsules and a project-free workspace independently; the
+empty-state UI exposes all 106 definitions and a real saved graph.
+
+The assistant's reviewed proposal vocabulary now includes vertical, square,
+portrait and landscape aspect-ratio changes plus bounded more/fewer-variant
+iterations. The pure reducer finds the node that actually declares the target
+parameter and never grants execution, approval or publication authority.
+
+Detailed implementation status and remaining feature work are recorded in
+[Third-iteration cfy feature comparison](cfy-feature-comparison-third-iteration.md#third-iteration-implementation-follow-up).
 
 ## Deliberate authority boundaries
 

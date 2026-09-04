@@ -352,6 +352,45 @@ ecosystem while retaining Mooncast's own advantages:
 The resulting product should feel like a creative workspace capable of making
 content—not merely a governed project tracker and not merely a model graph.
 
+## Third-iteration implementation follow-up
+
+The first major upgrade landed immediately after this audit as small,
+reviewable commits. It closes the highest-leverage gaps without introducing a
+second capability registry or a second media engine.
+
+| Audit gap | Implemented feature |
+| --- | --- |
+| Generic key/value node settings | `NodeDefinition` now carries typed parameter definitions, portable control hints, defaults, options, advanced visibility and numeric bounds. Built-in media/control nodes have curated schemas; manifest generation inputs project prompt, modality, variants, aspect ratio, provider, model and seed controls. Other manifest tools retain an advanced structured-request control. |
+| Hidden defaults and unstable cache meaning | Pure validation checks declared types, ranges and choices while preserving legacy metadata. Planning materializes defaults into the frozen graph before graph/tool/cache digests are calculated, so retries and cache hits do not depend on UI state. |
+| Minimal inspector | The MoonBit UI generates text areas, selects, sliders, number fields, checkboxes, asset selectors, provider/model fields and JSON editors directly from catalog data. Raw parameters remain available as an advanced compatibility surface. |
+| Minimal App Mode | App Mode generates recipe controls from every non-advanced parameter in the installed graph. The same node value is reflected in App Mode and the inspector, with undoable versioned edits. |
+| Fresh installs hid the actual workspace | Catalog, capsules and the default workspace graph now load even when no editor project exists. The rendered empty-state journey exposes all 106 governed definitions instead of silently falling back to a decorative graph. |
+| Decorative local recipe action | The Combine videos App uses the existing digest-pinned, ordered MoonBit utility-concat operation, then registers its verified result in the workspace asset library. There is still one media implementation. |
+| Status-forward assets and compare | Image, video and audio artifacts now render their real preview URI in the asset rail and comparison lens, with an explicit typed placeholder when no preview exists. |
+| Shallow assistant mutations | The review-gated assistant can propose aspect-ratio changes and bounded increases/decreases to variant counts. It locates the capable generation node even when the operator has selected a different node, and records the exact affected node. |
+| All-or-nothing extension decoding | The UI decodes catalog definitions independently, retains compatible contributed nodes and reports rejected future definitions instead of hiding the whole catalog. |
+
+The architectural shape is deliberately functional: parameter schemas and
+agent intents are immutable data; validation, default materialization and
+creative edits are pure transformations; effects remain in the existing
+Studio/MoonFlow adapters. User-visible controls are projections of that data,
+not another handwritten execution contract.
+
+Still open after this increment:
+
+- a larger curated outcome/template gallery with samples, estimates and
+  provider compatibility;
+- direct graph wrappers for the editor's trim, composite, caption, transition,
+  mix and render operations;
+- richer image/audio transformation coverage;
+- provider-backed intermediate previews while generation is running; and
+- complete agent-led graph construction, provider substitution and
+  quality-driven prompt revision.
+
+These are feature-expansion items, not hidden claims of parity. External
+generation continues to require a real MoonFlow worker receipt, and human
+approval remains non-delegable.
+
 ## Primary implementation references
 
 - `pack.json` — current governed tool and schema catalogue.
@@ -371,4 +410,3 @@ content—not merely a governed project tracker and not merely a model graph.
 - `../cfy/comfy_execution/progress.py` — live progress and previews.
 - `../cfy/app/subgraph_manager.py` — subgraph and blueprint discovery.
 - `../cfy/app/assets/` — asset discovery and metadata features.
-
