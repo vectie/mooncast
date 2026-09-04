@@ -92,4 +92,17 @@ async test "workspace coordinator walks native nodes and pauses at human gates" 
   let output = service.get_workspace_native_output(run.run_id, "register")
   assert_eq(output.semantics, "immutable-artifact-registration")
   assert_true(output.digest.has_prefix("sha256:"))
+
+  let assisted = service.assist_workspace_graph("native-project", {
+    graph_id: graph.graph_id,
+    target_node_id: "register",
+    instruction: "Auto layout this graph and let me inspect the proposal",
+    actor: "operator",
+  })
+  assert_true(assisted.proposal is Some(_))
+  assert_false(assisted.execute_authority)
+  assert_eq(
+    service.list_workspace_proposals("native-project").proposals.length(),
+    1,
+  )
 }

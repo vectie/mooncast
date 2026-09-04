@@ -100,6 +100,12 @@ fn workspace_native_semantics(
   definition : @workspace.NodeDefinition,
   node : @workspace.WorkflowNode,
 ) -> Result[String, WorkspaceRunBlocker] {
+  if workspace_parameter_bool(node, "workspace:muted") == Some(true) {
+    return Ok("muted-node")
+  }
+  if workspace_parameter_bool(node, "workspace:bypassed") == Some(true) {
+    return Ok("bypassed-node")
+  }
   match definition.node_kind {
     @workspace.InputNode =>
       if definition.definition_id == "workspace.asset-input" {
@@ -323,7 +329,10 @@ pub async fn StudioService::advance_workspace_run(
         is Some(definition) else {
         continue
       }
-      if planned.execution_owner != "mooncast" {
+      let locally_overridden = workspace_parameter_bool(node, "workspace:muted") ==
+        Some(true) ||
+        workspace_parameter_bool(node, "workspace:bypassed") == Some(true)
+      if planned.execution_owner != "mooncast" && !locally_overridden {
         continue
       }
       guard workspace_input_refs(snapshot, node.node_id) is Some(input_refs) else {
@@ -360,7 +369,10 @@ pub async fn StudioService::advance_workspace_run(
       workspace_node_definition(self, planned.definition_id) is Some(definition) else {
       continue
     }
-    if planned.execution_owner == "moonflow" {
+    let locally_overridden = workspace_parameter_bool(node, "workspace:muted") ==
+      Some(true) ||
+      workspace_parameter_bool(node, "workspace:bypassed") == Some(true)
+    if planned.execution_owner == "moonflow" && !locally_overridden {
       blockers.push({
         node_id: node.node_id,
         execution_owner: planned.execution_owner,

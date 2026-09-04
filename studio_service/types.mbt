@@ -479,6 +479,25 @@ pub(all) struct WorkspaceNativeOutput {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+pub(all) struct WorkspaceAgentAssistRequest {
+  graph_id : String
+  target_node_id : String
+  instruction : String
+  actor : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
+pub(all) struct WorkspaceAgentAssistProjection {
+  contract : String
+  project_id : String
+  graph_id : String
+  diagnosis : Array[String]
+  proposal : @workspace.AgentGraphProposal?
+  execute_authority : Bool
+  publication_authority : Bool
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 pub(all) struct WorkspaceRunEventProjection {
   contract : String
   run_id : String

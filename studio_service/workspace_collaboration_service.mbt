@@ -84,7 +84,7 @@ pub async fn StudioService::create_secure_workspace_share(
   {
     contract: "mooncast.workspace-share-created.v1",
     share,
-    access_path: "/api/workspace/shares/" + share_id + "/access?token=" + token,
+    access_path: "/workspace/review/" + share_id + "?token=" + token,
     token,
     publication_authority: false,
   }

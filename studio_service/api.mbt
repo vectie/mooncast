@@ -382,6 +382,11 @@ async fn StudioService::dispatch_unsafe(
   }
   let segments = path_segments(request.path)
   match (request.request_method, segments) {
+    (Get, ["workspace", "review", share_id]) =>
+      self.workspace_review_page(
+        share_id,
+        control_tower_query_value(request.query, "token").unwrap_or(""),
+      )
     (Get, ["api", "workspace", "catalog"]) =>
       json_value_response(200, self.workspace_catalog())
     (Get, ["api", "workspace", "projects", project_id, "capsules"]) =>
@@ -748,6 +753,10 @@ async fn StudioService::dispatch_unsafe(
     }
     (Get, ["api", "workspace", "projects", project_id, "proposals"]) =>
       json_value_response(200, self.list_workspace_proposals(project_id))
+    (Post, ["api", "workspace", "projects", project_id, "agent", "assist"]) => {
+      let input : WorkspaceAgentAssistRequest = decode_body(request)
+      json_value_response(200, self.assist_workspace_graph(project_id, input))
+    }
     (Get, ["api", "workspace", "projects", project_id, "proposals", proposal_id]
     ) =>
       json_value_response(

@@ -499,6 +499,19 @@ async test "secure shares revoke and stored proposals apply once" {
     created.token,
   )
   assert_eq(access.target_id, installed.graph_id)
+  assert_true(created.access_path.has_prefix("/workspace/review/"))
+  let review_page = service.dispatch_http({
+    request_method: @host_http.Get,
+    path: "/workspace/review/" + created.share.share_id,
+    query: Some("token=" + created.token),
+    headers: Map([]),
+    body: b"",
+  })
+  assert_eq(review_page.status, 200)
+  assert_eq(review_page.headers["Content-Type"], "text/html; charset=utf-8")
+  assert_true(
+    @utf8.decode(review_page.body).contains("Read-only client review"),
+  )
   let revoked = service.revoke_workspace_share(created.share.share_id, {
     actor: "operator",
   })
