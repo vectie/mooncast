@@ -83,6 +83,11 @@ async test "workspace coordinator walks native nodes and pauses at human gates" 
     note: "Approved",
   })
   assert_eq(decided.nodes[1].state, @workspace.Succeeded)
+  let decision = service.get_workspace_human_decision(run.run_id, "approval")
+  assert_eq(decision.actor, "reviewer")
+  assert_eq(decision.decision, "approve")
+  assert_eq(decision.note, "Approved")
+  assert_true(decision.digest.has_prefix("sha256:"))
   let completed = service.advance_workspace_run(run.run_id, {
     actor: "operator",
   })

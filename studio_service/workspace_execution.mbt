@@ -6,6 +6,13 @@ fn workspace_native_output_key(run_id : String, node_id : String) -> String {
 }
 
 ///|
+fn workspace_human_decision_key(run_id : String, node_id : String) -> String {
+  "workspace-human-decision-" +
+  sha256_text(run_id + "\u{0000}" + node_id) +
+  ".json"
+}
+
+///|
 fn workspace_graph_node(
   run : @workspace.RunRecord,
   node_id : String,
@@ -420,6 +427,23 @@ pub async fn StudioService::get_workspace_native_output(
 }
 
 ///|
+pub async fn StudioService::get_workspace_human_decision(
+  self : StudioService,
+  run_id : String,
+  node_id : String,
+) -> WorkspaceHumanDecisionEvidence {
+  ignore(self.get_workspace_run(run_id))
+  let value : WorkspaceHumanDecisionEvidence? = load_value(
+    self.store,
+    workspace_human_decision_key(run_id, node_id),
+  )
+  match value {
+    Some(evidence) => evidence
+    None => raise NotFound(entity="workspace_human_decision", id=node_id)
+  }
+}
+
+///|
 pub async fn StudioService::decide_workspace_human_gate(
   self : StudioService,
   run_id : String,
@@ -446,6 +470,33 @@ pub async fn StudioService::decide_workspace_human_gate(
     )
   }
   let recorded_at = now_string()
+  let digest = "sha256:" +
+    sha256_text(
+      run_id +
+      "\u{0000}" +
+      node_id +
+      "\u{0000}" +
+      request.actor +
+      "\u{0000}" +
+      request.decision +
+      "\u{0000}" +
+      request.note,
+    )
+  let evidence : WorkspaceHumanDecisionEvidence = {
+    contract: "mooncast.workspace-human-decision.v1",
+    run_id,
+    node_id,
+    actor: request.actor,
+    decision: request.decision,
+    note: request.note,
+    recorded_at,
+    digest,
+  }
+  save_value(
+    self.store,
+    workspace_human_decision_key(run_id, node_id),
+    evidence,
+  )
   let running = self.apply_workspace_run_command(run_id, {
     command: "start",
     node_id,
@@ -471,16 +522,6 @@ pub async fn StudioService::decide_workspace_human_gate(
       recorded_at,
     })
   }
-  let digest = "sha256:" +
-    sha256_text(
-      run_id +
-      "\u{0000}" +
-      node_id +
-      "\u{0000}" +
-      request.actor +
-      "\u{0000}" +
-      request.note,
-    )
   self.apply_workspace_run_command(run_id, {
     command: "succeed",
     node_id,

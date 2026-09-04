@@ -465,6 +465,18 @@ pub(all) struct WorkspaceHumanDecisionRequest {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+pub(all) struct WorkspaceHumanDecisionEvidence {
+  contract : String
+  run_id : String
+  node_id : String
+  actor : String
+  decision : String
+  note : String
+  recorded_at : String
+  digest : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 pub(all) struct WorkspaceNativeOutput {
   contract : String
   run_id : String

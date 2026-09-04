@@ -530,6 +530,11 @@ async fn StudioService::dispatch_unsafe(
         200,
         self.get_workspace_native_output(run_id, node_id),
       )
+    (Get, ["api", "workspace", "runs", run_id, "decisions", node_id]) =>
+      json_value_response(
+        200,
+        self.get_workspace_human_decision(run_id, node_id),
+      )
     (Post, ["api", "workspace", "runs", run_id, "nodes", node_id, "decision"]) => {
       let input : WorkspaceHumanDecisionRequest = decode_body(request)
       json_value_response(
