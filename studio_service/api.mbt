@@ -419,6 +419,26 @@ async fn StudioService::dispatch_unsafe(
       let input : WorkspaceGraphDiffRequest = decode_body(request)
       json_value_response(200, self.compare_workspace_graphs(input))
     }
+    (
+      Post,
+      [
+        "api",
+        "workspace",
+        "projects",
+        project_id,
+        "graphs",
+        graph_id,
+        "nodes",
+        node_id,
+        "expand-capsule",
+      ],
+    ) => {
+      let input : WorkspaceCapsuleExpandRequest = decode_body(request)
+      json_value_response(
+        200,
+        self.expand_workspace_capsule_node(project_id, graph_id, node_id, input),
+      )
+    }
     (Post, ["api", "workspace", "projects", project_id, "graphs"]) => {
       let graph : @workspace.WorkspaceGraph = decode_body(request)
       guard graph.project_id == project_id else {

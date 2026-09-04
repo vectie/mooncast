@@ -617,6 +617,14 @@ pub(all) struct WorkspaceCapsuleInstallRequest {
 } derive(Debug, Eq, ToJson, FromJson)
 
 ///|
+pub(all) struct WorkspaceCapsuleExpandRequest {
+  expected_revision : Int
+  capsule_id : String
+  capsule_version : Int
+  actor : String
+} derive(Debug, Eq, ToJson, FromJson)
+
+///|
 /// A graph edit is submitted against an exact saved revision. The service
 /// owns the new revision number and timestamp so browser clocks and stale tabs
 /// cannot manufacture graph history.

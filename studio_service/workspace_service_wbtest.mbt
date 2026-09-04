@@ -552,3 +552,80 @@ async test "secure shares revoke and stored proposals apply once" {
     service.list_workspace_proposals("governed-project").proposals[0].applied,
   )
 }
+
+///|
+async test "capsule nodes expand into revisioned executable graph structure" {
+  let root = "/tmp/mooncast-workspace-capsule-expand-" +
+    @async.now().to_string()
+  let service = StudioService::new(root)
+  let graph : @workspace.WorkspaceGraph = {
+    contract: "mooncast.workspace-graph.v1",
+    graph_id: "outer-graph",
+    project_id: "capsule-project",
+    revision: 1,
+    title: "Outer graph",
+    nodes: [
+      {
+        node_id: "source",
+        definition_id: "workspace.asset-input",
+        title: "Source",
+        x: 0,
+        y: 0,
+        parameters: [
+          { key: "artifact-id", value: "source-1".to_json() },
+          { key: "artifact-version", value: "1".to_json() },
+          { key: "artifact-digest", value: "sha256:source".to_json() },
+          { key: "artifact-uri", value: "/source/1".to_json() },
+        ],
+        collapsed: false,
+      },
+      {
+        node_id: "sub",
+        definition_id: "workspace.control.subgraph",
+        title: "Reusable combine",
+        x: 300,
+        y: 100,
+        parameters: [],
+        collapsed: false,
+      },
+    ],
+    edges: [
+      {
+        edge_id: "source-sub",
+        source_node_id: "source",
+        source_port_id: "asset",
+        target_node_id: "sub",
+        target_port_id: "input",
+      },
+    ],
+    output_node_ids: ["sub"],
+    created_by: "operator",
+    created_at: "created",
+  }
+  ignore(service.save_workspace_graph(graph))
+  let expanded = service.expand_workspace_capsule_node(
+    graph.project_id,
+    graph.graph_id,
+    "sub",
+    {
+      expected_revision: 1,
+      capsule_id: "combine-videos",
+      capsule_version: 1,
+      actor: "operator",
+    },
+  )
+  assert_eq(expanded.revision, 2)
+  assert_false(expanded.nodes.any(node => node.node_id == "sub"))
+  assert_eq(expanded.nodes.length(), 6)
+  assert_true(expanded.nodes.any(node => node.node_id == "sub--concat"))
+  assert_true(
+    expanded.edges.any(edge => {
+      edge.edge_id == "source-sub" && edge.target_node_id == "sub--probe"
+    }),
+  )
+  assert_eq(expanded.output_node_ids, ["sub--register"])
+  assert_eq(
+    service.workspace_graph_history(graph.project_id, graph.graph_id).revisions.length(),
+    2,
+  )
+}
