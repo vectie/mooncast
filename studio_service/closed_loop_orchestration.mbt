@@ -1,12 +1,9 @@
 ///|
-pub async fn StudioService::record_project_qualification(
-  self : StudioService,
+fn initial_project_qualification(
   project_id : String,
   metadata : ProjectExperienceMetadata,
-  recorded_at : String,
   moonwiki_intake? : @intake.MoonWikiNeedsPacket,
-) -> ProjectCommandResponse {
-  let record = self.get_project(project_id)
+) -> @governance.ClientQualification {
   let channel = metadata.channels.get(0).unwrap_or("review-only")
   let customer_id = moonwiki_intake
     .map(packet => packet.client_need.customer)
@@ -33,8 +30,8 @@ pub async fn StudioService::record_project_qualification(
     sha256_text(
       project_id + ":" + customer_id + ":" + payable_problem + ":" + channel,
     )
-  let qualification : @governance.ClientQualification = {
-    reference: { id: project_id + "-qualification", version: 1, digest },
+  {
+    reference: { id: project_id + "-qualification", version: 1, digest, },
     customer_id,
     payable_problem,
     acceptance_method,
@@ -43,6 +40,32 @@ pub async fn StudioService::record_project_qualification(
     repeat_purchase_hypothesis: repeat_hypothesis,
     accepted: metadata.rights_confirmed,
   }
+}
+
+///|
+pub async fn StudioService::record_project_qualification(
+  self : StudioService,
+  project_id : String,
+  metadata : ProjectExperienceMetadata,
+  recorded_at : String,
+  moonwiki_intake? : @intake.MoonWikiNeedsPacket,
+) -> ProjectCommandResponse {
+  self.record_planned_qualification(
+    project_id,
+    initial_project_qualification(project_id, metadata, moonwiki_intake?),
+    recorded_at,
+  )
+}
+
+///|
+async fn StudioService::record_planned_qualification(
+  self : StudioService,
+  project_id : String,
+  qualification : @governance.ClientQualification,
+  recorded_at : String,
+) -> ProjectCommandResponse {
+  let record = self.get_project(project_id)
+  let digest = qualification.reference.digest
   let command = {
     ..base_command(
       record.snapshot,
@@ -51,7 +74,7 @@ pub async fn StudioService::record_project_qualification(
       recorded_at,
       digest,
     ),
-    actor: Some(customer_id),
+    actor: Some(qualification.customer_id),
     role: Some("client-sponsor"),
     qualification: Some(qualification),
   }

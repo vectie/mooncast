@@ -260,6 +260,18 @@ pub async fn StudioService::create_project(
   graph : @project.ProjectGraph,
   recorded_at : String,
 ) -> ProjectRecord {
+  self.with_quote_intake_lock(() => {
+    self.create_project_with_initialization(graph, recorded_at, None)
+  })
+}
+
+///|
+async fn StudioService::create_project_with_initialization(
+  self : StudioService,
+  graph : @project.ProjectGraph,
+  recorded_at : String,
+  initialization_digest : String?,
+) -> ProjectRecord {
   self.with_mutation_lock(() => {
     guard valid_id(graph.project_id) else {
       raise Invalid(
@@ -276,6 +288,13 @@ pub async fn StudioService::create_project(
     }
     match self.load_project_record(graph.project_id) {
       Some(existing) => {
+        guard initialization_digest is None ||
+          existing.initialization_digest == initialization_digest else {
+          raise Conflict(
+            code="intake_project_conflict",
+            message="Project was created by different work after this intake started",
+          )
+        }
         if !existing.deleted && existing.snapshot.graph == graph {
           return existing
         }
@@ -294,6 +313,7 @@ pub async fn StudioService::create_project(
     let record : ProjectRecord = {
       contract: "mooncast.native-project-record.v1",
       project_id: graph.project_id,
+      initialization_digest,
       created_at: recorded_at,
       updated_at: recorded_at,
       deleted: false,
@@ -428,7 +448,7 @@ pub async fn StudioService::apply_project_command(
             message="stored command result is missing or corrupt",
           )
         }
-        return { project: record, result, idempotent_replay: true }
+        return { project: record, result, idempotent_replay: true, }
       }
     }
     guard request.expected_revision == record.snapshot.revision else {
@@ -437,7 +457,7 @@ pub async fn StudioService::apply_project_command(
         message="expected revision does not match canonical snapshot",
       )
     }
-    let command = { ..request.command, snapshot: record.snapshot }
+    let command = { ..request.command, snapshot: record.snapshot, }
     let result = @kernel.handle(command)
     let result_key = project_result_key(project_id, command.command_id)
     let result_digest = sha256_text(result.to_json().stringify())
@@ -472,7 +492,7 @@ pub async fn StudioService::apply_project_command(
         ),
       )
     }
-    { project: updated, result, idempotent_replay: false }
+    { project: updated, result, idempotent_replay: false, }
   })
 }
 
@@ -612,7 +632,7 @@ pub async fn StudioService::creative_view(
       None => false
     }
   })
-  { artifact, history, decisions, project_revision: record.snapshot.revision }
+  { artifact, history, decisions, project_revision: record.snapshot.revision, }
 }
 
 ///|
@@ -775,7 +795,7 @@ pub async fn StudioService::apply_provider_command(
             message="stored provider result is missing or corrupt",
           )
         }
-        return { record, result, idempotent_replay: true }
+        return { record, result, idempotent_replay: true, }
       }
     }
     guard supplied.expected_revision == record.job.revision else {
@@ -784,7 +804,7 @@ pub async fn StudioService::apply_provider_command(
         message="expected revision does not match canonical provider job",
       )
     }
-    let command = { ..supplied, job: record.job }
+    let command = { ..supplied, job: record.job, }
     let result = @execution.reduce_provider_command(command)
     let result_key = provider_result_key(job_id, command.command_id)
     let result_digest = sha256_text(result.to_json().stringify())
@@ -809,7 +829,7 @@ pub async fn StudioService::apply_provider_command(
       command_receipts: receipts,
     }
     save_value(self.store, provider_key(job_id), updated)
-    { record: updated, result, idempotent_replay: false }
+    { record: updated, result, idempotent_replay: false, }
   })
 }
 
@@ -961,5 +981,5 @@ pub async fn StudioService::resolve_media(
       message="stored media does not match canonical metadata",
     )
   }
-  { record, content: blob }
+  { record, content: blob, }
 }

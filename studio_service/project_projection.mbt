@@ -41,12 +41,14 @@ pub async fn StudioService::save_project_experience(
   project_id : String,
   metadata : ProjectExperienceMetadata,
 ) -> Unit {
-  save_value(self.store, project_experience_key(project_id), metadata)
+  self.with_mutation_lock(() => {
+    save_value(self.store, project_experience_key(project_id), metadata)
+  })
 }
 
 ///|
-async fn StudioService::record_initial_draft(
-  self : StudioService,
+fn append_initial_draft(
+  drafts : Array[@creative.CreativeArtifact],
   project_id : String,
   kind : @creative.ArtifactKind,
   dependency_digests : Array[String],
@@ -54,9 +56,7 @@ async fn StudioService::record_initial_draft(
   duration_seconds : Int?,
   expected_cost_cny : Double?,
   rights_cleared : Bool,
-  recorded_at : String,
 ) -> @creative.CreativeArtifact {
-  let record = self.get_project(project_id)
   let content_text = content.stringify()
   let kind_name = kind.to_string()
   let digest = "sha256:" +
@@ -70,7 +70,7 @@ async fn StudioService::record_initial_draft(
       content_text,
     )
   let artifact : @creative.CreativeArtifact = {
-    reference: { id: project_id + "-" + kind_name, version: 1, digest },
+    reference: { id: project_id + "-" + kind_name, version: 1, digest, },
     kind,
     dependency_digests,
     duration_seconds,
@@ -78,49 +78,18 @@ async fn StudioService::record_initial_draft(
     rights_cleared,
     content: content_text,
   }
-  ignore(
-    self.record_creative_artifact(project_id, {
-      expected_revision: record.snapshot.revision,
-      command_id: "initial-" +
-      kind_name +
-      "-" +
-      sha256_text(project_id)[:12].to_owned(),
-      recorded_at,
-      evidence_digest: digest,
-      artifact,
-    }),
-  )
+  drafts.push(artifact)
   artifact
 }
 
 ///|
-pub async fn StudioService::seed_initial_creative_drafts(
-  self : StudioService,
-  project_id : String,
+fn initial_creative_drafts(
+  graph : @project.ProjectGraph,
   metadata : ProjectExperienceMetadata,
-  recorded_at : String,
   moonwiki_intake? : @intake.MoonWikiNeedsPacket,
-) -> ProjectRecord {
-  let initial = self.get_project(project_id)
-  let existing = if initial.snapshot.qualification is None {
-    match moonwiki_intake {
-      Some(packet) =>
-        self.record_project_qualification(
-          project_id,
-          metadata,
-          recorded_at,
-          moonwiki_intake=packet,
-        ).project
-      None =>
-        self.record_project_qualification(project_id, metadata, recorded_at).project
-    }
-  } else {
-    initial
-  }
-  if !existing.snapshot.creative_artifacts.is_empty() {
-    return existing
-  }
-  let graph = existing.snapshot.graph
+) -> Array[@creative.CreativeArtifact] {
+  let drafts : Array[@creative.CreativeArtifact] = []
+  let project_id = graph.project_id
   let intake_validation = moonwiki_intake.map(@intake.validate_intake)
   let intake_context = match (moonwiki_intake, intake_validation) {
     (Some(packet), Some(validation)) =>
@@ -137,7 +106,8 @@ pub async fn StudioService::seed_initial_creative_drafts(
       })
     _ => Json::null()
   }
-  let brief = self.record_initial_draft(
+  let brief = append_initial_draft(
+    drafts,
     project_id,
     @creative.Brief,
     [],
@@ -156,9 +126,9 @@ pub async fn StudioService::seed_initial_creative_drafts(
     None,
     None,
     false,
-    recorded_at,
   )
-  let rights = self.record_initial_draft(
+  let rights = append_initial_draft(
+    drafts,
     project_id,
     @creative.RightsLedger,
     [brief.reference.digest],
@@ -183,9 +153,9 @@ pub async fn StudioService::seed_initial_creative_drafts(
     None,
     None,
     metadata.rights_confirmed,
-    recorded_at,
   )
-  let bible = self.record_initial_draft(
+  let bible = append_initial_draft(
+    drafts,
     project_id,
     @creative.IpBible,
     [rights.reference.digest],
@@ -209,7 +179,6 @@ pub async fn StudioService::seed_initial_creative_drafts(
     None,
     None,
     false,
-    recorded_at,
   )
   let script_scenes : Array[Json] = []
   for episode in graph.episodes {
@@ -234,7 +203,8 @@ pub async fn StudioService::seed_initial_creative_drafts(
       )
     }
   }
-  let script = self.record_initial_draft(
+  let script = append_initial_draft(
+    drafts,
     project_id,
     @creative.Script,
     [bible.reference.digest],
@@ -252,9 +222,9 @@ pub async fn StudioService::seed_initial_creative_drafts(
     Some(graph.target_duration_seconds),
     None,
     false,
-    recorded_at,
   )
-  let claims = self.record_initial_draft(
+  let claims = append_initial_draft(
+    drafts,
     project_id,
     @creative.ClaimsLedger,
     [script.reference.digest],
@@ -265,7 +235,6 @@ pub async fn StudioService::seed_initial_creative_drafts(
     None,
     None,
     false,
-    recorded_at,
   )
   let board_scenes : Array[Json] = []
   for episode in graph.episodes {
@@ -292,7 +261,8 @@ pub async fn StudioService::seed_initial_creative_drafts(
       )
     }
   }
-  let storyboard = self.record_initial_draft(
+  let storyboard = append_initial_draft(
+    drafts,
     project_id,
     @creative.Storyboard,
     [script.reference.digest, claims.reference.digest],
@@ -304,10 +274,10 @@ pub async fn StudioService::seed_initial_creative_drafts(
     Some(graph.target_duration_seconds),
     None,
     false,
-    recorded_at,
   )
   ignore(
-    self.record_initial_draft(
+    append_initial_draft(
+      drafts,
       project_id,
       @creative.Animatic,
       [storyboard.reference.digest],
@@ -320,10 +290,70 @@ pub async fn StudioService::seed_initial_creative_drafts(
       Some(graph.target_duration_seconds),
       Some(0.0),
       false,
-      recorded_at,
     ),
   )
+  drafts
+}
+
+///|
+pub async fn StudioService::seed_initial_creative_drafts(
+  self : StudioService,
+  project_id : String,
+  metadata : ProjectExperienceMetadata,
+  recorded_at : String,
+  moonwiki_intake? : @intake.MoonWikiNeedsPacket,
+) -> ProjectRecord {
+  let initial = self.get_project(project_id)
+  let existing = if initial.snapshot.qualification is None {
+    self.record_project_qualification(
+      project_id,
+      metadata,
+      recorded_at,
+      moonwiki_intake?,
+    ).project
+  } else {
+    initial
+  }
+  if !existing.snapshot.creative_artifacts.is_empty() {
+    return existing
+  }
+  for
+    artifact in initial_creative_drafts(
+      existing.snapshot.graph,
+      metadata,
+      moonwiki_intake?,
+    ) {
+    self.record_planned_initial_draft(project_id, artifact, recorded_at)
+  }
   self.get_project(project_id)
+}
+
+///|
+async fn StudioService::record_planned_initial_draft(
+  self : StudioService,
+  project_id : String,
+  artifact : @creative.CreativeArtifact,
+  recorded_at : String,
+) -> Unit {
+  let record = self.get_project(project_id)
+  let result = self.record_creative_artifact(project_id, {
+    expected_revision: record.snapshot.revision,
+    command_id: "initial-" +
+    artifact.kind.to_string() +
+    "-" +
+    sha256_text(project_id)[:12].to_owned(),
+    recorded_at,
+    evidence_digest: artifact.reference.digest,
+    artifact,
+  })
+  guard result.result.ok else {
+    raise Conflict(
+      code="intake_seed_conflict",
+      message="Initial " +
+        artifact.kind.to_string() +
+        " draft was rejected; retry cannot overwrite current creative history",
+    )
+  }
 }
 
 ///|
@@ -788,7 +818,10 @@ pub async fn StudioService::studio_project_projection(
     creative_history[kind.to_string()] = snapshot.creative_artifacts
       .filter(item => item.kind == kind)
       .map(item => {
-        creative_artifact_json({ ..snapshot, creative_artifacts: [item] }, kind)
+        creative_artifact_json(
+          { ..snapshot, creative_artifacts: [item], },
+          kind,
+        )
       })
       .to_json()
   }
@@ -988,7 +1021,7 @@ pub async fn StudioService::creative_workspace_projection(
   let history = snapshot.creative_artifacts
     .filter(item => item.kind == kind)
     .map(item => {
-      creative_artifact_json({ ..snapshot, creative_artifacts: [item] }, kind)
+      creative_artifact_json({ ..snapshot, creative_artifacts: [item], }, kind)
     })
   let decisions : Array[Json] = []
   for decision in snapshot.creative_decisions {

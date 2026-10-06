@@ -1,7 +1,10 @@
 ///|
 enum Msg {
+  ProjectReply(String, Int, Msg)
+  ExportReply(String, Int, Msg)
   Bootstrap
-  ProjectsLoaded(Result[Json, Error])
+  ReloadProjects
+  ProjectsLoaded(Int, Result[Json, Error])
   WorkspaceProposalsLoaded(Result[Json, Error])
   WorkspaceCatalogLoaded(Result[Json, Error])
   WorkspaceCapsulesLoaded(Result[Json, Error])

@@ -244,7 +244,7 @@ struct DeliveryCreateInput {
   expected_delivery_version : Int
   expected_delivery_digest : String
   profile : DeliveryProfileInput
-} derive(FromJson)
+} derive(ToJson, FromJson)
 
 ///|
 struct DeliveryActionInput {
@@ -417,7 +417,7 @@ async fn StudioService::client_workspace(
     },
     annotations: portal.annotations,
     decisions: portal.decisions,
-    revision_policy: { maximum: 2, used, remaining: 2 - used },
+    revision_policy: { maximum: 2, used, remaining: 2 - used, },
     delivery: {
       accepted,
       download_url: if accepted {
@@ -842,7 +842,7 @@ async fn StudioService::create_client_portal_from_ui(
     build_id: record.build.build_id,
     build_digest: record.build.build_digest,
     client_name: input.client_name,
-    brand: { name: input.brand_name, accent: input.brand_accent },
+    brand: { name: input.brand_name, accent: input.brand_accent, },
     scopes: ["master-read", "annotation-write", "delivery-decision"],
     expires_at: input.expires_at,
     status: "active",
@@ -1122,8 +1122,21 @@ async fn StudioService::create_delivery_from_ui(
     fail("delivery build profile contract or variant policy is invalid")
   }
   let outputs : Array[@execution.DeliveryOutputSpec] = []
+  let captions = if input.profile.include_subtitles {
+    Some(
+      self.verified_delivery_captions(project_id) catch {
+        _ =>
+          raise Conflict(
+            code="delivery_captions_required",
+            message="Verified captions are missing or changed. Preview selected captions in Delivery; restore the exact SRT or export and promote a corrected master in Cut Editor.",
+          )
+      },
+    )
+  } else {
+    None
+  }
   let subtitle_mode = if input.profile.include_subtitles {
-    "burned"
+    "sidecar"
   } else {
     "none"
   }
@@ -1205,8 +1218,27 @@ async fn StudioService::create_delivery_from_ui(
       ),
     )
   }
+  let caption_output_mappings : Array[Json] = match captions {
+    Some(selected) =>
+      outputs
+      .filter(output => output.subtitle_mode == "sidecar")
+      .map(output => {
+        @execution_app.delivery_output_captions(
+          selected.bytes,
+          master.duration_seconds.to_double(),
+          output,
+        ).mapping
+      })
+    None => []
+  }
+  let caption_identity = match captions {
+    Some(selected) =>
+      selected.metadata.stringify() +
+      caption_output_mappings.to_json().stringify()
+    None => ""
+  }
   let profile_digest = "sha256:" +
-    sha256_text(input.profile.to_json().stringify())
+    sha256_text(input.profile.to_json().stringify() + caption_identity)
   let profile : @execution.DeliveryBuildProfile = {
     contract: "mooncast.delivery-build-profile.v1",
     profile_version: input.profile.version,
@@ -1231,7 +1263,22 @@ async fn StudioService::create_delivery_from_ui(
     delivery_version: delivery.reference.version,
     delivery_digest: normalized_digest(delivery.reference.digest),
     profile,
-    subtitle_path: None,
+    subtitle_path: match captions {
+      Some(selected) => {
+        let key = "delivery-captions-" +
+          sha256_text(selected.metadata.stringify()) +
+          ".srt"
+        // A queued build owns an immutable, digest-bound copy, so a later
+        // editor export cannot change the captions of an earlier package.
+        let frozen = self.editor_render_files.put_blob(key, selected.bytes)
+        guard "sha256:" + frozen.sha256 ==
+          ledger_text(selected.metadata, "sha256") else {
+          fail("Frozen delivery caption bytes changed")
+        }
+        Some(self.editor_render_files.owned_path(key))
+      }
+      None => None
+    },
     project_metadata: Some(
       Json::object({
         "project_id": project_id.to_json(),
@@ -1245,6 +1292,10 @@ async fn StudioService::create_delivery_from_ui(
         "master_digest": master.video_digest.to_json(),
         "master_provenance_digest": master.provenance_digest.to_json(),
         "delivery_manifest_digest": delivery.manifest_digest.to_json(),
+        "caption_selection": captions
+        .map(selected => selected.metadata)
+        .unwrap_or(Json::null()),
+        "caption_output_mappings": caption_output_mappings.to_json(),
       }),
     ),
     rights_ledger: Some(
@@ -2192,6 +2243,109 @@ pub async fn StudioService::dispatch_application_http(
         }),
       )
     }
+    (
+      Get,
+      [
+        "api",
+        "v2",
+        "projects",
+        project_id,
+        "delivery-captions",
+        "cut",
+        start,
+        finish,
+        "view",
+      ],
+    ) =>
+      Some(
+        self.delivery_captions_page(
+          project_id,
+          cut=delivery_caption_cut(start, finish),
+        ),
+      )
+    (
+      Get,
+      [
+        "api",
+        "v2",
+        "projects",
+        project_id,
+        "delivery-captions",
+        "cut",
+        start,
+        finish,
+        digest,
+        "download",
+      ],
+    ) => {
+      let selected = self.verified_delivery_cut_captions(
+        project_id,
+        delivery_caption_cut(start, finish),
+      )
+      guard ledger_text(selected.metadata, "sha256") == "sha256:" + digest else {
+        raise Conflict(
+          code="delivery_caption_selection_changed",
+          message="The selected cut captions changed. Preview the current cut and master selection again.",
+        )
+      }
+      Some({
+        status: 200,
+        reason: "OK",
+        headers: {
+          "Content-Type": "application/x-subrip; charset=utf-8",
+          "Content-Disposition": "attachment; filename=\"selected-cut-subtitles.srt\"",
+          "Cache-Control": "no-store",
+        },
+        body: selected.bytes,
+      })
+    }
+    (Get, ["api", "v2", "projects", project_id, "delivery-captions", "view"]) =>
+      Some(self.delivery_captions_page(project_id))
+    (
+      Get,
+      [
+        "api",
+        "v2",
+        "projects",
+        project_id,
+        "delivery-captions",
+        caption_sha256,
+        "download",
+      ],
+    ) => {
+      let selected = self.verified_delivery_captions(project_id)
+      guard ledger_text(selected.metadata, "sha256") ==
+        "sha256:" + caption_sha256 else {
+        raise Conflict(
+          code="delivery_caption_selection_changed",
+          message="The selected caption version changed. Preview the current selection in Delivery.",
+        )
+      }
+      Some({
+        status: 200,
+        reason: "OK",
+        headers: {
+          "Content-Type": "application/x-subrip; charset=utf-8",
+          "Content-Disposition": "attachment; filename=\"subtitles.srt\"",
+          "Cache-Control": "no-store",
+        },
+        body: selected.bytes,
+      })
+    }
+    (Get, ["api", "v2", "projects", project_id, "delivery-captions", "download"]
+    ) => {
+      let selected = self.verified_delivery_captions(project_id)
+      Some({
+        status: 200,
+        reason: "OK",
+        headers: {
+          "Content-Type": "application/x-subrip; charset=utf-8",
+          "Content-Disposition": "attachment; filename=\"subtitles.srt\"",
+          "Cache-Control": "no-store",
+        },
+        body: selected.bytes,
+      })
+    }
     (Get, ["api", "v2", "projects", project_id, "delivery-builds"]) =>
       Some(
         json_value_response(200, DeliveryBuildsProjection::{
@@ -2326,10 +2480,33 @@ pub async fn StudioService::dispatch_application_http(
         ),
       )
     }
-    (Get, ["api", "v2", "projects", _, "delivery-builds", build_id, "download"]) =>
-      Some(
-        @app_http.delivery_download_handler(self.delivery_application, build_id),
-      )
+    (
+      Get,
+      [
+        "api",
+        "v2",
+        "projects",
+        project_id,
+        "delivery-builds",
+        build_id,
+        "download",
+      ],
+    ) =>
+      match self.delivery_application.load(build_id) {
+        Some(record) if record.build.project_id == project_id =>
+          Some(
+            @app_http.delivery_download_handler(
+              self.delivery_application,
+              build_id,
+            ),
+          )
+        _ =>
+          Some(
+            api_error(
+              404, "delivery_build_not_found", "delivery build was not found in this project",
+            ),
+          )
+      }
     (Get, ["api", "commercial-intake"]) =>
       Some(json_value_response(200, self.commercial_dashboard_projection()))
     (Get, ["api", "commercial-intake", "capacity-board"]) =>

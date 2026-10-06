@@ -12,6 +12,7 @@ pub(all) struct ProjectCommandReceipt {
 pub(all) struct ProjectRecord {
   contract : String
   project_id : String
+  initialization_digest : String?
   created_at : String
   updated_at : String
   deleted : Bool
@@ -179,7 +180,7 @@ pub fn RouteExtension::new(
   prefix : String,
   handler : async (@host_http.Request) -> @host_http.Response?,
 ) -> RouteExtension {
-  { prefix, handler }
+  { prefix, handler, }
 }
 
 ///|

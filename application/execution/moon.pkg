@@ -1,9 +1,12 @@
 import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
   "moonbitlang/x/crypto",
   "vectie/mooncast/execution" @execution_domain,
+  "vectie/mooncast/editor/media" @editor_media,
   "vectie/mooncast/production/governance",
   "vectie/mooncast/production/project",
   "vectie/mooncast/native_host/process" @host_process,

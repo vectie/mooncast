@@ -189,7 +189,7 @@ fn api_error(
   code : String,
   message : String,
 ) -> @host_http.Response {
-  json_value_response(status, { error: { code, message } })
+  json_value_response(status, { error: { code, message, }, })
 }
 
 ///|
@@ -294,7 +294,7 @@ async fn StudioService::revise_creative_from_ui(
       content,
     )
   let artifact : @creative.CreativeArtifact = {
-    reference: { ..current.reference, version: next_version, digest },
+    reference: { ..current.reference, version: next_version, digest, },
     kind,
     dependency_digests: current.dependency_digests,
     duration_seconds: current.duration_seconds,
@@ -798,7 +798,7 @@ async fn StudioService::dispatch_unsafe(
     (Get, ["api", "v2", "projects"]) =>
       json_value_response(
         200,
-        omit_null_fields({ projects: self.list_projects() }.to_json()),
+        omit_null_fields({ projects: self.list_projects(), }.to_json()),
       )
     (Post, ["api", "v2", "projects"]) => {
       let json = @json.parse(@utf8.decode(request.body))
@@ -831,6 +831,23 @@ async fn StudioService::dispatch_unsafe(
       }
       json_value_response(201, self.studio_project_projection(ready))
     }
+    (
+      Get,
+      ["api", "v2", "projects", project_id, "episodes", episode_id, "ledger"],
+    ) => json_value_response(200, self.episode_ledger(project_id, episode_id))
+    (
+      Get,
+      [
+        "api",
+        "v2",
+        "projects",
+        project_id,
+        "episodes",
+        episode_id,
+        "ledger",
+        "view",
+      ],
+    ) => self.episode_ledger_page(project_id, episode_id)
     (Get, ["api", "v2", "projects", project_id]) =>
       json_value_response(
         200,
@@ -839,11 +856,11 @@ async fn StudioService::dispatch_unsafe(
     (Delete, ["api", "v2", "projects", project_id]) => {
       let input : DeleteRequest = decode_body(request)
       self.delete_project(project_id, input.expected_revision)
-      json_value_response(200, { deleted: true, project_id })
+      json_value_response(200, { deleted: true, project_id, })
     }
     (Get, ["api", "v2", "projects", project_id, "events"]) => {
       let project = self.get_project(project_id)
-      json_value_response(200, { events: project.events })
+      json_value_response(200, { events: project.events, })
     }
     (Get, ["api", "v2", "projects", project_id, "governance"]) =>
       json_value_response(200, self.governance_view(project_id))
@@ -1403,7 +1420,7 @@ async fn StudioService::dispatch_unsafe(
       json_value_response(
         200,
         (
-          { jobs: self.list_provider_jobs(), publication_authority: false } :
+          { jobs: self.list_provider_jobs(), publication_authority: false, } :
           ProviderListResponse),
       )
     (Get, ["api", "provider-executions", "config"]) =>

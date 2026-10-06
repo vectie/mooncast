@@ -786,10 +786,15 @@ struct NativePreparedIntake {
 ///|
 struct Model {
   bootstrapped : Bool
+  catalog_state : ProjectCatalogState
+  catalog_generation : Int
+  catalog_auto_open : Bool
   loading : Bool
   busy : Bool
   projects : Array[@api.ProjectSummary]
   project_id : String
+  selected_project_id : String?
+  project_drafts : Map[String, EditorProjectDraft]
   workspace_lens : WorkspaceLens
   selected_workspace_recipe : WorkspaceRecipe
   selected_workspace_node : String
@@ -880,6 +885,7 @@ struct Model {
   preview_generation : Int
   open_generation : Int
   export_state : ExportState
+  export_generation : Int
   request_sequence : Int
   undo_stack : Array[String]
   redo_stack : Array[String]
@@ -891,11 +897,21 @@ struct Model {
 
 ///|
 enum PendingAction {
+  RetryCatalog
   RetryOpen(String)
   RetryCommand(String, Json)
   RetryComment(String)
   RetryPreview
 }
+
+///|
+priv enum ProjectCatalogState {
+  CatalogIdle
+  CatalogLoading
+  CatalogReady
+  CatalogEmpty
+  CatalogFailed
+} derive(Eq, Debug)
 
 ///|
 fn initial_inspector() -> InspectorDraft {
@@ -937,10 +953,15 @@ fn initial_inspector() -> InspectorDraft {
 fn initial_model() -> Model {
   {
     bootstrapped: false,
+    catalog_state: CatalogIdle,
+    catalog_generation: 0,
+    catalog_auto_open: false,
     loading: false,
     busy: false,
     projects: [],
     project_id: "project-mc3a",
+    selected_project_id: None,
+    project_drafts: {},
     workspace_lens: GraphLens,
     selected_workspace_recipe: CombineVideosRecipe,
     selected_workspace_node: "concat",
@@ -1079,6 +1100,7 @@ fn initial_model() -> Model {
       handoff_request_id: "",
       handoff_status: "not-prepared",
     },
+    export_generation: 0,
     request_sequence: 0,
     undo_stack: [],
     redo_stack: [],

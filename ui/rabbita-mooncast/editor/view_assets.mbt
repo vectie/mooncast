@@ -31,20 +31,66 @@ fn project_header(
         on_click=dispatch(SwitchWorkspaceLens(ReviewLens)),
         "Review",
       ),
-      @html.select(on_change=dispatch.map(value => SelectProject(value))) <| model.projects.map(project => {
+      @html.select(
+        disabled=model.catalog_state != CatalogReady,
+        on_change=dispatch.map(value => SelectProject(value)),
+      ) <| (if model.projects.is_empty() {
+        [
+          @html.option(
+            disabled=true,
+            selected=true,
+            match model.catalog_state {
+              CatalogIdle | CatalogLoading => "Loading projects…"
+              CatalogFailed => "Project catalog unavailable"
+              CatalogEmpty => "No editor projects yet"
+              CatalogReady => "Choose a project"
+            },
+          ),
+        ]
+      } else {
+        model.projects.map(project => {
           @html.option(
             value=project.project_id,
-            selected=project.project_id == model.project_id,
+            selected=project.project_id == chosen_project(model),
           ) <| [
             @html.span("\{project.title} · r\{project.revision}"),
           ]
-        },
-      ),
+        })
+      }),
       @html.button(
         type_="button",
-        disabled=model.loading,
-        on_click=dispatch(OpenProject),
-        "Open project",
+        disabled=model.busy ||
+          model.workspace_graph_saving ||
+          (
+            model.catalog_state != CatalogReady &&
+            model.catalog_state != CatalogEmpty &&
+            model.catalog_state != CatalogFailed
+          ),
+        on_click=dispatch(
+          if model.catalog_state == CatalogFailed {
+            ReloadProjects
+          } else {
+            OpenProject
+          },
+        ),
+        if model.catalog_state == CatalogFailed {
+          "Retry project catalog"
+        } else if model.catalog_state == CatalogEmpty {
+          "Open creative workspace"
+        } else if chosen_project(model) != model.project_id {
+          "Open selected project"
+        } else {
+          "Reload project"
+        },
+      ),
+      @html.small(
+        "Working in: " +
+        model.project_id +
+        (if chosen_project(model) != model.project_id {
+          " · " + chosen_project(model) + " selected; use Open to switch"
+        } else {
+          ""
+        }),
       ),
       @html.span(class="revision-pill", "r\{selected_revision(model)}"),
     ],

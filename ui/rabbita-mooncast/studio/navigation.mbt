@@ -155,11 +155,27 @@ fn render_header(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
     div(class="header-actions", [
       button(
         class="secondary icon-action",
-        title="Refresh exact revision",
-        attrs=@html.Attrs::build().aria_label("Refresh exact project revision"),
-        disabled=model.selected_project_id == "" || model.loading,
+        title=if model.project_load_errors.is_empty() {
+          "Refresh exact revision"
+        } else {
+          "Retry project and related evidence"
+        },
+        attrs=@html.Attrs::build().aria_label(
+          "Refresh or retry exact project revision",
+        ),
+        disabled=model.selected_project_id == "",
         on_click=dispatch(RefreshProject),
-        [studio_action_icon("refresh"), span(class="action-label", "Refresh")],
+        [
+          studio_action_icon("refresh"),
+          span(
+            class="action-label",
+            if model.project_load_errors.is_empty() {
+              "Refresh"
+            } else {
+              "Retry"
+            },
+          ),
+        ],
       ),
       a(
         class="primary-link icon-action",

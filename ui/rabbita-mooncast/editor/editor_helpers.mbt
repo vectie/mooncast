@@ -495,7 +495,8 @@ fn normalized_after_snapshot(
     selected
   }
   let export_state = match merged.master_promotion {
-    Some(promotion) => {
+    Some(promotion) if model.export_state.job_id.is_blank() ||
+      model.export_state.job_id == promotion.job_id => {
       let preserve_handoff = model.export_state.job_id == promotion.job_id
       {
         ..model.export_state,
@@ -532,7 +533,7 @@ fn normalized_after_snapshot(
         },
       }
     }
-    None => model.export_state
+    _ => model.export_state
   }
   {
     ..model,

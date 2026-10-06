@@ -143,7 +143,7 @@ type DeliveryBuildsProjection derive(ToJson)
 
 type DeliveryCoverInput derive(ToJson, @json.FromJson)
 
-type DeliveryCreateInput derive(@json.FromJson)
+type DeliveryCreateInput derive(ToJson, @json.FromJson)
 
 type DeliveryCutInput derive(ToJson, @json.FromJson)
 
@@ -449,6 +449,7 @@ type ProjectListResponse derive(ToJson)
 pub(all) struct ProjectRecord {
   contract : String
   project_id : String
+  initialization_digest : String?
   created_at : String
   updated_at : String
   deleted : Bool
@@ -508,9 +509,11 @@ type QcDecisionInput derive(@json.FromJson)
 
 type QcFindingInput derive(@json.FromJson)
 
-type QuoteConversionInput derive(@json.FromJson)
+type QuoteConversionInput derive(ToJson, @json.FromJson)
 
 type QuoteInput derive(ToJson, @json.FromJson)
+
+type QuoteIntakePlan derive(ToJson, @json.FromJson)
 
 type QuoteMilestoneInput derive(ToJson, @json.FromJson)
 
@@ -641,6 +644,8 @@ pub async fn StudioService::dispatch_application_http(Self, @http.Request) -> @h
 pub async fn StudioService::dispatch_editor_command(Self, String, @domain.EditCommand, String) -> EditorOpenView
 pub async fn StudioService::dispatch_http(Self, @http.Request) -> @http.Response
 pub async fn StudioService::editor_export_path_for_digest(Self, String, String) -> String
+pub async fn StudioService::episode_ledger(Self, String, String) -> Json
+pub async fn StudioService::episode_ledger_page(Self, String, String) -> @http.Response
 pub async fn StudioService::expand_workspace_capsule_node(Self, String, String, String, WorkspaceCapsuleExpandRequest) -> @workspace.WorkspaceGraph
 pub async fn StudioService::fork_workspace_graph(Self, String, String, WorkspaceGraphForkRequest) -> @workspace.WorkspaceGraph
 pub fn StudioService::freeze_workspace_plan(Self, WorkspacePlanRequest) -> @workspace.ExecutionPlan raise
@@ -784,6 +789,8 @@ type UtilityConcatProbeFormat derive(@json.FromJson)
 type UtilityConcatProbeStream derive(@json.FromJson)
 
 type UtilityConcatVideoSignature derive(Eq, @debug.Debug)
+
+type VerifiedDeliveryCaptions
 
 pub(all) struct WorkspaceAgentAssistProjection {
   contract : String

@@ -110,7 +110,7 @@ struct QuoteConversionInput {
   human_confirmed : Bool
   actor : String
   actor_role : String
-} derive(FromJson)
+} derive(FromJson, ToJson)
 
 ///|
 struct RepeatOrderInput {
@@ -239,6 +239,7 @@ struct ReservationProjection {
 
 ///|
 struct ConversionProjection {
+  initialization_status : String?
   contract : String
   quote_id : String
   quote_version : Int
@@ -552,6 +553,7 @@ fn conversion_projection(
   conversion : @commerce.QuoteConversion,
 ) -> ConversionProjection {
   {
+    initialization_status: None,
     contract: conversion.contract,
     quote_id: conversion.quote.id,
     quote_version: conversion.quote.version,
@@ -584,6 +586,21 @@ pub async fn StudioService::commercial_dashboard_projection(
       quotes.push(quote_projection(snapshot, item))
     }
   }
+  let conversions : Array[ConversionProjection] = []
+  for conversion in snapshot.conversions {
+    conversions.push(self.conversion_with_initialization(conversion))
+  }
+  // A crash can leave the frozen intention before commerce has committed the
+  // conversion. Surface its original inputs so the same intake action resumes.
+  for key in self.store.list_keys(prefix="quote-intake-", suffix=".json") {
+    let plan : QuoteIntakePlan = load_value(self.store, key).unwrap()
+    if !plan.complete &&
+      !snapshot.conversions.any(item => {
+        item.project_id == plan.conversion.project_id
+      }) {
+      conversions.push(self.conversion_with_initialization(plan.conversion))
+    }
+  }
   {
     contract: "mooncast.commercial-intake-dashboard.v1",
     revision: snapshot.revision,
@@ -592,7 +609,7 @@ pub async fn StudioService::commercial_dashboard_projection(
     quotes,
     resources: snapshot.resources.map(resource_projection),
     reservations: snapshot.reservations.map(reservation_projection),
-    conversions: snapshot.conversions.map(conversion_projection),
+    conversions,
     external_effects: false,
   }
 }
@@ -632,7 +649,7 @@ pub async fn StudioService::create_commercial_lead(
     sha256_text(input.to_json().stringify() + ":" + lead_id)
   let lead : @commerce.QualifiedLead = {
     contract: "mooncast.qualified-lead.v1",
-    lead: { id: lead_id, version: 1, digest },
+    lead: { id: lead_id, version: 1, digest, },
     customer: input.customer,
     customer_contact_ref: input.customer_contact_ref,
     payable_problem: input.payable_problem,
@@ -767,7 +784,7 @@ pub async fn StudioService::create_or_revise_quote(
     )
   let quote : @commerce.ScopedQuote = {
     contract: "mooncast.scoped-quote.v1",
-    quote: { id, version, digest },
+    quote: { id, version, digest, },
     source_lead: lead.lead,
     project: {
       project_id: input.project_id,
@@ -861,7 +878,7 @@ pub async fn StudioService::create_capacity_resource(
   let digest = "sha256:" + sha256_text(id + ":" + input.name + ":" + input.role)
   let resource : @commerce.CapacityResource = {
     contract: "mooncast.capacity-resource.v1",
-    resource: { id, version: 1, digest },
+    resource: { id, version: 1, digest, },
     name: input.name,
     role: input.role,
     skills: input.skills,
@@ -960,7 +977,7 @@ pub async fn StudioService::create_capacity_reservation(
     )
   let reservation : @commerce.CapacityReservation = {
     contract: "mooncast.capacity-reservation.v1",
-    reservation: { id, version: 1, digest },
+    reservation: { id, version: 1, digest, },
     quote: quote.quote,
     resource: resource.resource,
     role: resource.role,
@@ -1095,75 +1112,7 @@ pub async fn StudioService::convert_commercial_quote(
   quote_id : String,
   input : QuoteConversionInput,
 ) -> ConversionResultProjection {
-  guard input.human_confirmed else {
-    fail("named human confirmation is required")
-  }
-  let snapshot = self.commerce_application.load()
-  guard latest_quote(snapshot, quote_id) is Some(quote) &&
-    quote.quote.version == input.expected_version &&
-    normalized_digest(quote.quote.digest) ==
-    normalized_digest(input.expected_digest) &&
-    self.commerce_application.capacity_board(quote_id~) is Some(board) &&
-    board.ready &&
-    normalized_digest(board.digest) ==
-    normalized_digest(input.expected_capacity_digest) else {
-    fail("accepted quote or capacity binding changed")
-  }
-  let converted_at = now_string()
-  let digest = "sha256:" +
-    sha256_text(
-      quote.quote.digest +
-      ":" +
-      board.digest +
-      ":" +
-      quote.project.project_id +
-      ":" +
-      input.actor,
-    )
-  let conversion : @commerce.QuoteConversion = {
-    contract: "mooncast.quote-conversion.v1",
-    quote: quote.quote,
-    capacity_digest: board.digest,
-    project_id: quote.project.project_id,
-    actor: input.actor,
-    actor_role: input.actor_role,
-    converted_at,
-    digest,
-    payment_effect_performed: false,
-    publication_authority: false,
-  }
-  ignore(
-    self.commerce_application.submit(
-      commercial_command(snapshot, "convert_quote", digest, conversion~),
-    ),
-  )
-  let graph = @production_app.episode_production_graph(
-    quote.project.project_id,
-    quote.project.title,
-    quote.project.target_duration_seconds,
-    quote.project.production_budget_cny,
-  )
-  let project = self.create_project(graph, converted_at)
-  let experience : ProjectExperienceMetadata = {
-    objective: quote.project.objective,
-    audience: quote.project.audience,
-    channels: ["review-only"],
-    rights_owner: quote.project.rights_owner,
-    rights_confirmed: true,
-  }
-  self.save_project_experience(project.project_id, experience)
-  let ready = self.seed_initial_creative_drafts(
-    project.project_id,
-    experience,
-    converted_at,
-  )
-  {
-    conversion: conversion_projection(conversion),
-    project: self.studio_project_projection(ready),
-    external_effect_performed: false,
-    payment_effect_performed: false,
-    publication_authority: false,
-  }
+  self.convert_quote_intake(quote_id, input, async fn(_) { () })
 }
 
 ///|

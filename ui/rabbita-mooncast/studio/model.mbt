@@ -836,6 +836,7 @@ struct ConversionProjection {
   digest : String
   payment_effect_performed : Bool
   publication_authority : Bool
+  initialization_status : String?
 } derive(FromJson)
 
 ///|
@@ -1247,16 +1248,25 @@ struct ClientOpsForm {
 ///|
 struct Model {
   tab : StudioTab
+  tab_generation : Int
   loading : Bool
   busy : Bool
   projects : Array[ProjectSummaryProjection]
   selected_project_id : String
+  project_generation : Int
+  project_selection_generation : Int
+  project_pending : Array[String]
+  project_load_errors : Array[(String, String)]
+  command_notices : Array[String]
   project : ProjectProjection?
   routed : Array[RoutedExecutionSummary]
   delivery_builds : Array[DeliveryBuildProjection]
+  delivery_cut_start : String
+  delivery_cut_end : String
   client_portals : Array[ClientPortalProjection]
   billing_entries : Array[BillingProjection]
   latest_client_url : String?
+  client_urls : Map[String, String]
   commercial : CommercialDashboardProjection?
   capacity_board : CapacityBoardProjection?
   control_tower : ProductionControlTowerProjection?
@@ -1276,6 +1286,7 @@ struct Model {
   selected_quote_id : String
   selected_artifact_kind : String
   artifact_draft : String
+  artifact_drafts : Map[(String, String), String]
   create : CreateForm
   operator : OperatorForm
   commercial_form : CommercialForm
@@ -1299,12 +1310,15 @@ enum Msg {
   SelectProject(String)
   RefreshProject
   LoadedProjects(Result[ProjectListProjection, Error])
-  LoadedProject(Result[ProjectProjection, Error])
-  LoadedRouted(Result[RoutedListProjection, Error])
-  LoadedDeliveries(Result[DeliveryListProjection, Error])
-  LoadedPortals(Result[PortalListProjection, Error])
-  LoadedBilling(Result[BillingListProjection, Error])
-  CreatedClientPortal(Result[ClientPortalCreatedProjection, Error])
+  LoadedProject(ProjectRequest, Result[ProjectProjection, Error])
+  LoadedRouted(ProjectRequest, Result[RoutedListProjection, Error])
+  LoadedDeliveries(ProjectRequest, Result[DeliveryListProjection, Error])
+  LoadedPortals(ProjectRequest, Result[PortalListProjection, Error])
+  LoadedBilling(ProjectRequest, Result[BillingListProjection, Error])
+  CreatedClientPortal(
+    ProjectRequest,
+    Result[ClientPortalCreatedProjection, Error]
+  )
   LoadedCommercial(Result[CommercialDashboardProjection, Error])
   LoadedCapacity(Result[CapacityBoardProjection, Error])
   LoadedControlTower(Result[ProductionControlTowerProjection, Error])
@@ -1315,7 +1329,10 @@ enum Msg {
   SetControlTowerOwnershipDue(String)
   AssignControlTowerException(String)
   LoadedNeedsIntake(Result[NeedsIntakeWorkspaceProjection, Error])
-  LoadedAssetFactory(Result[AssetFactoryWorkspaceProjection, Error])
+  LoadedAssetFactory(
+    ProjectRequest,
+    Result[AssetFactoryWorkspaceProjection, Error]
+  )
   SetAssetPlanDraft(String)
   RecordAssetPlan
   DecideAssetPlan(String)
@@ -1323,16 +1340,25 @@ enum Msg {
   RecordAssetVariantQc(String)
   ApproveAssetVariant(String)
   BindAssetFactoryShots
-  LoadedAnimaticWorkspace(Result[AnimaticWorkspaceProjection, Error])
+  LoadedAnimaticWorkspace(
+    ProjectRequest,
+    Result[AnimaticWorkspaceProjection, Error]
+  )
   SetAnimaticPlanDraft(String)
   RecordAnimaticPlan
   RenderAnimatic
   ApproveRenderedAnimatic
-  LoadedPostprocessWorkspace(Result[PostprocessWorkspaceProjection, Error])
+  LoadedPostprocessWorkspace(
+    ProjectRequest,
+    Result[PostprocessWorkspaceProjection, Error]
+  )
   SetPostprocessTaskDraft(String)
   RecordPostprocessTask
   RunPostprocessTask
-  LoadedAnalyzerWorkspace(Result[AnalyzerWorkspaceProjection, Error])
+  LoadedAnalyzerWorkspace(
+    ProjectRequest,
+    Result[AnalyzerWorkspaceProjection, Error]
+  )
   SetAnalyzerTaskDraft(String)
   RecordAnalyzerTask
   RunAnalyzerTask
@@ -1342,8 +1368,8 @@ enum Msg {
   ImportNeedsPacket
   DecideNeedsIntake(String)
   SeedProjectFromIntake
-  ActionCompleted(String, Result[Json, Error])
-  CreatedProject(Result[ProjectProjection, Error])
+  ActionCompleted(ProjectRequest, String, Result[Json, Error])
+  CreatedProject(ProjectRequest, Result[ProjectProjection, Error])
   SetCreateField(String, String)
   SetRightsConfirmed(Bool)
   CreateProject
@@ -1379,6 +1405,8 @@ enum Msg {
   RunRoutedShot(String, String, String)
   RunAllPendingShots(String)
   ConfirmBatchQc
+  SetDeliveryCutStart(String)
+  SetDeliveryCutEnd(String)
   CreateDeliveryBuild
   RunDeliveryAction(String, String)
   AcceptDelivery(String)
@@ -1397,33 +1425,35 @@ enum Msg {
   CreateReservation
   LoadCapacity
   ConvertQuote
+  RefreshQuoteInitializations
+  ResumeQuoteInitialization(String)
 }
 
 ///|
 fn starter_moonwiki_packet() -> String {
   let value =
     #|{
-  #|  "contract": "moonwiki.mooncast-needs-export.v1",
-  #|  "packet_id": "brand-episode-needs-001",
-  #|  "packet_version": 1,
-  #|  "exported_at": "2026-07-19T00:00:00+08:00",
-  #|  "evidence_refs": [
-  #|    {"source_id":"wiki-brief-001","source_version":"1","source_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","provenance_ref":"moonwiki://projects/brand/brief"},
-  #|    {"source_id":"wiki-bible-001","source_version":"1","source_digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222","provenance_ref":"moonwiki://projects/brand/bible"},
-  #|    {"source_id":"wiki-script-001","source_version":"1","source_digest":"sha256:3333333333333333333333333333333333333333333333333333333333333333","provenance_ref":"moonwiki://projects/brand/script"}
-  #|  ],
-  #|  "intent_refs": {
-  #|    "brief":{"source_id":"wiki-brief-001","source_version":"1","source_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","provenance_ref":"moonwiki://projects/brand/brief"},
-  #|    "bible":{"source_id":"wiki-bible-001","source_version":"1","source_digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222","provenance_ref":"moonwiki://projects/brand/bible"},
-  #|    "script":{"source_id":"wiki-script-001","source_version":"1","source_digest":"sha256:3333333333333333333333333333333333333333333333333333333333333333","provenance_ref":"moonwiki://projects/brand/script"}
-  #|  },
-  #|  "client_need":{"customer":"Named design partner","payable_problem":"Produce a repeatable branded narrative episode faster than the current agency workflow","audience":"Customer-defined audience","channels":["review-only"],"acceptance_method":"Named client accepts the exact 3–8 minute master and provenance package","repeat_purchase_hypothesis":"Quarterly episode retainer"},
-  #|  "contract_boundary":{"contract_ref":"contract:pending-signature","budget_ceiling_cny":20000,"revision_limit":2,"target_duration_seconds":240,"deliverables":["horizontal master","vertical master","subtitles","cover","provenance manifest"],"payment_milestones":["deposit","approved animatic","accepted master"]},
-  #|  "constraints":{"rights_owner":"Named contract party","rights_confirmed":true,"rights_constraints":["licensed source assets only","named-human final review"],"confidentiality_class":"contract-confidential","permitted_provider_ids":["approved-provider"],"prohibited_provider_ids":[],"permitted_data_class":"rights-cleared-confidential"},
-  #|  "creative_strategy":{"project_title":"Governed brand episode","objective":"Tell one complete branded story with measurable audience retention","narrative_proposition":"A character-led story demonstrates the product promise","tone":"confident, human, cinematic","claims":[],"success_metrics":["client acceptance","completion rate","repeat order"],"negative_constraints":["no invented product claims","no unlicensed identity"]},
-  #|  "unresolved_questions":[],
-  #|  "publication_authority":false,
-  #|  "provider_execution_authority":false
+    #|  "contract": "moonwiki.mooncast-needs-export.v1",
+    #|  "packet_id": "brand-episode-needs-001",
+    #|  "packet_version": 1,
+    #|  "exported_at": "2026-07-19T00:00:00+08:00",
+    #|  "evidence_refs": [
+    #|    {"source_id":"wiki-brief-001","source_version":"1","source_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","provenance_ref":"moonwiki://projects/brand/brief"},
+    #|    {"source_id":"wiki-bible-001","source_version":"1","source_digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222","provenance_ref":"moonwiki://projects/brand/bible"},
+    #|    {"source_id":"wiki-script-001","source_version":"1","source_digest":"sha256:3333333333333333333333333333333333333333333333333333333333333333","provenance_ref":"moonwiki://projects/brand/script"}
+    #|  ],
+    #|  "intent_refs": {
+    #|    "brief":{"source_id":"wiki-brief-001","source_version":"1","source_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","provenance_ref":"moonwiki://projects/brand/brief"},
+    #|    "bible":{"source_id":"wiki-bible-001","source_version":"1","source_digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222","provenance_ref":"moonwiki://projects/brand/bible"},
+    #|    "script":{"source_id":"wiki-script-001","source_version":"1","source_digest":"sha256:3333333333333333333333333333333333333333333333333333333333333333","provenance_ref":"moonwiki://projects/brand/script"}
+    #|  },
+    #|  "client_need":{"customer":"Named design partner","payable_problem":"Produce a repeatable branded narrative episode faster than the current agency workflow","audience":"Customer-defined audience","channels":["review-only"],"acceptance_method":"Named client accepts the exact 3–8 minute master and provenance package","repeat_purchase_hypothesis":"Quarterly episode retainer"},
+    #|  "contract_boundary":{"contract_ref":"contract:pending-signature","budget_ceiling_cny":20000,"revision_limit":2,"target_duration_seconds":240,"deliverables":["horizontal master","vertical master","subtitles","cover","provenance manifest"],"payment_milestones":["deposit","approved animatic","accepted master"]},
+    #|  "constraints":{"rights_owner":"Named contract party","rights_confirmed":true,"rights_constraints":["licensed source assets only","named-human final review"],"confidentiality_class":"contract-confidential","permitted_provider_ids":["approved-provider"],"prohibited_provider_ids":[],"permitted_data_class":"rights-cleared-confidential"},
+    #|  "creative_strategy":{"project_title":"Governed brand episode","objective":"Tell one complete branded story with measurable audience retention","narrative_proposition":"A character-led story demonstrates the product promise","tone":"confident, human, cinematic","claims":[],"success_metrics":["client acceptance","completion rate","repeat order"],"negative_constraints":["no invented product claims","no unlicensed identity"]},
+    #|  "unresolved_questions":[],
+    #|  "publication_authority":false,
+    #|  "provider_execution_authority":false
     #|}
   value
 }
@@ -1434,14 +1464,15 @@ fn starter_asset_factory_plan(project : ProjectProjection) -> String {
   let source_digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
   let prompt_digest = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
   let specs : Array[Json] = []
-  for item in [
-    ("hero", "character", "image"),
-    ("main-location", "location", "image"),
-    ("narrator", "voice", "voice"),
-    ("episode-score", "music", "music"),
-    ("hero-motion", "motion", "video"),
-    ("style-copy", "text", "text"),
-  ] {
+  for
+    item in [
+      ("hero", "character", "image"),
+      ("main-location", "location", "image"),
+      ("narrator", "voice", "voice"),
+      ("episode-score", "music", "music"),
+      ("hero-motion", "motion", "video"),
+      ("style-copy", "text", "text"),
+    ] {
     let (asset_id, kind, capability) = item
     specs.push({
       "asset_id": asset_id,
@@ -1489,8 +1520,10 @@ fn starter_animatic_plan(
   factory : AssetFactoryWorkspaceProjection,
   current_version : Int,
 ) -> String {
-  guard project.bible is Some(bible) && project.script is Some(script) &&
-    project.storyboard is Some(storyboard) && !factory.approved_assets.is_empty() else {
+  guard project.bible is Some(bible) &&
+    project.script is Some(script) &&
+    project.storyboard is Some(storyboard) &&
+    !factory.approved_assets.is_empty() else {
     return "{}"
   }
   let assets = factory.approved_assets.map(value => value.reference)
@@ -1500,13 +1533,23 @@ fn starter_animatic_plan(
   for approved in factory.approved_assets {
     match approved.reference {
       Object(fields) => {
-        let id = match fields.get("asset_id") { Some(String(value)) => value; _ => "" }
-        let kind = match fields.get("kind") { Some(String(value)) => value; _ => "" }
+        let id = match fields.get("asset_id") {
+          Some(String(value)) => value
+          _ => ""
+        }
+        let kind = match fields.get("kind") {
+          Some(String(value)) => value
+          _ => ""
+        }
         if ["character", "location", "prop", "image", "motion"].contains(kind) {
           visual_ids.push(id)
         }
-        if kind == "voice" { voice_ids.push(id) }
-        if kind == "music" { music_ids.push(id) }
+        if kind == "voice" {
+          voice_ids.push(id)
+        }
+        if kind == "music" {
+          music_ids.push(id)
+        }
       }
       _ => ()
     }
@@ -1519,19 +1562,39 @@ fn starter_animatic_plan(
       "shot_id": shot.id,
       "order": shot.order,
       "duration_ms": (shot.duration_seconds * 1000.0).to_int(),
-      "caption": if shot.subtitle.trim() == "" { shot.prompt } else { shot.subtitle },
+      "caption": if shot.subtitle.trim() == "" {
+        shot.prompt
+      } else {
+        shot.subtitle
+      },
       "visual_asset_ids": visual_ids,
       "transition": "cut",
     })
   }
   let value : Json = {
     "contract": "mooncast.animatic-plan.v1",
-    "reference": { "id": project.id + "-animatic-render-plan", "version": current_version, "digest": "" },
+    "reference": {
+      "id": project.id + "-animatic-render-plan",
+      "version": current_version,
+      "digest": "",
+    },
     "project_id": project.id,
     "project_revision": project.revision,
-    "bible": { "id": bible.artifact_id, "version": bible.version, "digest": bible.digest },
-    "script": { "id": script.artifact_id, "version": script.version, "digest": script.digest },
-    "storyboard": { "id": storyboard.artifact_id, "version": storyboard.version, "digest": storyboard.digest },
+    "bible": {
+      "id": bible.artifact_id,
+      "version": bible.version,
+      "digest": bible.digest,
+    },
+    "script": {
+      "id": script.artifact_id,
+      "version": script.version,
+      "digest": script.digest,
+    },
+    "storyboard": {
+      "id": storyboard.artifact_id,
+      "version": storyboard.version,
+      "digest": storyboard.digest,
+    },
     "panels": panels,
     "approved_assets": assets,
     "temporary_voice_asset_ids": voice_ids,
@@ -1556,7 +1619,11 @@ fn starter_postprocess_task(
   let sources = factory.approved_assets.map(value => value.reference)
   let value : Json = {
     "contract": "mooncast.postprocess-task.v1",
-    "reference": { "id": project.id + "-lip-sync-task", "version": 1, "digest": "" },
+    "reference": {
+      "id": project.id + "-lip-sync-task",
+      "version": 1,
+      "digest": "",
+    },
     "project_id": project.id,
     "project_revision": project.revision,
     "operation": "lip-sync",
@@ -1587,10 +1654,16 @@ fn starter_analyzer_task(project : ProjectProjection) -> String {
     Some(value) => value.asset_id.unwrap_or("sha256:provider-output-required")
     None => "sha256:provider-output-required"
   }
-  let duration_ms = shot.map(value => (value.duration_seconds * 1000.0).to_int()).unwrap_or(1000)
+  let duration_ms = shot
+    .map(value => (value.duration_seconds * 1000.0).to_int())
+    .unwrap_or(1000)
   let value : Json = {
     "contract": "mooncast.qc-analyzer-task.v1",
-    "reference": { "id": project.id + "-codec-analysis", "version": 1, "digest": "" },
+    "reference": {
+      "id": project.id + "-codec-analysis",
+      "version": 1,
+      "digest": "",
+    },
     "project_id": project.id,
     "project_revision": project.revision,
     "shot_id": shot_id,
@@ -1620,16 +1693,25 @@ fn starter_analyzer_task(project : ProjectProjection) -> String {
 fn initial_model() -> Model {
   {
     tab: Overview,
+    tab_generation: 0,
     loading: true,
     busy: false,
     projects: [],
     selected_project_id: "",
+    project_generation: 0,
+    project_selection_generation: 0,
+    project_pending: [],
+    project_load_errors: [],
+    command_notices: [],
     project: None,
     routed: [],
     delivery_builds: [],
+    delivery_cut_start: "",
+    delivery_cut_end: "",
     client_portals: [],
     billing_entries: [],
     latest_client_url: None,
+    client_urls: {},
     commercial: None,
     capacity_board: None,
     control_tower: None,
@@ -1649,6 +1731,7 @@ fn initial_model() -> Model {
     selected_quote_id: "",
     selected_artifact_kind: "brief",
     artifact_draft: "{}",
+    artifact_drafts: {},
     create: {
       project_id: "mooncast-episode-001",
       title: "Mooncast governed episode",
@@ -1722,9 +1805,7 @@ fn initial_model() -> Model {
       evidence_refs: "",
       provider_cost_reconciled: false,
     },
-    control_tower_ownership_form: {
-      action_due_date: "2026-08-01",
-    },
+    control_tower_ownership_form: { action_due_date: "2026-08-01", },
     routing_form: {
       route_id: "primary-video-route",
       provider: "configured-video-provider",

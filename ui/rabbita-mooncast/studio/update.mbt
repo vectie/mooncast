@@ -39,11 +39,12 @@ fn optional_double_json(value : String) -> Json {
 }
 
 ///|
-fn update(
+fn update_current(
   emit : @rabbita.Emit[Msg],
   msg : Msg,
   model : Model,
 ) -> (@rabbita.Cmd, Model) {
+  let request = project_request(model)
   match msg {
     Bootstrap => {
       let projects = @http.get("/api/v2/projects").expect_json(
@@ -67,118 +68,119 @@ fn update(
         },
       )
     }
-    SelectTab(tab) =>
+    SelectTab(tab) => {
+      let model = {
+        ..model,
+        tab_generation: model.tab_generation +
+        (if model.tab == tab { 0 } else { 1 }),
+      }
       if tab == ControlTower {
         (
           @http.get("/api/control-tower").expect_json(
             emit.map(fn(result) { LoadedControlTower(result) }),
           ),
-          { ..model, tab, status: "Refreshing portfolio evidence…" },
+          { ..model, tab, status: "Refreshing portfolio evidence…", },
         )
       } else {
         (@rabbita.none, { ..model, tab, })
       }
-    SelectProject(project_id) => {
-      let cmd = @http.get("/api/v2/projects/" + project_id).expect_json(
-        emit.map(fn(result) { LoadedProject(result) }),
-      )
-      (
-        cmd,
-        {
-          ..model,
-          selected_project_id: project_id,
-          loading: true,
-          error: None,
-          status: "Loading canonical project revision…",
-        },
-      )
     }
+    SelectProject(project_id) => begin_project_load(emit, model, project_id)
     RefreshProject =>
       if model.selected_project_id == "" {
         (@rabbita.none, model)
       } else {
-        let cmd = @http.get("/api/v2/projects/" + model.selected_project_id).expect_json(
-          emit.map(fn(result) { LoadedProject(result) }),
-        )
-        (cmd, { ..model, loading: true, error: None })
+        begin_project_load(emit, model, model.selected_project_id)
       }
     LoadedProjects(Ok(value)) => {
       let should_open = model.selected_project_id == "" &&
+        model.project_generation == 0 &&
+        model.tab_generation == 0 &&
         !value.projects.is_empty()
       let selected = if should_open {
         value.projects[0].project_id
       } else {
         model.selected_project_id
       }
-      let cmd = if should_open {
-        @http.get("/api/v2/projects/" + selected).expect_json(
-          emit.map(fn(result) { LoadedProject(result) }),
+      let next = { ..model, projects: value.projects, }
+      if should_open {
+        begin_project_load(emit, next, selected)
+      } else if model.selected_project_id == "" {
+        (
+          @rabbita.none,
+          {
+            ..next,
+            loading: false,
+            status: if value.projects.is_empty() {
+              "No production project yet. Create one from a qualified scenario."
+            } else {
+              "Project index loaded."
+            },
+          },
         )
       } else {
-        @rabbita.none
+        (@rabbita.none, next)
       }
-      (
-        cmd,
-        {
-          ..model,
-          projects: value.projects,
-          selected_project_id: selected,
-          loading: should_open,
-          status: if value.projects.is_empty() {
-            "No production project yet. Create one from a qualified scenario."
-          } else {
-            "Project index loaded."
-          },
-        },
-      )
     }
     LoadedProjects(Err(error)) =>
       (
         @rabbita.none,
         {
           ..model,
-          loading: false,
+          loading: !model.project_pending.is_empty(),
           error: Some("Could not load projects: \{error}"),
         },
       )
-    LoadedProject(Ok(project)) => {
+    LoadedProject(request, Ok(project)) => {
+      let model = reconcile_artifact_drafts(model, project)
       let routed = @http.get(
         "/api/v2/projects/" + project.id + "/routed-executions",
-      ).expect_json(emit.map(fn(result) { LoadedRouted(result) }))
+      ).expect_json(emit.map(fn(result) { LoadedRouted(request, result) }))
       let deliveries = @http.get(
         "/api/v2/projects/" + project.id + "/delivery-builds",
-      ).expect_json(emit.map(fn(result) { LoadedDeliveries(result) }))
+      ).expect_json(emit.map(fn(result) { LoadedDeliveries(request, result) }))
       let portals = @http.get(
         "/api/v2/projects/" + project.id + "/client-portals",
-      ).expect_json(emit.map(fn(result) { LoadedPortals(result) }))
+      ).expect_json(emit.map(fn(result) { LoadedPortals(request, result) }))
       let billing = @http.get("/api/v2/projects/" + project.id + "/billing").expect_json(
-        emit.map(fn(result) { LoadedBilling(result) }),
+        emit.map(fn(result) { LoadedBilling(request, result) }),
       )
       let assets = @http.get(
         "/api/v2/projects/" + project.id + "/asset-factory",
-      ).expect_json(emit.map(fn(result) { LoadedAssetFactory(result) }))
+      ).expect_json(
+        emit.map(fn(result) { LoadedAssetFactory(request, result) }),
+      )
       let animatic = @http.get(
         "/api/v2/projects/" + project.id + "/animatic-workspace",
-      ).expect_json(emit.map(fn(result) { LoadedAnimaticWorkspace(result) }))
+      ).expect_json(
+        emit.map(fn(result) { LoadedAnimaticWorkspace(request, result) }),
+      )
       let postprocess = @http.get(
         "/api/v2/projects/" + project.id + "/postprocess-jobs",
-      ).expect_json(emit.map(fn(result) { LoadedPostprocessWorkspace(result) }))
+      ).expect_json(
+        emit.map(fn(result) { LoadedPostprocessWorkspace(request, result) }),
+      )
       let analyzers = @http.get(
         "/api/v2/projects/" + project.id + "/automated-qc",
-      ).expect_json(emit.map(fn(result) { LoadedAnalyzerWorkspace(result) }))
+      ).expect_json(
+        emit.map(fn(result) { LoadedAnalyzerWorkspace(request, result) }),
+      )
       (
-        @rabbita.batch([routed, deliveries, portals, billing, assets, animatic, postprocess, analyzers]),
+        @rabbita.batch([
+          routed, deliveries, portals, billing, assets, animatic, postprocess, analyzers,
+        ]),
         {
           ..model,
           project: Some(project),
-          selected_project_id: project.id,
+          project_pending: project_sections(),
           loading: false,
-          busy: false,
-          error: None,
           status: "Canonical revision loaded. No external effect was performed.",
-          artifact_draft: artifact_for(project, model.selected_artifact_kind)
-          .map(item => item.content.stringify())
-          .unwrap_or("{}"),
+          artifact_draft: project_artifact_draft(
+            model,
+            project,
+            model.selected_artifact_kind,
+          ),
+          latest_client_url: model.client_urls.get(project.id),
           asset_plan_draft: if model.asset_plan_draft == "" {
             starter_asset_factory_plan(project)
           } else {
@@ -187,40 +189,54 @@ fn update(
         },
       )
     }
-    LoadedProject(Err(error)) =>
+    LoadedProject(_, Err(error)) =>
       (
         @rabbita.none,
         {
           ..model,
           loading: false,
-          busy: false,
           error: Some("Could not load project: \{error}"),
         },
       )
-    LoadedRouted(Ok(value)) =>
-      (@rabbita.none, { ..model, routed: value.executions })
-    LoadedRouted(Err(error)) =>
-      (@rabbita.none, { ..model, error: Some("Routed execution: \{error}") })
-    LoadedDeliveries(Ok(value)) =>
-      (@rabbita.none, { ..model, delivery_builds: value.builds })
-    LoadedDeliveries(Err(error)) =>
-      (@rabbita.none, { ..model, error: Some("Delivery factory: \{error}") })
-    LoadedPortals(Ok(value)) =>
-      (@rabbita.none, { ..model, client_portals: value.portals })
-    LoadedPortals(Err(error)) =>
-      (@rabbita.none, { ..model, error: Some("Client portals: \{error}") })
-    LoadedBilling(Ok(value)) =>
-      (@rabbita.none, { ..model, billing_entries: value.entries })
-    LoadedBilling(Err(error)) =>
-      (@rabbita.none, { ..model, error: Some("Billing ledger: \{error}") })
-    CreatedClientPortal(Ok(value)) => {
-      let portals = @http.get(
-        "/api/v2/projects/" + value.portal.project_id + "/client-portals",
-      ).expect_json(emit.map(fn(result) { LoadedPortals(result) }))
+    LoadedRouted(_, Ok(value)) =>
+      (@rabbita.none, { ..model, routed: value.executions, })
+    LoadedRouted(_, Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Routed execution: \{error}"), })
+    LoadedDeliveries(_, Ok(value)) =>
+      (@rabbita.none, { ..model, delivery_builds: value.builds, })
+    LoadedDeliveries(_, Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Delivery factory: \{error}"), })
+    LoadedPortals(_, Ok(value)) =>
+      (@rabbita.none, { ..model, client_portals: value.portals, })
+    LoadedPortals(_, Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Client portals: \{error}"), })
+    LoadedBilling(_, Ok(value)) =>
+      (@rabbita.none, { ..model, billing_entries: value.entries, })
+    LoadedBilling(_, Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Billing ledger: \{error}"), })
+    CreatedClientPortal(_, Ok(value)) => {
+      if value.portal.project_id != model.selected_project_id {
+        return (
+          @rabbita.none,
+          {
+            ..model,
+            busy: false,
+            error: Some(
+              "Client portal response belongs to a different project.",
+            ),
+          },
+        )
+      }
+      let model = remember_client_url(model, value)
+      let (refresh, next) = begin_project_load(
+        emit,
+        model,
+        model.selected_project_id,
+      )
       (
-        portals,
+        refresh,
         {
-          ..model,
+          ..next,
           busy: false,
           latest_client_url: Some(value.client_url),
           status: "Client review URL created once; copy it before leaving this revision.",
@@ -228,10 +244,10 @@ fn update(
         },
       )
     }
-    CreatedClientPortal(Err(error)) =>
+    CreatedClientPortal(_, Err(error)) =>
       (
         @rabbita.none,
-        { ..model, busy: false, error: Some("Client portal: \{error}") },
+        { ..model, busy: false, error: Some("Client portal: \{error}"), },
       )
     LoadedCommercial(Ok(value)) => {
       let selected_lead_id = if model.selected_lead_id == "" &&
@@ -266,9 +282,9 @@ fn update(
       )
     }
     LoadedCommercial(Err(error)) =>
-      (@rabbita.none, { ..model, error: Some("Commercial intake: \{error}") })
+      (@rabbita.none, { ..model, error: Some("Commercial intake: \{error}"), })
     LoadedCapacity(Ok(value)) =>
-      (@rabbita.none, { ..model, capacity_board: Some(value) })
+      (@rabbita.none, { ..model, capacity_board: Some(value), })
     LoadedCapacity(Err(error)) =>
       (
         @rabbita.none,
@@ -290,39 +306,42 @@ fn update(
     LoadedControlTower(Err(error)) =>
       (
         @rabbita.none,
-        {
-          ..model,
-          error: Some("Production control tower: \{error}"),
-        },
+        { ..model, error: Some("Production control tower: \{error}"), },
       )
     RefreshControlTower =>
       (
         @http.get("/api/control-tower").expect_json(
           emit.map(fn(result) { LoadedControlTower(result) }),
         ),
-        { ..model, status: "Refreshing portfolio evidence…", error: None },
+        { ..model, status: "Refreshing portfolio evidence…", error: None, },
       )
     SetControlTowerActualsField(field, value) => {
       let form = match field {
         "provider" =>
-          { ..model.control_tower_actuals_form, provider_cost_confirmed_cny: value }
+          {
+            ..model.control_tower_actuals_form,
+            provider_cost_confirmed_cny: value,
+          }
         "labor" =>
-          { ..model.control_tower_actuals_form, labor_cost_cny: value }
+          { ..model.control_tower_actuals_form, labor_cost_cny: value, }
         "other" =>
-          { ..model.control_tower_actuals_form, other_cost_cny: value }
+          { ..model.control_tower_actuals_form, other_cost_cny: value, }
         "revenue" =>
-          { ..model.control_tower_actuals_form, recognized_revenue_cny: value }
+          { ..model.control_tower_actuals_form, recognized_revenue_cny: value, }
         "founder" =>
-          { ..model.control_tower_actuals_form, founder_hours: value }
+          { ..model.control_tower_actuals_form, founder_hours: value, }
         "labor_hours" =>
-          { ..model.control_tower_actuals_form, completed_labor_hours: value }
+          { ..model.control_tower_actuals_form, completed_labor_hours: value, }
         "forecast" =>
-          { ..model.control_tower_actuals_form, forecast_completion_date: value }
+          {
+            ..model.control_tower_actuals_form,
+            forecast_completion_date: value,
+          }
         "evidence" =>
-          { ..model.control_tower_actuals_form, evidence_refs: value }
+          { ..model.control_tower_actuals_form, evidence_refs: value, }
         _ => model.control_tower_actuals_form
       }
-      (@rabbita.none, { ..model, control_tower_actuals_form: form })
+      (@rabbita.none, { ..model, control_tower_actuals_form: form, })
     }
     ToggleProviderCostReconciled =>
       (
@@ -331,9 +350,7 @@ fn update(
           ..model,
           control_tower_actuals_form: {
             ..model.control_tower_actuals_form,
-            provider_cost_reconciled: !model
-            .control_tower_actuals_form
-            .provider_cost_reconciled,
+            provider_cost_reconciled: !model.control_tower_actuals_form.provider_cost_reconciled,
           },
         },
       )
@@ -346,7 +363,10 @@ fn update(
           if candidates.length() != 1 {
             (
               @rabbita.none,
-              { ..model, error: Some("Select one project in the project rail.") },
+              {
+                ..model,
+                error: Some("Select one project in the project rail."),
+              },
             )
           } else {
             let project = candidates[0]
@@ -373,7 +393,8 @@ fn update(
               "completed_labor_hours": optional_double_json(
                 form.completed_labor_hours,
               ),
-              "forecast_completion_date": if form.forecast_completion_date.trim() == "" {
+              "forecast_completion_date": if form.forecast_completion_date.trim() ==
+                "" {
                 Json::null()
               } else {
                 form.forecast_completion_date.to_json()
@@ -386,17 +407,17 @@ fn update(
               "human_confirmed": model.operator.human_confirmed,
             }
             let cmd = @http.post(
-                "/api/control-tower/projects/" +
-                project.project_id +
-                "/actuals",
+                "/api/control-tower/projects/" + project.project_id + "/actuals",
               )
               .with_json(body)
               .expect_json(
                 emit.map(fn(result) {
-                  ActionCompleted("Control-tower operating actuals", result)
+                  ActionCompleted(
+                    request, "Control-tower operating actuals", result,
+                  )
                 }),
               )
-            (cmd, { ..model, busy: true, error: None })
+            (cmd, { ..model, busy: true, error: None, })
           }
         }
         None => (@rabbita.none, model)
@@ -404,12 +425,7 @@ fn update(
     SetControlTowerOwnershipDue(value) =>
       (
         @rabbita.none,
-        {
-          ..model,
-          control_tower_ownership_form: {
-            action_due_date: value,
-          },
-        },
+        { ..model, control_tower_ownership_form: { action_due_date: value, }, },
       )
     AssignControlTowerException(exception_id) =>
       match model.control_tower {
@@ -434,9 +450,7 @@ fn update(
               .unwrap_or(Json::null()),
               "owner": model.operator.actor,
               "owner_role": model.operator.role,
-              "action_due_date": model
-              .control_tower_ownership_form
-              .action_due_date,
+              "action_due_date": model.control_tower_ownership_form.action_due_date,
               "note": model.operator.note,
               "assigned_by": model.operator.actor,
               "assigned_by_role": model.operator.role,
@@ -444,17 +458,15 @@ fn update(
               "human_confirmed": model.operator.human_confirmed,
             }
             let cmd = @http.post(
-                "/api/control-tower/exceptions/" +
-                exception_id +
-                "/assignment",
+                "/api/control-tower/exceptions/" + exception_id + "/assignment",
               )
               .with_json(body)
               .expect_json(
                 emit.map(fn(result) {
-                  ActionCompleted("Named exception ownership", result)
+                  ActionCompleted(request, "Named exception ownership", result)
                 }),
               )
-            (cmd, { ..model, busy: true, error: None })
+            (cmd, { ..model, busy: true, error: None, })
           }
         }
         None => (@rabbita.none, model)
@@ -468,19 +480,15 @@ fn update(
       }
       (
         @rabbita.none,
-        {
-          ..model,
-          needs_intake: Some(value),
-          selected_intake_id: selected,
-        },
+        { ..model, needs_intake: Some(value), selected_intake_id: selected, },
       )
     }
     LoadedNeedsIntake(Err(error)) =>
       (
         @rabbita.none,
-        { ..model, error: Some("Needs / Strategy intake: \{error}") },
+        { ..model, error: Some("Needs / Strategy intake: \{error}"), },
       )
-    LoadedAssetFactory(Ok(value)) => {
+    LoadedAssetFactory(_, Ok(value)) => {
       let draft = match model.project {
         Some(project) if model.animatic_plan_draft == "" ||
           model.animatic_plan_draft == "{}" ||
@@ -488,8 +496,7 @@ fn update(
           .map(previous => {
             previous.approved_assets.length() != value.approved_assets.length()
           })
-          .unwrap_or(false) =>
-          starter_animatic_plan(project, value, 1)
+          .unwrap_or(false) => starter_animatic_plan(project, value, 1)
         _ => model.animatic_plan_draft
       }
       let postprocess_draft = match model.project {
@@ -497,20 +504,20 @@ fn update(
           starter_postprocess_task(project, value)
         _ => model.postprocess_task_draft
       }
-      (@rabbita.none, {
-        ..model,
-        asset_factory: Some(value),
-        animatic_plan_draft: draft,
-        postprocess_task_draft: postprocess_draft,
-      })
-    }
-    LoadedAssetFactory(Err(error)) =>
       (
         @rabbita.none,
-        { ..model, error: Some("Asset factory: \{error}") },
+        {
+          ..model,
+          asset_factory: Some(value),
+          animatic_plan_draft: draft,
+          postprocess_task_draft: postprocess_draft,
+        },
       )
+    }
+    LoadedAssetFactory(_, Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Asset factory: \{error}"), })
     SetAssetPlanDraft(value) =>
-      (@rabbita.none, { ..model, asset_plan_draft: value })
+      (@rabbita.none, { ..model, asset_plan_draft: value, })
     RecordAssetPlan =>
       match model.project {
         None => (@rabbita.none, model)
@@ -519,7 +526,10 @@ fn update(
             _ =>
               return (
                 @rabbita.none,
-                { ..model, error: Some("Asset factory plan must be valid JSON.") },
+                {
+                  ..model,
+                  error: Some("Asset factory plan must be valid JSON."),
+                },
               )
           }
           let body : Json = { "plan": plan }
@@ -527,10 +537,12 @@ fn update(
               "/api/v2/projects/" + project.id + "/asset-factory/plans",
             )
             .with_json(body)
-            .expect_json(emit.map(fn(result) {
-              ActionCompleted("Reusable asset plan", result)
-            }))
-          (cmd, { ..model, busy: true, error: None })
+            .expect_json(
+              emit.map(fn(result) {
+                ActionCompleted(request, "Reusable asset plan", result)
+              }),
+            )
+          (cmd, { ..model, busy: true, error: None, })
         }
       }
     DecideAssetPlan(decision) =>
@@ -556,12 +568,22 @@ fn update(
               "/api/v2/projects/" + project.id + "/asset-factory/plan-decisions",
             )
             .with_json(body)
-            .expect_json(emit.map(fn(result) {
-              ActionCompleted("Reusable asset plan " + decision, result)
-            }))
-          (cmd, { ..model, busy: true, error: None })
+            .expect_json(
+              emit.map(fn(result) {
+                ActionCompleted(
+                  request,
+                  "Reusable asset plan " + decision,
+                  result,
+                )
+              }),
+            )
+          (cmd, { ..model, busy: true, error: None, })
         }
-        _ => (@rabbita.none, { ..model, error: Some("Record an asset plan first.") })
+        _ =>
+          (
+            @rabbita.none,
+            { ..model, error: Some("Record an asset plan first."), },
+          )
       }
     RunAssetFactory =>
       match (model.project, model.asset_factory) {
@@ -583,19 +605,28 @@ fn update(
               "/api/v2/projects/" + project.id + "/asset-factory/run-pending",
             )
             .with_json(body)
-            .expect_json(emit.map(fn(result) {
-              ActionCompleted("Bounded multimodal asset run", result)
-            }))
-          (cmd, { ..model, busy: true, error: None })
+            .expect_json(
+              emit.map(fn(result) {
+                ActionCompleted(request, "Bounded multimodal asset run", result)
+              }),
+            )
+          (cmd, { ..model, busy: true, error: None, })
         }
-        _ => (@rabbita.none, { ..model, error: Some("Approve an asset plan first.") })
+        _ =>
+          (
+            @rabbita.none,
+            { ..model, error: Some("Approve an asset plan first."), },
+          )
       }
     RecordAssetVariantQc(variant_id) =>
       match model.project {
         None => (@rabbita.none, model)
         Some(project) => {
           let commands : Array[@rabbita.Cmd] = []
-          for dimension in ["technical", "identity", "continuity", "rights", "safety"] {
+          for
+            dimension in [
+              "technical", "identity", "continuity", "rights", "safety",
+            ] {
             let body : Json = {
               "variant_id": variant_id,
               "dimension": dimension,
@@ -608,15 +639,17 @@ fn update(
             }
             commands.push(
               @http.post(
-                  "/api/v2/projects/" + project.id + "/asset-factory/findings",
-                )
-                .with_json(body)
-                .expect_json(emit.map(fn(result) {
-                  ActionCompleted("Asset QC " + dimension, result)
-                })),
+                "/api/v2/projects/" + project.id + "/asset-factory/findings",
+              )
+              .with_json(body)
+              .expect_json(
+                emit.map(fn(result) {
+                  ActionCompleted(request, "Asset QC " + dimension, result)
+                }),
+              ),
             )
           }
-          (@rabbita.batch(commands), { ..model, busy: true, error: None })
+          (@rabbita.batch(commands), { ..model, busy: true, error: None, })
         }
       }
     ApproveAssetVariant(variant_id) =>
@@ -626,7 +659,10 @@ fn update(
             value.variant_id == variant_id
           })
           if matches.is_empty() {
-            (@rabbita.none, { ..model, error: Some("Variant is not current.") })
+            (
+              @rabbita.none,
+              { ..model, error: Some("Variant is not current."), },
+            )
           } else {
             let variant = matches[0]
             let body : Json = {
@@ -642,10 +678,14 @@ fn update(
                 "/api/v2/projects/" + project.id + "/asset-factory/approvals",
               )
               .with_json(body)
-              .expect_json(emit.map(fn(result) {
-                ActionCompleted("Immutable reusable asset approval", result)
-              }))
-            (cmd, { ..model, busy: true, error: None })
+              .expect_json(
+                emit.map(fn(result) {
+                  ActionCompleted(
+                    request, "Immutable reusable asset approval", result,
+                  )
+                }),
+              )
+            (cmd, { ..model, busy: true, error: None, })
           }
         }
         _ => (@rabbita.none, model)
@@ -663,40 +703,62 @@ fn update(
               "/api/v2/projects/" + project.id + "/asset-factory/bind-shots",
             )
             .with_json(body)
-            .expect_json(emit.map(fn(result) {
-              ActionCompleted("Exact approved shot asset bindings", result)
-            }))
-          (cmd, { ..model, busy: true, error: None })
+            .expect_json(
+              emit.map(fn(result) {
+                ActionCompleted(
+                  request, "Exact approved shot asset bindings", result,
+                )
+              }),
+            )
+          (cmd, { ..model, busy: true, error: None, })
         }
       }
-    LoadedAnimaticWorkspace(Ok(value)) => {
+    LoadedAnimaticWorkspace(_, Ok(value)) => {
       let draft = match (model.project, model.asset_factory) {
         (Some(project), Some(factory)) if model.animatic_plan_draft == "" ||
           model.animatic_plan_draft == "{}" =>
           starter_animatic_plan(project, factory, value.plans.length() + 1)
         _ => model.animatic_plan_draft
       }
-      (@rabbita.none, { ..model, animatic_workspace: Some(value), animatic_plan_draft: draft })
+      (
+        @rabbita.none,
+        {
+          ..model,
+          animatic_workspace: Some(value),
+          animatic_plan_draft: draft,
+        },
+      )
     }
-    LoadedAnimaticWorkspace(Err(error)) =>
-      (@rabbita.none, { ..model, error: Some("Storyboard / Animatic: \{error}") })
+    LoadedAnimaticWorkspace(_, Err(error)) =>
+      (
+        @rabbita.none,
+        { ..model, error: Some("Storyboard / Animatic: \{error}"), },
+      )
     SetAnimaticPlanDraft(value) =>
-      (@rabbita.none, { ..model, animatic_plan_draft: value })
+      (@rabbita.none, { ..model, animatic_plan_draft: value, })
     RecordAnimaticPlan =>
       match model.project {
         None => (@rabbita.none, model)
         Some(project) => {
           let plan = @json.parse(model.animatic_plan_draft) catch {
-            _ => return (@rabbita.none, { ..model, error: Some("Animatic plan must be valid JSON.") })
+            _ =>
+              return (
+                @rabbita.none,
+                { ..model, error: Some("Animatic plan must be valid JSON."), },
+              )
           }
           let cmd = @http.post(
               "/api/v2/projects/" + project.id + "/animatic-workspace/plans",
             )
             .with_json({ "plan": plan })
-            .expect_json(emit.map(fn(result) {
-              ActionCompleted("Exact storyboard / animatic plan", result)
-            }))
-          (cmd, { ..model, busy: true, error: None })
+            .expect_json(
+              emit.map(fn(result) {
+                ActionCompleted(
+                  request, "Exact storyboard / animatic plan", result,
+                )
+              }),
+            )
+          (cmd, { ..model, busy: true, error: None, })
         }
       }
     RenderAnimatic =>
@@ -710,7 +772,10 @@ fn update(
           guard reference is Some(Object(fields)) &&
             fields.get("version") is Some(Number(version, ..)) &&
             fields.get("digest") is Some(String(plan_digest)) else {
-            return (@rabbita.none, { ..model, error: Some("Current animatic plan is malformed.") })
+            return (
+              @rabbita.none,
+              { ..model, error: Some("Current animatic plan is malformed."), },
+            )
           }
           let body : Json = {
             "expected_plan_version": version.to_int(),
@@ -724,12 +789,20 @@ fn update(
               "/api/v2/projects/" + project.id + "/animatic-workspace/render",
             )
             .with_json(body)
-            .expect_json(emit.map(fn(result) {
-              ActionCompleted("Rendered storyboard sheet and timed animatic", result)
-            }))
-          (cmd, { ..model, busy: true, error: None })
+            .expect_json(
+              emit.map(fn(result) {
+                ActionCompleted(
+                  request, "Rendered storyboard sheet and timed animatic", result,
+                )
+              }),
+            )
+          (cmd, { ..model, busy: true, error: None, })
         }
-        _ => (@rabbita.none, { ..model, error: Some("Record an animatic plan first.") })
+        _ =>
+          (
+            @rabbita.none,
+            { ..model, error: Some("Record an animatic plan first."), },
+          )
       }
     ApproveRenderedAnimatic =>
       match (model.project, model.animatic_workspace) {
@@ -748,34 +821,53 @@ fn update(
               "/api/v2/projects/" + project.id + "/animatic-workspace/approve",
             )
             .with_json(body)
-            .expect_json(emit.map(fn(result) {
-              ActionCompleted("Exact rendered animatic approval", result)
-            }))
-          (cmd, { ..model, busy: true, error: None })
+            .expect_json(
+              emit.map(fn(result) {
+                ActionCompleted(
+                  request, "Exact rendered animatic approval", result,
+                )
+              }),
+            )
+          (cmd, { ..model, busy: true, error: None, })
         }
-        _ => (@rabbita.none, { ..model, error: Some("Render an animatic first.") })
+        _ =>
+          (
+            @rabbita.none,
+            { ..model, error: Some("Render an animatic first."), },
+          )
       }
-    LoadedPostprocessWorkspace(Ok(value)) =>
-      (@rabbita.none, { ..model, postprocess_workspace: Some(value) })
-    LoadedPostprocessWorkspace(Err(error)) =>
-      (@rabbita.none, { ..model, error: Some("Postprocess jobs: \{error}") })
+    LoadedPostprocessWorkspace(_, Ok(value)) =>
+      (@rabbita.none, { ..model, postprocess_workspace: Some(value), })
+    LoadedPostprocessWorkspace(_, Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Postprocess jobs: \{error}"), })
     SetPostprocessTaskDraft(value) =>
-      (@rabbita.none, { ..model, postprocess_task_draft: value })
+      (@rabbita.none, { ..model, postprocess_task_draft: value, })
     RecordPostprocessTask =>
       match model.project {
         None => (@rabbita.none, model)
         Some(project) => {
           let task = @json.parse(model.postprocess_task_draft) catch {
-            _ => return (@rabbita.none, { ..model, error: Some("Postprocess task must be valid JSON.") })
+            _ =>
+              return (
+                @rabbita.none,
+                {
+                  ..model,
+                  error: Some("Postprocess task must be valid JSON."),
+                },
+              )
           }
           let cmd = @http.post(
               "/api/v2/projects/" + project.id + "/postprocess-jobs/tasks",
             )
             .with_json({ "task": task })
-            .expect_json(emit.map(fn(result) {
-              ActionCompleted("Exact multimodal postprocess task", result)
-            }))
-          (cmd, { ..model, busy: true, error: None })
+            .expect_json(
+              emit.map(fn(result) {
+                ActionCompleted(
+                  request, "Exact multimodal postprocess task", result,
+                )
+              }),
+            )
+          (cmd, { ..model, busy: true, error: None, })
         }
       }
     RunPostprocessTask =>
@@ -793,35 +885,61 @@ fn update(
               "/api/v2/projects/" + project.id + "/postprocess-jobs/run",
             )
             .with_json(body)
-            .expect_json(emit.map(fn(result) {
-              ActionCompleted("Bounded postprocess provider job", result)
-            }))
-          (cmd, { ..model, busy: true, error: None })
+            .expect_json(
+              emit.map(fn(result) {
+                ActionCompleted(
+                  request, "Bounded postprocess provider job", result,
+                )
+              }),
+            )
+          (cmd, { ..model, busy: true, error: None, })
         }
-        _ => (@rabbita.none, { ..model, error: Some("Record a postprocess task first.") })
+        _ =>
+          (
+            @rabbita.none,
+            { ..model, error: Some("Record a postprocess task first."), },
+          )
       }
-    LoadedAnalyzerWorkspace(Ok(value)) => {
+    LoadedAnalyzerWorkspace(_, Ok(value)) => {
       let draft = match model.project {
-        Some(project) if model.analyzer_task_draft == "" => starter_analyzer_task(project)
+        Some(project) if model.analyzer_task_draft == "" =>
+          starter_analyzer_task(project)
         _ => model.analyzer_task_draft
       }
-      (@rabbita.none, { ..model, analyzer_workspace: Some(value), analyzer_task_draft: draft })
+      (
+        @rabbita.none,
+        {
+          ..model,
+          analyzer_workspace: Some(value),
+          analyzer_task_draft: draft,
+        },
+      )
     }
-    LoadedAnalyzerWorkspace(Err(error)) =>
-      (@rabbita.none, { ..model, error: Some("Automated QC: \{error}") })
+    LoadedAnalyzerWorkspace(_, Err(error)) =>
+      (@rabbita.none, { ..model, error: Some("Automated QC: \{error}"), })
     SetAnalyzerTaskDraft(value) =>
-      (@rabbita.none, { ..model, analyzer_task_draft: value })
+      (@rabbita.none, { ..model, analyzer_task_draft: value, })
     RecordAnalyzerTask =>
       match model.project {
         None => (@rabbita.none, model)
         Some(project) => {
           let task = @json.parse(model.analyzer_task_draft) catch {
-            _ => return (@rabbita.none, { ..model, error: Some("Analyzer task must be valid JSON.") })
+            _ =>
+              return (
+                @rabbita.none,
+                { ..model, error: Some("Analyzer task must be valid JSON."), },
+              )
           }
-          let cmd = @http.post("/api/v2/projects/" + project.id + "/automated-qc/tasks")
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/automated-qc/tasks",
+            )
             .with_json({ "task": task })
-            .expect_json(emit.map(fn(result) { ActionCompleted("Exact QC analyzer task", result) }))
-          (cmd, { ..model, busy: true, error: None })
+            .expect_json(
+              emit.map(fn(result) {
+                ActionCompleted(request, "Exact QC analyzer task", result)
+              }),
+            )
+          (cmd, { ..model, busy: true, error: None, })
         }
       }
     RunAnalyzerTask =>
@@ -829,31 +947,45 @@ fn update(
         (Some(project), Some(workspace)) if !workspace.tasks.is_empty() => {
           let task = workspace.tasks[workspace.tasks.length() - 1]
           let body : Json = {
-              "expected_task_version": task.reference.version,
-              "expected_task_digest": task.reference.digest,
-              "actor": model.operator.actor,
-              "human_confirmed": model.operator.human_confirmed,
-              "network_authority": task.execution_mode == "external-semantic" && model.operator.human_confirmed,
-            }
-          let cmd = @http.post("/api/v2/projects/" + project.id + "/automated-qc/run")
+            "expected_task_version": task.reference.version,
+            "expected_task_digest": task.reference.digest,
+            "actor": model.operator.actor,
+            "human_confirmed": model.operator.human_confirmed,
+            "network_authority": task.execution_mode == "external-semantic" &&
+            model.operator.human_confirmed,
+          }
+          let cmd = @http.post(
+              "/api/v2/projects/" + project.id + "/automated-qc/run",
+            )
             .with_json(body)
-            .expect_json(emit.map(fn(result) { ActionCompleted("Automated QC evidence", result) }))
-          (cmd, { ..model, busy: true, error: None })
+            .expect_json(
+              emit.map(fn(result) {
+                ActionCompleted(request, "Automated QC evidence", result)
+              }),
+            )
+          (cmd, { ..model, busy: true, error: None, })
         }
-        _ => (@rabbita.none, { ..model, error: Some("Record an analyzer task first.") })
+        _ =>
+          (
+            @rabbita.none,
+            { ..model, error: Some("Record an analyzer task first."), },
+          )
       }
     SelectIntake(value) =>
-      (@rabbita.none, { ..model, selected_intake_id: value })
+      (@rabbita.none, { ..model, selected_intake_id: value, })
     SetIntakePacketDraft(value) =>
-      (@rabbita.none, { ..model, intake_packet_draft: value })
+      (@rabbita.none, { ..model, intake_packet_draft: value, })
     SetIntakeSeedProjectId(value) =>
-      (@rabbita.none, { ..model, intake_seed_project_id: value })
+      (@rabbita.none, { ..model, intake_seed_project_id: value, })
     ImportNeedsPacket => {
       let packet = @json.parse(model.intake_packet_draft) catch {
         _ =>
           return (
             @rabbita.none,
-            { ..model, error: Some("MoonWiki export packet must be valid JSON.") },
+            {
+              ..model,
+              error: Some("MoonWiki export packet must be valid JSON."),
+            },
           )
       }
       let packet_id = match packet {
@@ -867,7 +999,7 @@ fn update(
       if packet_id.trim().is_empty() {
         (
           @rabbita.none,
-          { ..model, error: Some("MoonWiki packet_id is required.") },
+          { ..model, error: Some("MoonWiki packet_id is required."), },
         )
       } else {
         let body : Json = {
@@ -876,9 +1008,11 @@ fn update(
         }
         let cmd = @http.post("/api/v2/needs-intakes")
           .with_json(body)
-          .expect_json(emit.map(fn(result) {
-            ActionCompleted("MoonWiki needs packet", result)
-          }))
+          .expect_json(
+            emit.map(fn(result) {
+              ActionCompleted(request, "MoonWiki needs packet", result)
+            }),
+          )
         (
           cmd,
           {
@@ -898,11 +1032,14 @@ fn update(
             value.packet.packet_id == model.selected_intake_id
           })
           if matches.is_empty() {
-            (@rabbita.none, { ..model, error: Some("Select an imported intake.") })
+            (
+              @rabbita.none,
+              { ..model, error: Some("Select an imported intake."), },
+            )
           } else if !model.operator.human_confirmed {
             (
               @rabbita.none,
-              { ..model, error: Some("Named-human confirmation is required.") },
+              { ..model, error: Some("Named-human confirmation is required."), },
             )
           } else {
             let imported = matches[matches.length() - 1]
@@ -922,9 +1059,11 @@ fn update(
                 "/decisions",
               )
               .with_json(body)
-              .expect_json(emit.map(fn(result) {
-                ActionCompleted("Needs / Strategy decision", result)
-              }))
+              .expect_json(
+                emit.map(fn(result) {
+                  ActionCompleted(request, "Needs / Strategy decision", result)
+                }),
+              )
             (
               cmd,
               {
@@ -936,7 +1075,11 @@ fn update(
             )
           }
         }
-        None => (@rabbita.none, { ..model, error: Some("Intake ledger is not loaded.") })
+        None =>
+          (
+            @rabbita.none,
+            { ..model, error: Some("Intake ledger is not loaded."), },
+          )
       }
     SeedProjectFromIntake =>
       match model.needs_intake {
@@ -944,10 +1087,14 @@ fn update(
           let matches = workspace.intakes.filter(value => {
             value.packet.packet_id == model.selected_intake_id
           })
-          if matches.is_empty() || model.intake_seed_project_id.trim().is_empty() {
+          if matches.is_empty() ||
+            model.intake_seed_project_id.trim().is_empty() {
             (
               @rabbita.none,
-              { ..model, error: Some("Select an intake and provide a project id.") },
+              {
+                ..model,
+                error: Some("Select an intake and provide a project id."),
+              },
             )
           } else {
             let imported = matches[matches.length() - 1]
@@ -963,9 +1110,13 @@ fn update(
                 "/seed-project",
               )
               .with_json(body)
-              .expect_json(emit.map(fn(result) {
-                ActionCompleted("Intake-bound production project", result)
-              }))
+              .expect_json(
+                emit.map(fn(result) {
+                  ActionCompleted(
+                    request, "Intake-bound production project", result,
+                  )
+                }),
+              )
             (
               cmd,
               {
@@ -978,67 +1129,66 @@ fn update(
             )
           }
         }
-        None => (@rabbita.none, { ..model, error: Some("Intake ledger is not loaded.") })
+        None =>
+          (
+            @rabbita.none,
+            { ..model, error: Some("Intake ledger is not loaded."), },
+          )
       }
-    CreatedProject(Ok(project)) => {
+    CreatedProject(_, Ok(project)) => {
       let index = @http.get("/api/v2/projects").expect_json(
         emit.map(fn(result) { LoadedProjects(result) }),
       )
+      let (refresh, next) = begin_project_load(emit, model, project.id)
       (
-        index,
+        @rabbita.batch([index, refresh]),
         {
-          ..model,
-          project: Some(project),
-          selected_project_id: project.id,
+          ..next,
           busy: false,
-          loading: false,
           tab: Creative,
           status: "Project and seven governed creative drafts created.",
           error: None,
         },
       )
     }
-    CreatedProject(Err(error)) =>
+    CreatedProject(_, Err(error)) =>
       (
         @rabbita.none,
-        { ..model, busy: false, error: Some("Create project: \{error}") },
+        { ..model, busy: false, error: Some("Create project: \{error}"), },
       )
-    ActionCompleted(label, Ok(value)) =>
+    ActionCompleted(_, label, Ok(value)) =>
       match api_error_message(value) {
         Some(message) =>
           (
-            @rabbita.none,
+            if is_quote_initialization_action(label) {
+              refresh_quote_initializations(emit)
+            } else {
+              @rabbita.none
+            },
             {
               ..model,
               busy: false,
               error: Some(label + ": " + message),
-              status: "Command rejected; canonical state was not changed locally.",
+              status: if is_quote_initialization_action(label) {
+                "Draft initialization may be partially saved. Refreshing its status so you can resume safely."
+              } else {
+                "Command rejected; canonical state was not changed locally."
+              },
             },
           )
         None => {
           let commands : Array[@rabbita.Cmd] = []
+          let (refresh, next) = if model.selected_project_id == "" {
+            (@rabbita.none, model)
+          } else {
+            begin_project_load(emit, model, model.selected_project_id)
+          }
+          commands.push(refresh)
           commands.push(
             @http.get("/api/v2/projects").expect_json(
               emit.map(fn(result) { LoadedProjects(result) }),
             ),
           )
-          if model.selected_project_id != "" {
-            commands.push(
-              @http.get("/api/v2/projects/" + model.selected_project_id).expect_json(
-                emit.map(fn(result) { LoadedProject(result) }),
-              ),
-            )
-            commands.push(
-              @http.get(
-                "/api/v2/projects/" + model.selected_project_id + "/postprocess-jobs",
-              ).expect_json(emit.map(fn(result) { LoadedPostprocessWorkspace(result) })),
-            )
-            commands.push(
-              @http.get(
-                "/api/v2/projects/" + model.selected_project_id + "/animatic-workspace",
-              ).expect_json(emit.map(fn(result) { LoadedAnimaticWorkspace(result) })),
-            )
-          }
           commands.push(
             @http.get("/api/commercial-intake").expect_json(
               emit.map(fn(result) { LoadedCommercial(result) }),
@@ -1054,17 +1204,10 @@ fn update(
               emit.map(fn(result) { LoadedNeedsIntake(result) }),
             ),
           )
-          if model.selected_project_id != "" {
-            commands.push(
-              @http.get(
-                "/api/v2/projects/" + model.selected_project_id + "/asset-factory",
-              ).expect_json(emit.map(fn(result) { LoadedAssetFactory(result) })),
-            )
-          }
           (
             @rabbita.batch(commands),
             {
-              ..model,
+              ..next,
               busy: false,
               error: None,
               status: label + " recorded; refreshing exact server state.",
@@ -1073,26 +1216,34 @@ fn update(
           )
         }
       }
-    ActionCompleted(label, Err(error)) =>
+    ActionCompleted(_, label, Err(error)) =>
       (
-        @rabbita.none,
+        if is_quote_initialization_action(label) {
+          refresh_quote_initializations(emit)
+        } else {
+          @rabbita.none
+        },
         {
           ..model,
           busy: false,
           error: Some(label + ": \{error}"),
-          status: "Command rejected; canonical state was not changed locally.",
+          status: if is_quote_initialization_action(label) {
+            "Draft initialization may be partially saved. Refreshing its status so you can resume safely."
+          } else {
+            "Command rejected; canonical state was not changed locally."
+          },
         },
       )
     SetCreateField(field, value) => {
       let create = match field {
-        "project_id" => { ..model.create, project_id: value }
-        "title" => { ..model.create, title: value }
-        "objective" => { ..model.create, objective: value }
-        "audience" => { ..model.create, audience: value }
-        "channels" => { ..model.create, channels: value }
-        "rights_owner" => { ..model.create, rights_owner: value }
-        "duration" => { ..model.create, duration_seconds: value }
-        "budget" => { ..model.create, maximum_budget_cny: value }
+        "project_id" => { ..model.create, project_id: value, }
+        "title" => { ..model.create, title: value, }
+        "objective" => { ..model.create, objective: value, }
+        "audience" => { ..model.create, audience: value, }
+        "channels" => { ..model.create, channels: value, }
+        "rights_owner" => { ..model.create, rights_owner: value, }
+        "duration" => { ..model.create, duration_seconds: value, }
+        "budget" => { ..model.create, maximum_budget_cny: value, }
         _ => model.create
       }
       (@rabbita.none, { ..model, create, })
@@ -1100,7 +1251,7 @@ fn update(
     SetRightsConfirmed(value) =>
       (
         @rabbita.none,
-        { ..model, create: { ..model.create, rights_confirmed: value } },
+        { ..model, create: { ..model.create, rights_confirmed: value, }, },
       )
     CreateProject => {
       let duration = @string.parse_int(model.create.duration_seconds) catch {
@@ -1137,7 +1288,7 @@ fn update(
         }
         let cmd = @http.post("/api/v2/projects")
           .with_json(body)
-          .expect_json(emit.map(fn(result) { CreatedProject(result) }))
+          .expect_json(emit.map(fn(result) { CreatedProject(request, result) }))
         (
           cmd,
           {
@@ -1151,19 +1302,16 @@ fn update(
     }
     SelectArtifact(kind) => {
       let draft = match model.project {
-        Some(project) =>
-          artifact_for(project, kind)
-          .map(item => item.content.stringify())
-          .unwrap_or("{}")
+        Some(project) => project_artifact_draft(model, project, kind)
         None => "{}"
       }
       (
         @rabbita.none,
-        { ..model, selected_artifact_kind: kind, artifact_draft: draft },
+        { ..model, selected_artifact_kind: kind, artifact_draft: draft, },
       )
     }
     SetArtifactDraft(value) =>
-      (@rabbita.none, { ..model, artifact_draft: value })
+      (@rabbita.none, edit_artifact_draft(model, value))
     ReviseArtifact =>
       match model.project {
         Some(project) =>
@@ -1196,13 +1344,13 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Creative revision", result)
+                    ActionCompleted(request, "Creative revision", result)
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
             None =>
-              (@rabbita.none, { ..model, error: Some("Artifact is missing.") })
+              (@rabbita.none, { ..model, error: Some("Artifact is missing."), })
           }
         None => (@rabbita.none, model)
       }
@@ -1212,7 +1360,7 @@ fn update(
         Some(project) =>
           match artifact_for(project, model.selected_artifact_kind) {
             None =>
-              (@rabbita.none, { ..model, error: Some("Artifact is missing.") })
+              (@rabbita.none, { ..model, error: Some("Artifact is missing."), })
             Some(artifact) => {
               let body : Json = {
                 "expected_project_revision": project.revision,
@@ -1238,10 +1386,10 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Creative " + decision, result)
+                    ActionCompleted(request, "Creative " + decision, result)
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
           }
       }
@@ -1284,25 +1432,25 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Gate " + gate, result)
+                    ActionCompleted(request, "Gate " + gate, result)
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
           }
         }
       }
     SetRoutingField(field, value) => {
       let routing_form = match field {
-        "route_id" => { ..model.routing_form, route_id: value }
-        "provider" => { ..model.routing_form, provider: value }
-        "model" => { ..model.routing_form, model: value }
-        "model_version" => { ..model.routing_form, model_version: value }
-        "data_class" => { ..model.routing_form, permitted_data_class: value }
-        "cost" => { ..model.routing_form, cost_ceiling_cny: value }
-        "total" => { ..model.routing_form, total_cost_ceiling_cny: value }
-        "retry" => { ..model.routing_form, retry_limit: value }
-        "fallback" => { ..model.routing_form, fallback_route_ids: value }
+        "route_id" => { ..model.routing_form, route_id: value, }
+        "provider" => { ..model.routing_form, provider: value, }
+        "model" => { ..model.routing_form, model: value, }
+        "model_version" => { ..model.routing_form, model_version: value, }
+        "data_class" => { ..model.routing_form, permitted_data_class: value, }
+        "cost" => { ..model.routing_form, cost_ceiling_cny: value, }
+        "total" => { ..model.routing_form, total_cost_ceiling_cny: value, }
+        "retry" => { ..model.routing_form, retry_limit: value, }
+        "fallback" => { ..model.routing_form, fallback_route_ids: value, }
         _ => model.routing_form
       }
       (@rabbita.none, { ..model, routing_form, })
@@ -1365,10 +1513,10 @@ fn update(
             .with_json(body)
             .expect_json(
               emit.map(fn(result) {
-                ActionCompleted("Model routing plan", result)
+                ActionCompleted(request, "Model routing plan", result)
               }),
             )
-          (cmd, { ..model, busy: true, error: None })
+          (cmd, { ..model, busy: true, error: None, })
         }
         None => (@rabbita.none, model)
       }
@@ -1395,35 +1543,39 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Routing " + role + " decision", result)
+                    ActionCompleted(
+                      request,
+                      "Routing " + role + " decision",
+                      result,
+                    )
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
             None =>
               (
                 @rabbita.none,
-                { ..model, error: Some("Record a routing plan first.") },
+                { ..model, error: Some("Record a routing plan first."), },
               )
           }
         None => (@rabbita.none, model)
       }
     SetQcField(field, value) => {
       let qc_form = match field {
-        "shot_id" => { ..model.qc_form, shot_id: value }
-        "attempt_id" => { ..model.qc_form, attempt_id: value }
-        "route_id" => { ..model.qc_form, route_id: value }
-        "prompt_digest" => { ..model.qc_form, prompt_digest: value }
-        "sources" => { ..model.qc_form, source_asset_digests: value }
-        "cost" => { ..model.qc_form, cost_cny: value }
-        "output" => { ..model.qc_form, output_digest: value }
-        "attempt_status" => { ..model.qc_form, attempt_status: value }
-        "dimension" => { ..model.qc_form, dimension: value }
-        "finding_status" => { ..model.qc_form, finding_status: value }
-        "evidence" => { ..model.qc_form, evidence_digest: value }
-        "finding_version" => { ..model.qc_form, finding_version: value }
-        "finding_digest" => { ..model.qc_form, finding_digest: value }
-        "note" => { ..model.qc_form, note: value }
+        "shot_id" => { ..model.qc_form, shot_id: value, }
+        "attempt_id" => { ..model.qc_form, attempt_id: value, }
+        "route_id" => { ..model.qc_form, route_id: value, }
+        "prompt_digest" => { ..model.qc_form, prompt_digest: value, }
+        "sources" => { ..model.qc_form, source_asset_digests: value, }
+        "cost" => { ..model.qc_form, cost_cny: value, }
+        "output" => { ..model.qc_form, output_digest: value, }
+        "attempt_status" => { ..model.qc_form, attempt_status: value, }
+        "dimension" => { ..model.qc_form, dimension: value, }
+        "finding_status" => { ..model.qc_form, finding_status: value, }
+        "evidence" => { ..model.qc_form, evidence_digest: value, }
+        "finding_version" => { ..model.qc_form, finding_version: value, }
+        "finding_digest" => { ..model.qc_form, finding_digest: value, }
+        "note" => { ..model.qc_form, note: value, }
         _ => model.qc_form
       }
       (@rabbita.none, { ..model, qc_form, })
@@ -1453,7 +1605,12 @@ fn update(
         @rabbita.none,
         {
           ..model,
-          qc_form: { ..model.qc_form, shot_id, route_id, output_digest: output },
+          qc_form: {
+            ..model.qc_form,
+            shot_id,
+            route_id,
+            output_digest: output,
+          },
         },
       )
     }
@@ -1489,15 +1646,17 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Generation attempt evidence", result)
+                    ActionCompleted(
+                      request, "Generation attempt evidence", result,
+                    )
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
             None =>
               (
                 @rabbita.none,
-                { ..model, error: Some("Routing plan is required.") },
+                { ..model, error: Some("Routing plan is required."), },
               )
           }
         None => (@rabbita.none, model)
@@ -1535,9 +1694,11 @@ fn update(
             )
             .with_json(body)
             .expect_json(
-              emit.map(fn(result) { ActionCompleted("QC finding", result) }),
+              emit.map(fn(result) {
+                ActionCompleted(request, "QC finding", result)
+              }),
             )
-          (cmd, { ..model, busy: true, error: None })
+          (cmd, { ..model, busy: true, error: None, })
         }
         None => (@rabbita.none, model)
       }
@@ -1570,60 +1731,63 @@ fn update(
             .with_json(body)
             .expect_json(
               emit.map(fn(result) {
-                ActionCompleted("Independent QC decision", result)
+                ActionCompleted(request, "Independent QC decision", result)
               }),
             )
-          (cmd, { ..model, busy: true, error: None })
+          (cmd, { ..model, busy: true, error: None, })
         }
         None => (@rabbita.none, model)
       }
     SetDeliveryGovernanceField(field, value) => {
       let delivery_governance_form = match field {
-        "video" => { ..model.delivery_governance_form, video_digest: value }
-        "audio" => { ..model.delivery_governance_form, audio_digest: value }
+        "video" => { ..model.delivery_governance_form, video_digest: value, }
+        "audio" => { ..model.delivery_governance_form, audio_digest: value, }
         "subtitle" =>
-          { ..model.delivery_governance_form, subtitle_digest: value }
+          { ..model.delivery_governance_form, subtitle_digest: value, }
         "provenance" =>
-          { ..model.delivery_governance_form, provenance_digest: value }
-        "ai_label" => { ..model.delivery_governance_form, ai_label: value }
+          { ..model.delivery_governance_form, provenance_digest: value, }
+        "ai_label" => { ..model.delivery_governance_form, ai_label: value, }
         "destinations" =>
-          { ..model.delivery_governance_form, destination_ids: value }
+          { ..model.delivery_governance_form, destination_ids: value, }
         "manifest" =>
-          { ..model.delivery_governance_form, manifest_digest: value }
+          { ..model.delivery_governance_form, manifest_digest: value, }
         "rights" =>
-          { ..model.delivery_governance_form, rights_ledger_digest: value }
+          { ..model.delivery_governance_form, rights_ledger_digest: value, }
         "destination" =>
-          { ..model.delivery_governance_form, destination_id: value }
+          { ..model.delivery_governance_form, destination_id: value, }
         "scope" =>
-          { ..model.delivery_governance_form, publication_scope: value }
+          { ..model.delivery_governance_form, publication_scope: value, }
         "expires" =>
-          { ..model.delivery_governance_form, publication_expires_at: value }
+          { ..model.delivery_governance_form, publication_expires_at: value, }
         "receipt" =>
           {
             ..model.delivery_governance_form,
             publication_receipt_digest: value,
           }
         "authority_ref" =>
-          { ..model.delivery_governance_form, publication_authority_ref: value }
+          {
+            ..model.delivery_governance_form,
+            publication_authority_ref: value,
+          }
         "performance_status" =>
-          { ..model.delivery_governance_form, performance_status: value }
+          { ..model.delivery_governance_form, performance_status: value, }
         "performance_evidence" =>
           {
             ..model.delivery_governance_form,
             performance_evidence_digest: value,
           }
-        "reach" => { ..model.delivery_governance_form, reach: value }
+        "reach" => { ..model.delivery_governance_form, reach: value, }
         "completion" =>
-          { ..model.delivery_governance_form, completion_rate: value }
+          { ..model.delivery_governance_form, completion_rate: value, }
         "conversion" =>
-          { ..model.delivery_governance_form, conversion_rate: value }
-        "revenue" => { ..model.delivery_governance_form, revenue_cny: value }
+          { ..model.delivery_governance_form, conversion_rate: value, }
+        "revenue" => { ..model.delivery_governance_form, revenue_cny: value, }
         "provider_cost" =>
-          { ..model.delivery_governance_form, provider_cost_cny: value }
+          { ..model.delivery_governance_form, provider_cost_cny: value, }
         "founder_hours" =>
-          { ..model.delivery_governance_form, founder_hours: value }
+          { ..model.delivery_governance_form, founder_hours: value, }
         "repeat" =>
-          { ..model.delivery_governance_form, repeat_purchase_status: value }
+          { ..model.delivery_governance_form, repeat_purchase_status: value, }
         _ => model.delivery_governance_form
       }
       (@rabbita.none, { ..model, delivery_governance_form, })
@@ -1657,10 +1821,10 @@ fn update(
             .with_json(body)
             .expect_json(
               emit.map(fn(result) {
-                ActionCompleted("Reviewed master record", result)
+                ActionCompleted(request, "Reviewed master record", result)
               }),
             )
-          (cmd, { ..model, busy: true, error: None })
+          (cmd, { ..model, busy: true, error: None, })
         }
         None => (@rabbita.none, model)
       }
@@ -1689,15 +1853,19 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Master " + kind + " decision", result)
+                    ActionCompleted(
+                      request,
+                      "Master " + kind + " decision",
+                      result,
+                    )
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
             None =>
               (
                 @rabbita.none,
-                { ..model, error: Some("Record the exact master first.") },
+                { ..model, error: Some("Record the exact master first."), },
               )
           }
         None => (@rabbita.none, model)
@@ -1742,13 +1910,13 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Delivery package intent", result)
+                    ActionCompleted(request, "Delivery package intent", result)
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
             None =>
-              (@rabbita.none, { ..model, error: Some("Master is required.") })
+              (@rabbita.none, { ..model, error: Some("Master is required."), })
           }
         None => (@rabbita.none, model)
       }
@@ -1776,15 +1944,19 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Delivery milestone " + decision, result)
+                    ActionCompleted(
+                      request,
+                      "Delivery milestone " + decision,
+                      result,
+                    )
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
             None =>
               (
                 @rabbita.none,
-                { ..model, error: Some("Delivery package is required.") },
+                { ..model, error: Some("Delivery package is required."), },
               )
           }
         None => (@rabbita.none, model)
@@ -1819,15 +1991,19 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Inert publication " + decision, result)
+                    ActionCompleted(
+                      request,
+                      "Inert publication " + decision,
+                      result,
+                    )
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
             None =>
               (
                 @rabbita.none,
-                { ..model, error: Some("Delivery package is required.") },
+                { ..model, error: Some("Delivery package is required."), },
               )
           }
         None => (@rabbita.none, model)
@@ -1856,10 +2032,10 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Publication observation", result)
+                    ActionCompleted(request, "Publication observation", result)
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
             None => (@rabbita.none, model)
           }
@@ -1915,15 +2091,17 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Performance and economics review", result)
+                    ActionCompleted(
+                      request, "Performance and economics review", result,
+                    )
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
             None =>
               (
                 @rabbita.none,
-                { ..model, error: Some("Delivery package is required.") },
+                { ..model, error: Some("Delivery package is required."), },
               )
           }
         None => (@rabbita.none, model)
@@ -1944,38 +2122,40 @@ fn update(
             .with_json(body)
             .expect_json(
               emit.map(fn(result) {
-                ActionCompleted("Immutable G7 outcome handoff", result)
+                ActionCompleted(request, "Immutable G7 outcome handoff", result)
               }),
             )
-          (cmd, { ..model, busy: true, error: None })
+          (cmd, { ..model, busy: true, error: None, })
         }
         None => (@rabbita.none, model)
       }
     SetClientOpsField(field, value) => {
       let client_ops_form = match field {
-        "client_name" => { ..model.client_ops_form, client_name: value }
-        "brand_name" => { ..model.client_ops_form, brand_name: value }
-        "brand_accent" => { ..model.client_ops_form, brand_accent: value }
-        "expires_at" => { ..model.client_ops_form, expires_at: value }
-        "billing_kind" => { ..model.client_ops_form, billing_kind: value }
-        "billing_state" => { ..model.client_ops_form, billing_state: value }
+        "client_name" => { ..model.client_ops_form, client_name: value, }
+        "brand_name" => { ..model.client_ops_form, brand_name: value, }
+        "brand_accent" => { ..model.client_ops_form, brand_accent: value, }
+        "expires_at" => { ..model.client_ops_form, expires_at: value, }
+        "billing_kind" => { ..model.client_ops_form, billing_kind: value, }
+        "billing_state" => { ..model.client_ops_form, billing_state: value, }
         "billing_currency" =>
-          { ..model.client_ops_form, billing_currency: value }
-        "billing_amount" => { ..model.client_ops_form, billing_amount: value }
-        "billing_due_at" => { ..model.client_ops_form, billing_due_at: value }
+          { ..model.client_ops_form, billing_currency: value, }
+        "billing_amount" => { ..model.client_ops_form, billing_amount: value, }
+        "billing_due_at" => { ..model.client_ops_form, billing_due_at: value, }
         "billing_reference" =>
-          { ..model.client_ops_form, billing_reference: value }
+          { ..model.client_ops_form, billing_reference: value, }
         "repeat_project_id" =>
-          { ..model.client_ops_form, repeat_project_id: value }
-        "repeat_title" => { ..model.client_ops_form, repeat_title: value }
+          { ..model.client_ops_form, repeat_project_id: value, }
+        "repeat_title" => { ..model.client_ops_form, repeat_title: value, }
         "repeat_objective" =>
-          { ..model.client_ops_form, repeat_objective: value }
-        "repeat_audience" => { ..model.client_ops_form, repeat_audience: value }
+          { ..model.client_ops_form, repeat_objective: value, }
+        "repeat_audience" =>
+          { ..model.client_ops_form, repeat_audience: value, }
         "repeat_rights_owner" =>
-          { ..model.client_ops_form, repeat_rights_owner: value }
+          { ..model.client_ops_form, repeat_rights_owner: value, }
         "repeat_duration" =>
-          { ..model.client_ops_form, repeat_duration_seconds: value }
-        "repeat_budget" => { ..model.client_ops_form, repeat_budget_cny: value }
+          { ..model.client_ops_form, repeat_duration_seconds: value, }
+        "repeat_budget" =>
+          { ..model.client_ops_form, repeat_budget_cny: value, }
         _ => model.client_ops_form
       }
       (@rabbita.none, { ..model, client_ops_form, })
@@ -2009,11 +2189,11 @@ fn update(
                 )
                 .with_json(body)
                 .expect_json(
-                  emit.map(fn(result) { CreatedClientPortal(result) }),
+                  emit.map(fn(result) { CreatedClientPortal(request, result) }),
                 )
               (
                 cmd,
-                { ..model, busy: true, error: None, latest_client_url: None },
+                { ..model, busy: true, error: None, latest_client_url: None, },
               )
             }
             _ =>
@@ -2054,10 +2234,10 @@ fn update(
           .with_json(body)
           .expect_json(
             emit.map(fn(result) {
-              ActionCompleted("Client portal " + action, result)
+              ActionCompleted(request, "Client portal " + action, result)
             }),
           )
-        (cmd, { ..model, busy: true, error: None })
+        (cmd, { ..model, busy: true, error: None, })
       }
     }
     CreateBillingEntry =>
@@ -2086,10 +2266,10 @@ fn update(
             .with_json(body)
             .expect_json(
               emit.map(fn(result) {
-                ActionCompleted("Billing milestone", result)
+                ActionCompleted(request, "Billing milestone", result)
               }),
             )
-          (cmd, { ..model, busy: true, error: None })
+          (cmd, { ..model, busy: true, error: None, })
         }
         None => (@rabbita.none, model)
       }
@@ -2120,10 +2300,10 @@ fn update(
           .with_json(body)
           .expect_json(
             emit.map(fn(result) {
-              ActionCompleted("Billing state " + state, result)
+              ActionCompleted(request, "Billing state " + state, result)
             }),
           )
-        (cmd, { ..model, busy: true, error: None })
+        (cmd, { ..model, busy: true, error: None, })
       }
     }
     CreateRepeatOrder =>
@@ -2166,10 +2346,10 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Repeat-order draft", result)
+                    ActionCompleted(request, "Repeat-order draft", result)
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
             _ =>
               (
@@ -2204,15 +2384,17 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Routed multi-shot execution", result)
+                    ActionCompleted(
+                      request, "Routed multi-shot execution", result,
+                    )
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
             None =>
               (
                 @rabbita.none,
-                { ..model, error: Some("Approve a routing plan first.") },
+                { ..model, error: Some("Approve a routing plan first."), },
               )
           }
         None => (@rabbita.none, model)
@@ -2243,10 +2425,10 @@ fn update(
           .with_json(body)
           .expect_json(
             emit.map(fn(result) {
-              ActionCompleted("Shot " + shot_id + " " + action, result)
+              ActionCompleted(request, "Shot " + shot_id + " " + action, result)
             }),
           )
-        (cmd, { ..model, busy: true, error: None })
+        (cmd, { ..model, busy: true, error: None, })
       }
     }
     RunAllPendingShots(execution_id) => {
@@ -2273,15 +2455,18 @@ fn update(
             .with_json(body)
             .expect_json(
               emit.map(fn(result) {
-                ActionCompleted("Production coordinator run", result)
+                ActionCompleted(request, "Production coordinator run", result)
               }),
             )
-          (cmd, { ..model, busy: true, error: None })
+          (cmd, { ..model, busy: true, error: None, })
         }
         _ =>
           (
             @rabbita.none,
-            { ..model, error: Some("Select one exact routed execution first.") },
+            {
+              ..model,
+              error: Some("Select one exact routed execution first."),
+            },
           )
       }
     }
@@ -2327,10 +2512,12 @@ fn update(
                   .with_json(body)
                   .expect_json(
                     emit.map(fn(result) {
-                      ActionCompleted("Production coordinator batch QC", result)
+                      ActionCompleted(
+                        request, "Production coordinator batch QC", result,
+                      )
                     }),
                   )
-                (cmd, { ..model, busy: true, error: None })
+                (cmd, { ..model, busy: true, error: None, })
               }
             }
             None =>
@@ -2344,42 +2531,27 @@ fn update(
           }
         None => (@rabbita.none, model)
       }
+    SetDeliveryCutStart(value) =>
+      (@rabbita.none, { ..model, delivery_cut_start: value, error: None, })
+    SetDeliveryCutEnd(value) =>
+      (@rabbita.none, { ..model, delivery_cut_end: value, error: None, })
+    CreateDeliveryBuild if model.busy => (@rabbita.none, model)
     CreateDeliveryBuild =>
       match model.project {
         Some(project) =>
           match (project.master, project.delivery_package) {
             (Some(master), Some(delivery)) => {
+              let cut = match delivery_cut_selection(model, project) {
+                Ok(cut) => cut
+                Err(message) =>
+                  return (@rabbita.none, { ..model, error: Some(message), })
+              }
               let body : Json = {
                 "expected_project_revision": project.revision,
                 "expected_master_sha256": master.sha256,
                 "expected_delivery_version": delivery.version,
                 "expected_delivery_digest": delivery.digest,
-                "profile": {
-                  "contract": "mooncast.delivery-build-profile.v1",
-                  "version": 1,
-                  "include_source_master": true,
-                  "variants": [
-                    {
-                      "variant_id": "horizontal-1080p",
-                      "orientation": "horizontal",
-                      "width": 1920,
-                      "height": 1080,
-                      "policy": "scale",
-                    },
-                    {
-                      "variant_id": "vertical-1080p",
-                      "orientation": "vertical",
-                      "width": 1080,
-                      "height": 1920,
-                      "policy": "crop",
-                    },
-                  ],
-                  "cuts": [],
-                  "covers": [],
-                  "include_subtitles": true,
-                  "include_metadata": true,
-                  "include_provenance_rights_ai_manifest": true,
-                },
+                "profile": delivery_profile(cut),
               }
               let cmd = @http.post(
                   "/api/v2/projects/" + project.id + "/delivery-builds",
@@ -2387,10 +2559,10 @@ fn update(
                 .with_json(body)
                 .expect_json(
                   emit.map(fn(result) {
-                    ActionCompleted("Delivery build", result)
+                    ActionCompleted(request, "Delivery build", result)
                   }),
                 )
-              (cmd, { ..model, busy: true, error: None })
+              (cmd, { ..model, busy: true, error: None, })
             }
             _ =>
               (
@@ -2429,10 +2601,10 @@ fn update(
           .with_json(body)
           .expect_json(
             emit.map(fn(result) {
-              ActionCompleted("Delivery " + action, result)
+              ActionCompleted(request, "Delivery " + action, result)
             }),
           )
-        (cmd, { ..model, busy: true, error: None })
+        (cmd, { ..model, busy: true, error: None, })
       }
     }
     AcceptDelivery(build_id) => {
@@ -2462,21 +2634,21 @@ fn update(
             .with_json(body)
             .expect_json(
               emit.map(fn(result) {
-                ActionCompleted("Delivery acceptance", result)
+                ActionCompleted(request, "Delivery acceptance", result)
               }),
             )
-          (cmd, { ..model, busy: true, error: None })
+          (cmd, { ..model, busy: true, error: None, })
         }
         _ => (@rabbita.none, model)
       }
     }
     SetOperatorField(field, value) => {
       let operator = match field {
-        "actor" => { ..model.operator, actor: value, human_confirmed: false }
-        "role" => { ..model.operator, role: value, human_confirmed: false }
+        "actor" => { ..model.operator, actor: value, human_confirmed: false, }
+        "role" => { ..model.operator, role: value, human_confirmed: false, }
         "recorded_at" =>
-          { ..model.operator, recorded_at: value, human_confirmed: false }
-        "note" => { ..model.operator, note: value, human_confirmed: false }
+          { ..model.operator, recorded_at: value, human_confirmed: false, }
+        "note" => { ..model.operator, note: value, human_confirmed: false, }
         _ => model.operator
       }
       (@rabbita.none, { ..model, operator, })
@@ -2484,18 +2656,19 @@ fn update(
     SetHumanConfirmed(value) =>
       (
         @rabbita.none,
-        { ..model, operator: { ..model.operator, human_confirmed: value } },
+        { ..model, operator: { ..model.operator, human_confirmed: value, }, },
       )
     SetCommercialField(field, value) => {
       let commercial_form = match field {
-        "customer" => { ..model.commercial_form, customer: value }
-        "contact" => { ..model.commercial_form, contact_ref: value }
-        "problem" => { ..model.commercial_form, payable_problem: value }
-        "baseline_cost" => { ..model.commercial_form, baseline_cost_cny: value }
-        "baseline_hours" => { ..model.commercial_form, baseline_hours: value }
+        "customer" => { ..model.commercial_form, customer: value, }
+        "contact" => { ..model.commercial_form, contact_ref: value, }
+        "problem" => { ..model.commercial_form, payable_problem: value, }
+        "baseline_cost" =>
+          { ..model.commercial_form, baseline_cost_cny: value, }
+        "baseline_hours" => { ..model.commercial_form, baseline_hours: value, }
         "acceptance" =>
-          { ..model.commercial_form, measurable_acceptance: value }
-        "repeat" => { ..model.commercial_form, repeat_hypothesis: value }
+          { ..model.commercial_form, measurable_acceptance: value, }
+        "repeat" => { ..model.commercial_form, repeat_hypothesis: value, }
         _ => model.commercial_form
       }
       (@rabbita.none, { ..model, commercial_form, })
@@ -2519,9 +2692,11 @@ fn update(
       let cmd = @http.post("/api/commercial-intake/leads")
         .with_json(body)
         .expect_json(
-          emit.map(fn(result) { ActionCompleted("Commercial lead", result) }),
+          emit.map(fn(result) {
+            ActionCompleted(request, "Commercial lead", result)
+          }),
         )
-      (cmd, { ..model, busy: true, error: None })
+      (cmd, { ..model, busy: true, error: None, })
     }
     SelectLead(lead_id) =>
       (
@@ -2540,7 +2715,7 @@ fn update(
             item.lead_id == model.selected_lead_id
           })
           if candidates.length() != 1 {
-            (@rabbita.none, { ..model, error: Some("Select one lead.") })
+            (@rabbita.none, { ..model, error: Some("Select one lead."), })
           } else {
             let lead = candidates[0]
             let body : Json = {
@@ -2560,35 +2735,35 @@ fn update(
               .with_json(body)
               .expect_json(
                 emit.map(fn(result) {
-                  ActionCompleted("Lead " + decision, result)
+                  ActionCompleted(request, "Lead " + decision, result)
                 }),
               )
-            (cmd, { ..model, busy: true, error: None })
+            (cmd, { ..model, busy: true, error: None, })
           }
         }
         None => (@rabbita.none, model)
       }
     SetQuoteField(field, value) => {
       let quote_form = match field {
-        "project_id" => { ..model.quote_form, project_id: value }
-        "title" => { ..model.quote_form, title: value }
-        "objective" => { ..model.quote_form, objective: value }
-        "audience" => { ..model.quote_form, audience: value }
-        "rights_owner" => { ..model.quote_form, rights_owner: value }
-        "duration" => { ..model.quote_form, duration_seconds: value }
-        "budget" => { ..model.quote_form, production_budget_cny: value }
-        "start" => { ..model.quote_form, start_date: value }
-        "delivery" => { ..model.quote_form, delivery_date: value }
-        "deliverables" => { ..model.quote_form, deliverables: value }
-        "revenue" => { ..model.quote_form, quoted_revenue_cny: value }
-        "provider_cost" => { ..model.quote_form, provider_cost_cny: value }
-        "labor_cost" => { ..model.quote_form, labor_cost_cny: value }
-        "other_cost" => { ..model.quote_form, other_cost_cny: value }
-        "founder_hours" => { ..model.quote_form, founder_hours: value }
-        "contingency" => { ..model.quote_form, contingency_percent: value }
-        "deposit" => { ..model.quote_form, deposit_cny: value }
-        "animatic" => { ..model.quote_form, animatic_cny: value }
-        "master" => { ..model.quote_form, master_cny: value }
+        "project_id" => { ..model.quote_form, project_id: value, }
+        "title" => { ..model.quote_form, title: value, }
+        "objective" => { ..model.quote_form, objective: value, }
+        "audience" => { ..model.quote_form, audience: value, }
+        "rights_owner" => { ..model.quote_form, rights_owner: value, }
+        "duration" => { ..model.quote_form, duration_seconds: value, }
+        "budget" => { ..model.quote_form, production_budget_cny: value, }
+        "start" => { ..model.quote_form, start_date: value, }
+        "delivery" => { ..model.quote_form, delivery_date: value, }
+        "deliverables" => { ..model.quote_form, deliverables: value, }
+        "revenue" => { ..model.quote_form, quoted_revenue_cny: value, }
+        "provider_cost" => { ..model.quote_form, provider_cost_cny: value, }
+        "labor_cost" => { ..model.quote_form, labor_cost_cny: value, }
+        "other_cost" => { ..model.quote_form, other_cost_cny: value, }
+        "founder_hours" => { ..model.quote_form, founder_hours: value, }
+        "contingency" => { ..model.quote_form, contingency_percent: value, }
+        "deposit" => { ..model.quote_form, deposit_cny: value, }
+        "animatic" => { ..model.quote_form, animatic_cny: value, }
+        "master" => { ..model.quote_form, master_cny: value, }
         _ => model.quote_form
       }
       (@rabbita.none, { ..model, quote_form, })
@@ -2602,7 +2777,7 @@ fn update(
           if leads.length() != 1 {
             (
               @rabbita.none,
-              { ..model, error: Some("Select a qualified lead.") },
+              { ..model, error: Some("Select a qualified lead."), },
             )
           } else {
             let lead = leads[0]
@@ -2715,6 +2890,7 @@ fn update(
               .expect_json(
                 emit.map(fn(result) {
                   ActionCompleted(
+                    request,
                     if revising {
                       "Quote revision"
                     } else {
@@ -2724,7 +2900,7 @@ fn update(
                   )
                 }),
               )
-            (cmd, { ..model, busy: true, error: None })
+            (cmd, { ..model, busy: true, error: None, })
           }
         }
         None => (@rabbita.none, model)
@@ -2733,7 +2909,7 @@ fn update(
       let cmd = @http.get(
         "/api/commercial-intake/quotes/" + quote_id + "/capacity-board",
       ).expect_json(emit.map(fn(result) { LoadedCapacity(result) }))
-      (cmd, { ..model, selected_quote_id: quote_id, capacity_board: None })
+      (cmd, { ..model, selected_quote_id: quote_id, capacity_board: None, })
     }
     DecideQuote(authority) =>
       match model.commercial {
@@ -2742,7 +2918,7 @@ fn update(
             item.quote_id == model.selected_quote_id
           })
           if candidates.length() != 1 {
-            (@rabbita.none, { ..model, error: Some("Select one quote.") })
+            (@rabbita.none, { ..model, error: Some("Select one quote."), })
           } else {
             let quote = candidates[0]
             let body : Json = {
@@ -2770,31 +2946,35 @@ fn update(
               .with_json(body)
               .expect_json(
                 emit.map(fn(result) {
-                  ActionCompleted("Quote " + authority + " approval", result)
+                  ActionCompleted(
+                    request,
+                    "Quote " + authority + " approval",
+                    result,
+                  )
                 }),
               )
-            (cmd, { ..model, busy: true, error: None })
+            (cmd, { ..model, busy: true, error: None, })
           }
         }
         None => (@rabbita.none, model)
       }
     SetCapacityField(field, value) => {
       let capacity_form = match field {
-        "name" => { ..model.capacity_form, resource_name: value }
-        "role" => { ..model.capacity_form, resource_role: value }
-        "skills" => { ..model.capacity_form, resource_skills: value }
-        "weekly_hours" => { ..model.capacity_form, weekly_hours: value }
-        "available_from" => { ..model.capacity_form, available_from: value }
-        "available_to" => { ..model.capacity_form, available_to: value }
-        "resource_id" => { ..model.capacity_form, resource_id: value }
+        "name" => { ..model.capacity_form, resource_name: value, }
+        "role" => { ..model.capacity_form, resource_role: value, }
+        "skills" => { ..model.capacity_form, resource_skills: value, }
+        "weekly_hours" => { ..model.capacity_form, weekly_hours: value, }
+        "available_from" => { ..model.capacity_form, available_from: value, }
+        "available_to" => { ..model.capacity_form, available_to: value, }
+        "resource_id" => { ..model.capacity_form, resource_id: value, }
         "reservation_skills" =>
-          { ..model.capacity_form, reservation_skills: value }
-        "depends_on" => { ..model.capacity_form, depends_on: value }
+          { ..model.capacity_form, reservation_skills: value, }
+        "depends_on" => { ..model.capacity_form, depends_on: value, }
         "reservation_start" =>
-          { ..model.capacity_form, reservation_start: value }
-        "reservation_end" => { ..model.capacity_form, reservation_end: value }
+          { ..model.capacity_form, reservation_start: value, }
+        "reservation_end" => { ..model.capacity_form, reservation_end: value, }
         "reservation_hours" =>
-          { ..model.capacity_form, reservation_hours: value }
+          { ..model.capacity_form, reservation_hours: value, }
         _ => model.capacity_form
       }
       (@rabbita.none, { ..model, capacity_form, })
@@ -2817,9 +2997,11 @@ fn update(
       let cmd = @http.post("/api/commercial-intake/capacity/resources")
         .with_json(body)
         .expect_json(
-          emit.map(fn(result) { ActionCompleted("Capacity resource", result) }),
+          emit.map(fn(result) {
+            ActionCompleted(request, "Capacity resource", result)
+          }),
         )
-      (cmd, { ..model, busy: true, error: None })
+      (cmd, { ..model, busy: true, error: None, })
     }
     CreateReservation =>
       match model.commercial {
@@ -2828,7 +3010,7 @@ fn update(
             item.quote_id == model.selected_quote_id
           })
           if quotes.length() != 1 {
-            (@rabbita.none, { ..model, error: Some("Select one quote.") })
+            (@rabbita.none, { ..model, error: Some("Select one quote."), })
           } else {
             let quote = quotes[0]
             let form = model.capacity_form
@@ -2852,10 +3034,10 @@ fn update(
               .with_json(body)
               .expect_json(
                 emit.map(fn(result) {
-                  ActionCompleted("Capacity reservation", result)
+                  ActionCompleted(request, "Capacity reservation", result)
                 }),
               )
-            (cmd, { ..model, busy: true, error: None })
+            (cmd, { ..model, busy: true, error: None, })
           }
         }
         None => (@rabbita.none, model)
@@ -2871,6 +3053,43 @@ fn update(
         ).expect_json(emit.map(fn(result) { LoadedCapacity(result) }))
         (cmd, model)
       }
+    RefreshQuoteInitializations => (refresh_quote_initializations(emit), model)
+    ResumeQuoteInitialization(conversion_digest) => {
+      if model.busy {
+        return (@rabbita.none, model)
+      }
+      match quote_initialization_request(model, conversion_digest) {
+        Some((path, body)) => {
+          let cmd = @http.post(path)
+            .with_json(body)
+            .expect_json(
+              emit.map(result => {
+                ActionCompleted(request, "Draft initialization", result)
+              }),
+            )
+          (
+            cmd,
+            {
+              ..model,
+              busy: true,
+              error: None,
+              status: "Resuming the original draft initialization…",
+            },
+          )
+        }
+        None =>
+          (
+            @rabbita.none,
+            {
+              ..model,
+              error: Some(
+                "Refresh initialization status and confirm the named operator before resuming a pending draft.",
+              ),
+            },
+          )
+      }
+    }
+    ConvertQuote if model.busy => (@rabbita.none, model)
     ConvertQuote =>
       match (model.commercial, model.capacity_board) {
         (Some(commercial), Some(board)) => {
@@ -2905,16 +3124,16 @@ fn update(
               .with_json(body)
               .expect_json(
                 emit.map(fn(result) {
-                  ActionCompleted("Quote conversion", result)
+                  ActionCompleted(request, "Quote conversion", result)
                 }),
               )
-            (cmd, { ..model, busy: true, error: None })
+            (cmd, { ..model, busy: true, error: None, })
           }
         }
         _ =>
           (
             @rabbita.none,
-            { ..model, error: Some("Load the quote capacity board first.") },
+            { ..model, error: Some("Load the quote capacity board first."), },
           )
       }
   }

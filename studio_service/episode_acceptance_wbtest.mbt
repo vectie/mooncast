@@ -110,7 +110,9 @@ fn acceptance_asset_spec(
 
 ///|
 async test "Studio to Cut Editor to Client Review produces a governed 180 second episode" {
-  let root = "/tmp/mooncast-ui-to-ui-validation-" + @async.now().to_string()
+  let root = @env.get_env_var("MOONCAST_LEDGER_FIXTURE_ROOT").unwrap_or(
+    "/tmp/mooncast-ui-to-ui-validation-" + @async.now().to_string(),
+  )
   let video_provider = "mooncast-local"
   let video_model = "deterministic-video-v1"
   let catalog : @execution_app.ProviderCatalog = {
@@ -124,7 +126,25 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
     authority_actors: ["acceptance-producer", "creative-director"],
   }
   let service = StudioService::new(root, provider_catalog=catalog)
-  let packet = needs_packet_fixture()
+  let quote = ledger_quote_fixture(
+    service, "acceptance-episode", "SYNTHETIC 180 second commission",
+  )
+  let packet_base = needs_packet_fixture()
+  let packet = {
+    ..packet_base,
+    client_need: {
+      ..packet_base.client_need,
+      customer: "SYNTHETIC fixture; no real customer",
+    },
+    contract_boundary: {
+      ..packet_base.contract_boundary,
+      budget_ceiling_cny: 5000.0,
+    },
+    creative_strategy: {
+      ..packet_base.creative_strategy,
+      project_title: quote.project.title,
+    },
+  }
   let validation = @intake.validate_intake(packet)
   ignore(
     service.needs_intake.import_packet(packet, "2026-07-19T12:01:00+08:00"),
@@ -150,6 +170,7 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
     }),
   )
   let project_id = "acceptance-episode"
+  ledger_convert_fixture(service, quote)
   acceptance_approve_creative(
     service,
     project_id,
@@ -193,7 +214,7 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
   assert_eq(shot_ids.length(), 15)
   let plan_base : @asset_factory.AssetFactoryPlan = {
     contract: "mooncast.asset-factory-plan.v1",
-    plan: { id: "acceptance-assets", version: 1, digest: "" },
+    plan: { id: "acceptance-assets", version: 1, digest: "", },
     project_id,
     project_revision: after_g2.snapshot.revision,
     specs: [
@@ -208,7 +229,7 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
   }
   let asset_plan = {
     ..plan_base,
-    plan: { ..plan_base.plan, digest: @asset_factory.plan_digest(plan_base) },
+    plan: { ..plan_base.plan, digest: @asset_factory.plan_digest(plan_base), },
   }
   ignore(
     service.asset_factory.record_plan(
@@ -299,7 +320,7 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
   }
   let animatic_base : @animatic.AnimaticPlan = {
     contract: "mooncast.animatic-plan.v1",
-    reference: { id: "acceptance-animatic-plan", version: 1, digest: "" },
+    reference: { id: "acceptance-animatic-plan", version: 1, digest: "", },
     project_id,
     project_revision: canonical.snapshot.revision,
     bible: bible.reference,
@@ -325,7 +346,7 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
       digest: @animatic.plan_digest(animatic_base),
     },
   }
-  ignore(service.record_animatic_plan(project_id, { plan: animatic_plan }))
+  ignore(service.record_animatic_plan(project_id, { plan: animatic_plan, }))
   let rendered = service.animatic.render(project_id, {
     expected_plan_version: 1,
     expected_plan_digest: animatic_plan.reference.digest,
@@ -455,12 +476,12 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
       request_id: export_job_id,
       expected_editor_revision: opened.revision,
       quality: "original",
-      range: { start_tick: 0, duration_ticks: 180000 },
+      range: { start_tick: 0, duration_ticks: 180000, },
       max_attempts: 2,
       spec: {
         width: 320,
         height: 180,
-        fps: { numerator: 24, denominator: 1 },
+        fps: { numerator: 24, denominator: 1, },
         container: "mp4",
         video_codec: "h264",
         audio_codec: "aac",
@@ -522,7 +543,61 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
     },
   )
   let delivery = delivery_response.project.snapshot.delivery_package.unwrap()
-  let queued_build = restarted.create_delivery_from_ui(project_id, {
+  let selected_captions = restarted.verified_delivery_captions(project_id)
+  assert_caption_provenance_rejections(restarted, project_id, export_job_id)
+  assert_eq(ledger_text(selected_captions.metadata, "language"), "und")
+  assert_eq(
+    ledger_text(selected_captions.metadata, "export_job_id"),
+    export_job_id,
+  )
+  let selected_srt = @utf8.decode(selected_captions.bytes)
+  assert_true(selected_srt.contains("00:00:00,000 --> 00:00:12,000"))
+  assert_true(selected_srt.contains("00:02:48,000 --> 00:03:00,000"))
+  let caption_page = restarted.dispatch_http({
+    request_method: Get,
+    path: "/api/v2/projects/" + project_id + "/delivery-captions/view",
+    query: None,
+    headers: {},
+    body: b"",
+  })
+  assert_eq(caption_page.status, 200)
+  assert_true(
+    @utf8.decode(caption_page.body).contains(
+      "Selected captions for this master",
+    ),
+  )
+  let caption_download = restarted.dispatch_http({
+    request_method: Get,
+    path: ledger_text(selected_captions.metadata, "download_url"),
+    query: None,
+    headers: {},
+    body: b"",
+  })
+  assert_eq(caption_download.status, 200)
+  assert_eq(caption_download.body, selected_captions.bytes)
+  assert_eq(
+    restarted.dispatch_http({
+      request_method: Get,
+      path: "/api/v2/projects/" +
+      project_id +
+      "/delivery-captions/stale-caption-digest/download",
+      query: None,
+      headers: {},
+      body: b"",
+    }).status,
+    409,
+  )
+  assert_eq(
+    restarted.dispatch_http({
+      request_method: Get,
+      path: "/api/v2/projects/foreign-project/delivery-captions/download",
+      query: None,
+      headers: {},
+      body: b"",
+    }).status,
+    404,
+  )
+  let caption_input : DeliveryCreateInput = {
     expected_project_revision: delivery_response.project.snapshot.revision,
     expected_master_sha256: canonical_master.video_digest,
     expected_delivery_version: delivery.reference.version,
@@ -534,11 +609,86 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
       variants: [],
       cuts: [],
       covers: [],
-      include_subtitles: false,
+      include_subtitles: true,
       include_metadata: true,
       include_provenance_rights_ai_manifest: true,
     },
+  }
+  let create_path = "/api/v2/projects/" + project_id + "/delivery-builds"
+  let stale_input = {
+    ..caption_input,
+    expected_master_sha256: "sha256:stale-master",
+  }
+  assert_true(
+    restarted.dispatch_http({
+      request_method: Post,
+      path: create_path,
+      query: None,
+      headers: {},
+      body: @utf8.encode(stale_input.to_json().stringify()),
+    }).status >=
+    400,
+  )
+  let caption_response = restarted.dispatch_http({
+    request_method: Post,
+    path: create_path,
+    query: None,
+    headers: {},
+    body: @utf8.encode(caption_input.to_json().stringify()),
   })
+  assert_eq(caption_response.status, 201)
+  let caption_response_json = @json.parse(@utf8.decode(caption_response.body))
+  let queued_build = delivery_build_projection(
+    restarted.delivery_application
+    .load(ledger_text(caption_response_json, "build_id"))
+    .unwrap().build,
+  )
+  let queued_caption_record = restarted.delivery_application
+    .load(queued_build.build_id)
+    .unwrap()
+  assert_true(queued_caption_record.request.subtitle_path is Some(_))
+  assert_true(
+    queued_caption_record.request.profile.outputs.all(output => {
+      output.subtitle_mode == "sidecar"
+    }),
+  )
+  try
+    restarted.delivery_application.create({
+      ..queued_caption_record.request,
+      subtitle_path: None,
+    })
+  catch {
+    _ => ()
+  } noraise {
+    _ => fail("Caption-required request without a source must remain invalid")
+  }
+  // A queued build keeps its exact SRT even if the editor sidecar later changes.
+  ignore(
+    restarted.editor_render_files.put_blob(
+      editor_subtitle_key(project_id, export_job_id),
+      b"1\n00:00:00,000 --> 00:00:01,000\nChanged caption\n",
+    ),
+  )
+  try restarted.verified_delivery_captions(project_id) catch {
+    _ => ()
+  } noraise {
+    _ => fail("Changed source captions must not be selected")
+  }
+  let changed_response = restarted.dispatch_http({
+    request_method: Post,
+    path: create_path,
+    query: None,
+    headers: {},
+    body: @utf8.encode(caption_input.to_json().stringify()),
+  })
+  assert_eq(changed_response.status, 409)
+  assert_true(
+    @utf8.decode(changed_response.body).contains("delivery_captions_required"),
+  )
+  let missing_page = restarted.delivery_captions_page(project_id)
+  assert_true(
+    @utf8.decode(missing_page.body).contains("Verified captions need attention"),
+  )
   let completed_build = restarted.run_delivery_action_from_ui(
     project_id,
     queued_build.build_id,
@@ -550,13 +700,78 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
     },
   )
   assert_eq(completed_build.state, "completed")
+  ignore(
+    restarted.editor_render_files.put_blob(
+      editor_subtitle_key(project_id, export_job_id),
+      selected_captions.bytes,
+    ),
+  )
+  let completed_caption_record = restarted.delivery_application
+    .load(completed_build.build_id)
+    .unwrap()
+  let caption_artifacts = completed_caption_record.build.artifacts.filter(item => {
+    item.kind == "subtitle-sidecar"
+  })
+  assert_eq(caption_artifacts.length(), 1)
+  let archive_before_acceptance = restarted.delivery_application
+  .load(completed_build.build_id)
+  .unwrap().build.archive.unwrap()
+  let delivery_files = @host_store.AtomicStore::new(
+    root + "/application/delivery/outputs",
+  )
+  let original_archive = delivery_files
+    .get_blob(archive_before_acceptance.filename)
+    .unwrap()
+  assert_eq(
+    delivery_files.get_blob(caption_artifacts[0].filename).unwrap().bytes,
+    selected_captions.bytes,
+  )
+  assert_eq(
+    caption_artifacts[0].digest,
+    ledger_text(selected_captions.metadata, "sha256"),
+  )
+  let ledger_episode_id = restarted.get_project(project_id).snapshot.graph.episodes[0].episode_id
+  let before_client = restarted.episode_ledger(project_id, ledger_episode_id)
+  assert_eq(
+    json_member(before_client, "master_available"),
+    Some(true.to_json()),
+  )
+  assert_eq(
+    json_member(before_client, "client_acceptance_recorded"),
+    Some(false.to_json()),
+  )
+  assert_eq(
+    json_member(before_client, "payment_evidence_recorded"),
+    Some(false.to_json()),
+  )
+  assert_eq(
+    json_member(before_client, "actual_provider_cost_cny"),
+    Some(Json::null()),
+  )
+  let ledger_store = @host_store.AtomicStore::new(root + "/ledger-evidence")
+  ignore(ledger_store.put_blob("subtitles.srt", selected_captions.bytes))
+  ignore(
+    ledger_store.put_blob(
+      "caption-preview.html",
+      @utf8.encode(
+        @utf8.decode(caption_page.body).replace_all(
+          old=ledger_text(selected_captions.metadata, "download_url"),
+          new="subtitles.srt",
+        ),
+      ),
+    ),
+  )
+  ignore(
+    ledger_store.put_json("caption-selection.json", selected_captions.metadata),
+  )
+  ignore(ledger_store.put_json("before-client.json", before_client))
   let portal = restarted.create_client_portal_from_ui(project_id, {
     expected_project_revision: delivery_response.project.snapshot.revision,
     expected_master_sha256: canonical_master.video_digest,
     build_id: completed_build.build_id,
     expected_build_digest: completed_build.build_digest,
     expected_build_record_digest: completed_build.record_digest,
-    client_name: "Acceptance Client",
+    client_name: "Synthetic fixture reviewer",
     brand_name: "Mooncast Acceptance",
     brand_accent: "#5b5ce2",
     expires_at: "2099-12-31T23:59:59+08:00",
@@ -579,7 +794,7 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
       expected_master_sha256: completed_build.master_sha256,
       expected_build_digest: completed_build.build_digest,
       timecode_seconds: 24.0,
-      author: "Acceptance Client",
+      author: "Synthetic fixture reviewer",
       body: "Reviewed exact episode timing and visual continuity",
     }),
   )
@@ -588,13 +803,126 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
       expected_master_sha256: completed_build.master_sha256,
       expected_build_digest: completed_build.build_digest,
       human_confirmed: true,
-      actor: "Acceptance Client",
+      actor: "Synthetic fixture reviewer",
       decision: "accept",
       note: "Accepted exact master and delivery package",
     }),
   )
   let accepted = restarted.get_project(project_id)
   assert_true(gate_recorded(accepted.snapshot, "G5"))
+  let ledger = restarted.episode_ledger(project_id, ledger_episode_id)
+  assert_eq(
+    json_member(ledger, "client_acceptance_recorded"),
+    Some(true.to_json()),
+  )
+  assert_eq(
+    json_member(ledger, "payment_evidence_recorded"),
+    Some(false.to_json()),
+  )
+  assert_eq(json_member(ledger, "actual_labor_cost_cny"), Some(Json::null()))
+  assert_eq(ledger_list(ledger, "blockers").length(), 0)
+  assert_true(
+    json_member(ledger_list(ledger, "delivery_builds")[0], "download_url")
+    is Some(String(_)),
+  )
+  let download_path = "/api/v2/projects/" +
+    project_id +
+    "/delivery-builds/" +
+    completed_build.build_id +
+    "/download"
+  assert_eq(
+    restarted.dispatch_http({
+      request_method: Get,
+      path: download_path,
+      query: None,
+      headers: {},
+      body: b"",
+    }).status,
+    200,
+  )
+  assert_eq(
+    restarted.dispatch_http({
+      request_method: Get,
+      path: "/api/v2/projects/foreign-project/delivery-builds/" +
+      completed_build.build_id +
+      "/download",
+      query: None,
+      headers: {},
+      body: b"",
+    }).status,
+    404,
+  )
+  let unchanged_archive = delivery_files
+    .get_blob(archive_before_acceptance.filename)
+    .unwrap()
+  assert_eq(unchanged_archive.bytes, original_archive.bytes)
+  assert_eq(
+    "sha256:" + unchanged_archive.sha256,
+    archive_before_acceptance.digest,
+  )
+  // Exercise corrupt/missing access without rerunning or recharging a build.
+  ignore(
+    delivery_files.put_blob(
+      archive_before_acceptance.filename,
+      b"corrupt synthetic archive",
+    ),
+  )
+  assert_eq(
+    restarted.delivery_application.accepted_archive(completed_build.build_id),
+    None,
+  )
+  let corrupt_ledger = restarted.episode_ledger(project_id, ledger_episode_id)
+  assert_eq(
+    json_member(
+      ledger_list(corrupt_ledger, "delivery_builds")[0],
+      "download_url",
+    ),
+    Some(Json::null()),
+  )
+  ignore(
+    delivery_files.put_blob(
+      archive_before_acceptance.filename,
+      original_archive.bytes,
+    ),
+  )
+  ignore(ledger_store.put_json("episode-ledger.json", ledger))
+  let page = restarted.episode_ledger_page(project_id, ledger_episode_id)
+  let master_url = ledger_text(ledger, "master_url")
+  let local_html = @utf8.decode(page.body)
+    .replace_all(old=master_url, new="master.mp4")
+    .replace_all(old=download_path, new="delivery.zip")
+    .replace_all(old="href=\"../ledger\"", new="href=\"episode-ledger.json\"")
+  ignore(ledger_store.put_blob("review.html", @utf8.encode(local_html)))
+  ignore(
+    ledger_store.put_blob(
+      "master.mp4",
+      restarted.resolve_editor_job_media(project_id, export_job_id),
+    ),
+  )
+  guard restarted.delivery_application.accepted_archive(
+      completed_build.build_id,
+    )
+    is Some(archive) else {
+    fail("fixture archive missing")
+  }
+  ignore(ledger_store.put_blob("delivery.zip", archive.bytes))
+  ignore(
+    ledger_store.put_json(
+      "acceptance-receipt.json",
+      restarted.delivery_application
+      .acceptance(completed_build.build_id)
+      .unwrap()
+      .to_json(),
+    ),
+  )
+  ignore(
+    ledger_store.put_blob(
+      "README.txt",
+      @utf8.encode(
+        "SYNTHETIC OFFLINE FIXTURE ONLY. Open review.html and master.mp4 locally. subtitles.srt is the verified export sidecar, byte-identical to the required-caption ZIP artifact. caption-selection.json retains timing and source version provenance; its language is und because the actual source has no language tag. All named decisions and commercial amounts are test data. No customer, payment, real provider production, recipient access, or publication is demonstrated. G6/G7 remain unchanged and pending.\n",
+      ),
+    ),
+  )
   let studio_surface = restarted.dispatch_http({
     request_method: @host_http.Get,
     path: "/api/v2/projects/" + project_id,
@@ -648,6 +976,13 @@ async test "Studio to Cut Editor to Client Review produces a governed 180 second
       "bookkeeper-ingress-bundle", "acceptance-deliverable-moonflow-handoff",
     )
     is Some(_),
+  )
+  assert_cut_caption_delivery(
+    restarted,
+    project_id,
+    root,
+    original_archive,
+    archive_before_acceptance.filename,
   )
   println("mooncast acceptance root: " + root)
   println("mooncast acceptance master: " + master_path)

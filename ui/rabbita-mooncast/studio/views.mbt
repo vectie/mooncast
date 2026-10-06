@@ -30,16 +30,19 @@ type Dispatch[A] = @rabbita.Emit[A]
 ///|
 fn status_tone(status : String) -> String {
   match status {
-    "passed" | "approved" | "completed" | "accepted" | "complete" | "on-track" =>
-      "good"
+    "passed"
+    | "approved"
+    | "completed"
+    | "accepted"
+    | "complete"
+    | "on-track" => "good"
     "failed"
     | "rejected"
     | "attention-required"
     | "cancelled"
     | "breached"
     | "high"
-    | "overage" =>
-      "bad"
+    | "overage" => "bad"
     "running" | "building" => "active"
     _ => "pending"
   }
@@ -127,8 +130,10 @@ fn intake_approved(model : Model, intake : ImportedIntakeProjection) -> Bool {
         let mut latest = decisions[0]
         for candidate in decisions {
           if candidate.decided_at > latest.decided_at ||
-            (candidate.decided_at == latest.decided_at &&
-            candidate.decision_digest > latest.decision_digest) {
+            (
+              candidate.decided_at == latest.decided_at &&
+              candidate.decision_digest > latest.decision_digest
+            ) {
             latest = candidate
           }
         }
@@ -192,7 +197,9 @@ fn render_needs_strategy(
     section(class="panel", [
       div(class="panel-heading", [
         div([small("VERSIONED INTAKE LEDGER"), h2("Imported needs")]),
-        p("Each version has a deterministic provenance digest and independent human decision."),
+        p(
+          "Each version has a deterministic provenance digest and independent human decision.",
+        ),
       ]),
       div(
         class="artifact-tabs",
@@ -207,7 +214,9 @@ fn render_needs_strategy(
                 "artifact-tab"
               },
               on_click=dispatch(SelectIntake(value.packet.packet_id)),
-              value.packet.packet_id + " · v" + value.packet.packet_version.to_string(),
+              value.packet.packet_id +
+              " · v" +
+              value.packet.packet_version.to_string(),
             )
           })
         },
@@ -225,7 +234,13 @@ fn render_needs_strategy(
               h2(packet.creative_strategy.project_title),
             ]),
             div(class="chips", [
-              status_chip(if intake.validation.complete { "complete" } else { "attention-required" }),
+              status_chip(
+                if intake.validation.complete {
+                  "complete"
+                } else {
+                  "attention-required"
+                },
+              ),
               status_chip(if approved { "approved" } else { "pending" }),
               status_chip("immutable"),
             ]),
@@ -249,7 +264,9 @@ fn render_needs_strategy(
             metric(
               "Rights / data",
               packet.constraints.rights_owner,
-              packet.constraints.confidentiality_class + " · " + packet.constraints.permitted_data_class,
+              packet.constraints.confidentiality_class +
+              " · " +
+              packet.constraints.permitted_data_class,
             ),
           ]),
           article(class="artifact-card", [
@@ -265,18 +282,30 @@ fn render_needs_strategy(
           article(class="artifact-card", [
             strong("Deterministic provenance"),
             code(intake.validation.provenance_digest),
-            small("Exported " + packet.exported_at + " · imported " + intake.imported_at),
+            small(
+              "Exported " +
+              packet.exported_at +
+              " · imported " +
+              intake.imported_at,
+            ),
           ]),
           if intake.validation.errors.is_empty() &&
             intake.validation.unresolved_questions.is_empty() {
-            p(class="callout good", "All required needs, rights, contract, strategy, evidence, and intent bindings are complete.")
+            p(
+              class="callout good",
+              "All required needs, rights, contract, strategy, evidence, and intent bindings are complete.",
+            )
           } else {
             div(class="callout bad", [
               strong("Resolve before approval"),
-              ul([
-                ..intake.validation.errors.map(value => li(value)),
-                ..intake.validation.unresolved_questions.map(value => li("Open question: " + value)),
-              ]),
+              ul(
+                [
+                  ..intake.validation.errors.map(value => li(value)),
+                  ..intake.validation.unresolved_questions.map(value => {
+                    li("Open question: " + value)
+                  }),
+                ],
+              ),
             ])
           },
           div(class="form-actions", [
@@ -309,7 +338,10 @@ fn render_needs_strategy(
               "Create intake-bound project",
             ),
           ]),
-          p(class="boundary-note", "The created brief, bible, and script copy the three exact MoonWiki intent records. No synthetic moonwiki:* ref is created."),
+          p(
+            class="boundary-note",
+            "The created brief, bible, and script copy the three exact MoonWiki intent records. No synthetic moonwiki:* ref is created.",
+          ),
         ])
       }
     },
@@ -385,7 +417,8 @@ fn gate_reason_label(reason : String) -> String {
     "creative_dependency_binding_stale" => "refresh stale creative bindings"
     "storyboard_approval_required" => "approve the storyboard"
     "animatic_approval_required" => "approve the animatic"
-    "storyboard_animatic_duration_mismatch" => "align storyboard and animatic duration"
+    "storyboard_animatic_duration_mismatch" =>
+      "align storyboard and animatic duration"
     "animatic_cost_outside_budget" => "bring animatic cost inside budget"
     "exact_rendered_animatic_approval_required" =>
       "approve the exact rendered animatic"
@@ -436,9 +469,7 @@ fn render_gate_rail(
           small("Controlled in the dedicated downstream workspace")
         },
         if value.status != "passed" && !value.ready {
-          small(
-            "Next: " + value.reasons.map(gate_reason_label).join(" · "),
-          )
+          small("Next: " + value.reasons.map(gate_reason_label).join(" · "))
         } else {
           small("")
         },
@@ -531,14 +562,14 @@ fn tower_number(value : Double?, suffix : String) -> String {
 }
 
 ///|
-fn render_tower_project(
-  project : TowerProjectProjection,
-) -> @rabbita.Html {
+fn render_tower_project(project : TowerProjectProjection) -> @rabbita.Html {
   let planned = project.planned
   article(class="tower-project-card", [
     div(class="tower-project-head", [
       div([
-        small(project.project_id + " · r" + project.project_revision.to_string()),
+        small(
+          project.project_id + " · r" + project.project_revision.to_string(),
+        ),
         h2(project.title),
       ]),
       div(class="chips", [
@@ -646,7 +677,9 @@ fn render_tower_project(
           "Founder hours actual " +
           tower_number(project.actual.founder_hours, "") +
           " · plan " +
-          planned.map(value => value.founder_hours.to_string()).unwrap_or("missing"),
+          planned
+          .map(value => value.founder_hours.to_string())
+          .unwrap_or("missing"),
         ),
       ]),
       article(class="tower-cost-card", [
@@ -703,7 +736,9 @@ fn render_control_tower_actuals(
     return section(class="panel", [
       div(class="panel-heading", [
         div([small("OPERATING EVIDENCE"), h2("Select a project")]),
-        p("Choose a project in the left rail to record its named operating actuals."),
+        p(
+          "Choose a project in the left rail to record its named operating actuals.",
+        ),
       ]),
     ])
   }
@@ -744,17 +779,18 @@ fn render_control_tower_actuals(
         "not payment inference",
         fn(value) { dispatch(SetControlTowerActualsField("revenue", value)) },
       ),
-      form_field(
-        "Founder hours",
-        form.founder_hours,
-        "blank until measured",
-        fn(value) { dispatch(SetControlTowerActualsField("founder", value)) },
-      ),
+      form_field("Founder hours", form.founder_hours, "blank until measured", fn(
+        value,
+      ) {
+        dispatch(SetControlTowerActualsField("founder", value))
+      }),
       form_field(
         "Completed labor hours",
         form.completed_labor_hours,
         "named time evidence",
-        fn(value) { dispatch(SetControlTowerActualsField("labor_hours", value)) },
+        fn(value) {
+          dispatch(SetControlTowerActualsField("labor_hours", value))
+        },
       ),
       form_field(
         "Forecast completion date",
@@ -851,8 +887,7 @@ fn render_control_tower(
           metric(
             "Contribution margin",
             tower_money(totals.actual_contribution_margin_cny),
-            "Plan CNY " +
-            totals.planned_contribution_margin_cny.to_string(),
+            "Plan CNY " + totals.planned_contribution_margin_cny.to_string(),
           ),
           metric(
             "Provider spend",
@@ -894,7 +929,12 @@ fn render_control_tower(
           div(
             class="tower-conflict-list",
             if tower.capacity_conflicts.is_empty() {
-              [p(class="callout good", "No cross-project capacity conflict is visible.")]
+              [
+                p(
+                  class="callout good",
+                  "No cross-project capacity conflict is visible.",
+                ),
+              ]
             } else {
               tower.capacity_conflicts.map(conflict => {
                 article(class="tower-conflict-card", [
@@ -918,7 +958,12 @@ fn render_control_tower(
                   div(
                     class="tower-candidates",
                     if conflict.reallocation_candidates.is_empty() {
-                      [p(class="inline-error", "No compatible free resource is recorded.")]
+                      [
+                        p(
+                          class="inline-error",
+                          "No compatible free resource is recorded.",
+                        ),
+                      ]
                     } else {
                       conflict.reallocation_candidates.map(candidate => {
                         div([
@@ -981,12 +1026,9 @@ fn render_control_tower(
                         strong("No named owner"),
                         button(
                           class="secondary",
-                          disabled=model.busy ||
-                            !model.operator.human_confirmed,
+                          disabled=model.busy || !model.operator.human_confirmed,
                           on_click=dispatch(
-                            AssignControlTowerException(
-                              exception.exception_id,
-                            ),
+                            AssignControlTowerException(exception.exception_id),
                           ),
                           "Assign to current operator",
                         ),
@@ -1067,6 +1109,15 @@ fn render_overview(
             project.episodes.map(episode => {
               article(class="episode-card", [
                 div([small(episode.id), h3(episode.title)]),
+                a(
+                  class="primary-link",
+                  href="/api/v2/projects/" +
+                    project.id +
+                    "/episodes/" +
+                    episode.id +
+                    "/ledger/view",
+                  "Open episode ledger",
+                ),
                 ul(
                   episode.scenes.map(scene => {
                     li([
@@ -1159,6 +1210,14 @@ fn render_creative(
                   18,
                   fn(text) { dispatch(SetArtifactDraft(text)) },
                 ),
+                if artifact_draft_is_dirty(model) {
+                  p(
+                    class="muted",
+                    "Unsaved creative edits retained for this project and artifact in this tab. The project Refresh action and project switches will not replace them. Review the current version before saving. Save a new immutable version before reloading or closing the browser tab.",
+                  )
+                } else {
+                  @html.nothing
+                },
                 text_field(
                   "Decision note",
                   model.operator.note,
@@ -1195,7 +1254,10 @@ fn render_creative(
         ]),
         section(class="panel", [
           div(class="panel-heading", [
-            div([small("After approved source assets"), h2("Lip-sync · translation · upscale")]),
+            div([
+              small("After approved source assets"),
+              h2("Lip-sync · translation · upscale"),
+            ]),
             p(
               "Run first-class postprocess jobs with exact source versions, rights, prompt, provider/model, retry and cost evidence; import immutable outputs into a shot, the Cut Editor, or a delivery build.",
             ),
@@ -1238,8 +1300,11 @@ fn render_creative(
             ),
             button(
               class="primary",
-              disabled=model.busy || !model.operator.human_confirmed ||
-                model.postprocess_workspace.map(value => value.tasks.is_empty()).unwrap_or(true),
+              disabled=model.busy ||
+                !model.operator.human_confirmed ||
+                model.postprocess_workspace
+                .map(value => value.tasks.is_empty())
+                .unwrap_or(true),
               on_click=dispatch(RunPostprocessTask),
               "Authorize / resume provider job",
             ),
@@ -1469,9 +1534,15 @@ fn render_routing(
             Some(plan) =>
               div([
                 if gate_passed(project, "G3") {
-                  p(class="boundary-note", "G3 production authorization is recorded for this exact routing plan.")
+                  p(
+                    class="boundary-note",
+                    "G3 production authorization is recorded for this exact routing plan.",
+                  )
                 } else {
-                  p(class="boundary-note", "Before execution, approve the exact rendered animatic and both routing decisions, then record G3 from the evidence-gate rail.")
+                  p(
+                    class="boundary-note",
+                    "Before execution, approve the exact rendered animatic and both routing decisions, then record G3 from the evidence-gate rail.",
+                  )
                 },
                 div(class="metrics", [
                   metric("Plan version", "\{plan.version}", plan.digest),
@@ -1520,9 +1591,15 @@ fn render_asset_factory(
     Some(_) => {
       let workspace = model.asset_factory
       let plan_count = workspace.map(value => value.plans.length()).unwrap_or(0)
-      let variant_count = workspace.map(value => value.variants.length()).unwrap_or(0)
-      let approved_count = workspace.map(value => value.approved_assets.length()).unwrap_or(0)
-      let binding_count = workspace.map(value => value.shot_bindings.length()).unwrap_or(0)
+      let variant_count = workspace
+        .map(value => value.variants.length())
+        .unwrap_or(0)
+      let approved_count = workspace
+        .map(value => value.approved_assets.length())
+        .unwrap_or(0)
+      let binding_count = workspace
+        .map(value => value.shot_bindings.length())
+        .unwrap_or(0)
       div(class="surface-stack", [
         section(class="panel", [
           div(class="panel-heading", [
@@ -1556,13 +1633,17 @@ fn render_asset_factory(
             ),
             button(
               class="secondary",
-              disabled=model.busy || !model.operator.human_confirmed || plan_count == 0,
+              disabled=model.busy ||
+                !model.operator.human_confirmed ||
+                plan_count == 0,
               on_click=dispatch(DecideAssetPlan("approve")),
               "Approve plan",
             ),
             button(
               class="primary",
-              disabled=model.busy || !model.operator.human_confirmed || plan_count == 0,
+              disabled=model.busy ||
+                !model.operator.human_confirmed ||
+                plan_count == 0,
               on_click=dispatch(RunAssetFactory),
               "Authorize and run bounded variants",
             ),
@@ -1578,7 +1659,10 @@ fn render_asset_factory(
         ]),
         section(class="panel", [
           div(class="panel-heading", [
-            div([small("Technical · identity · continuity · rights · safety"), h2("Variant QC and immutable approval")]),
+            div([
+              small("Technical · identity · continuity · rights · safety"),
+              h2("Variant QC and immutable approval"),
+            ]),
             p(
               "A named reviewer records all five dimensions before selecting one reusable version. Validation fixtures are not commercial media.",
             ),
@@ -1597,7 +1681,13 @@ fn render_asset_factory(
                   article(class="resource-card", [
                     div([
                       strong(variant.asset_id + " · " + variant.modality),
-                      status_chip(if approved { "approved" } else { variant.state }),
+                      status_chip(
+                        if approved {
+                          "approved"
+                        } else {
+                          variant.state
+                        },
+                      ),
                     ]),
                     code(variant.variant_id),
                     small(
@@ -1609,7 +1699,9 @@ fn render_asset_factory(
                         disabled=model.busy ||
                           !model.operator.human_confirmed ||
                           variant.state != "completed",
-                        on_click=dispatch(RecordAssetVariantQc(variant.variant_id)),
+                        on_click=dispatch(
+                          RecordAssetVariantQc(variant.variant_id),
+                        ),
                         "Record five-dimension QC",
                       ),
                       button(
@@ -1618,8 +1710,14 @@ fn render_asset_factory(
                           !model.operator.human_confirmed ||
                           variant.state != "completed" ||
                           approved,
-                        on_click=dispatch(ApproveAssetVariant(variant.variant_id)),
-                        if approved { "Approved immutable" } else { "Approve selected output" },
+                        on_click=dispatch(
+                          ApproveAssetVariant(variant.variant_id),
+                        ),
+                        if approved {
+                          "Approved immutable"
+                        } else {
+                          "Approve selected output"
+                        },
                       ),
                     ]),
                   ])
@@ -1641,9 +1739,13 @@ fn render_storyboard_animatic(
     None => render_create_project(dispatch, model)
     Some(project) => {
       let workspace = model.animatic_workspace
-      let attempts = workspace.map(value => value.attempts.length()).unwrap_or(0)
+      let attempts = workspace
+        .map(value => value.attempts.length())
+        .unwrap_or(0)
       let renders = workspace.map(value => value.renders.length()).unwrap_or(0)
-      let approvals = workspace.map(value => value.approvals.length()).unwrap_or(0)
+      let approvals = workspace
+        .map(value => value.approvals.length())
+        .unwrap_or(0)
       let latest : AnimaticRenderProjection? = match workspace {
         Some(value) if !value.renders.is_empty() =>
           Some(value.renders[value.renders.length() - 1])
@@ -1652,7 +1754,10 @@ fn render_storyboard_animatic(
       div(class="surface-stack", [
         section(class="panel", [
           div(class="panel-heading", [
-            div([small("G3 real-media approval"), h2("Rendered storyboard and timed animatic")]),
+            div([
+              small("G3 real-media approval"),
+              h2("Rendered storyboard and timed animatic"),
+            ]),
             p(
               "Bind the approved bible, script, storyboard, exact reusable asset versions, temporary voice/music, captions, transitions, provider evidence and budget before expensive shot generation.",
             ),
@@ -1679,14 +1784,21 @@ fn render_storyboard_animatic(
             ),
             button(
               class="primary",
-              disabled=model.busy || !model.operator.human_confirmed ||
+              disabled=model.busy ||
+                !model.operator.human_confirmed ||
                 workspace.map(value => value.plans.is_empty()).unwrap_or(true),
               on_click=dispatch(RenderAnimatic),
-              if attempts > 0 && renders == 0 { "Resume / retry render" } else { "Render sheet + timed MP4" },
+              if attempts > 0 && renders == 0 {
+                "Resume / retry render"
+              } else {
+                "Render sheet + timed MP4"
+              },
             ),
             button(
               class="primary",
-              disabled=model.busy || !model.operator.human_confirmed || latest is None,
+              disabled=model.busy ||
+                !model.operator.human_confirmed ||
+                latest is None,
               on_click=dispatch(ApproveRenderedAnimatic),
               "Approve exact rendered version",
             ),
@@ -1701,7 +1813,9 @@ fn render_storyboard_animatic(
             section(class="panel", [
               h3("Render gaps"),
               p(
-                if model.asset_factory.map(value => value.approved_assets.is_empty()).unwrap_or(true) {
+                if model.asset_factory
+                  .map(value => value.approved_assets.is_empty())
+                  .unwrap_or(true) {
                   "Approve reusable visual, voice, and music assets first."
                 } else {
                   "Record the exact plan, then render the production-length approval media."
@@ -1709,11 +1823,23 @@ fn render_storyboard_animatic(
               ),
             ])
           Some(render) => {
-            let base = "/api/v2/projects/" + project.id + "/animatic-workspace/renders/" + render.reference.version.to_string()
+            let base = "/api/v2/projects/" +
+              project.id +
+              "/animatic-workspace/renders/" +
+              render.reference.version.to_string()
             section(class="panel", [
               div(class="panel-heading", [
-                div([small("Immutable render v\{render.reference.version}"), h2("Review actual timing before G3")]),
-                status_chip(if approvals > 0 { "approved" } else { "review-required" }),
+                div([
+                  small("Immutable render v\{render.reference.version}"),
+                  h2("Review actual timing before G3"),
+                ]),
+                status_chip(
+                  if approvals > 0 {
+                    "approved"
+                  } else {
+                    "review-required"
+                  },
+                ),
               ]),
               @html.img(
                 class="animatic-sheet",
@@ -1729,14 +1855,30 @@ fn render_storyboard_animatic(
                 @html.nothing,
               ),
               div(class="metrics", [
-                metric("Duration", "\{render.duration_seconds}s", "\{render.panel_count} timed panels"),
-                metric("Actual cost", "CNY \{render.budget.actual_cny}", "Ceiling CNY \{render.budget.planned_cny}"),
+                metric(
+                  "Duration",
+                  "\{render.duration_seconds}s",
+                  "\{render.panel_count} timed panels",
+                ),
+                metric(
+                  "Actual cost",
+                  "CNY \{render.budget.actual_cny}",
+                  "Ceiling CNY \{render.budget.planned_cny}",
+                ),
                 metric("Provider", render.provider, render.model),
                 metric("Provenance", "Immutable", render.video_digest),
               ]),
               div(class="form-actions", [
-                a(class="secondary", href=base + "/sheet", "Download storyboard sheet"),
-                a(class="secondary", href=base + "/video", "Download timed animatic"),
+                a(
+                  class="secondary",
+                  href=base + "/sheet",
+                  "Download storyboard sheet",
+                ),
+                a(
+                  class="secondary",
+                  href=base + "/video",
+                  "Download timed animatic",
+                ),
               ]),
             ])
           }
@@ -1847,7 +1989,10 @@ fn render_qc_workbench(
     ]),
     div(class="qc-divider", ([] : Array[@rabbita.Html])),
     div(class="panel-heading", [
-      div([small("Machine evidence, human decision"), h2("Automated analyzer jobs")]),
+      div([
+        small("Machine evidence, human decision"),
+        h2("Automated analyzer jobs"),
+      ]),
       p(
         "Run codec, duration, blank-frame, audio, subtitle, flicker, lip-sync, identity and continuity analyzers against the exact output. Receipts create evidence-bound findings but never approve them.",
       ),
@@ -1890,8 +2035,11 @@ fn render_qc_workbench(
       ),
       button(
         class="primary",
-        disabled=model.busy || !model.operator.human_confirmed ||
-          model.analyzer_workspace.map(value => value.tasks.is_empty()).unwrap_or(true),
+        disabled=model.busy ||
+          !model.operator.human_confirmed ||
+          model.analyzer_workspace
+          .map(value => value.tasks.is_empty())
+          .unwrap_or(true),
         on_click=dispatch(RunAnalyzerTask),
         "Run / resume analyzer",
       ),
@@ -2091,7 +2239,8 @@ fn render_delivery(
               class="primary",
               disabled=model.busy ||
                 project.master is None ||
-                project.delivery_package is None,
+                project.delivery_package is None ||
+                delivery_cut_selection(model, project) is Err(_),
               on_click=dispatch(CreateDeliveryBuild),
               "Create delivery build",
             ),
@@ -2124,6 +2273,75 @@ fn render_delivery(
           ]),
         ]),
         render_delivery_governance(dispatch, model, project),
+        section(class="panel", [
+          h3("Selected captions"),
+          p(
+            "Delivery uses the verified SRT from this exact promoted master. Preview its text, timestamps and source version before creating a build. Missing or changed captions must be restored or re-exported in Cut Editor.",
+          ),
+          a(
+            class="primary-link",
+            href="/api/v2/projects/" + project.id + "/delivery-captions/view",
+            "Preview selected captions and download SRT",
+          ),
+          match project.master {
+            Some(master) =>
+              div(class="delivery-facts", [
+                span([
+                  small("Caption source"),
+                  strong(
+                    "Promoted master · \{master.master_id} · v\{master.version}",
+                  ),
+                ]),
+                span([small("Master SHA-256"), code(master.sha256)]),
+                span([
+                  small("Master duration"),
+                  strong("\{master.media.duration_seconds} seconds"),
+                ]),
+              ])
+            None =>
+              p(
+                "Promote an exact reviewed master to select a cut and its caption source.",
+              )
+          },
+          h3("Optional contiguous cut"),
+          p(
+            "Leave both fields blank for no cut. Use seconds with up to 3 decimal places; a cut may be at most 180 seconds long and must fit within the promoted master.",
+          ),
+          div(class="form-grid", [
+            form_field(
+              "Cut start (seconds)",
+              model.delivery_cut_start,
+              "e.g. 12.250",
+              value => dispatch(SetDeliveryCutStart(value)),
+            ),
+            form_field(
+              "Cut end (seconds)",
+              model.delivery_cut_end,
+              "e.g. 42.750",
+              value => dispatch(SetDeliveryCutEnd(value)),
+            ),
+          ]),
+          match delivery_cut_selection(model, project) {
+            Ok(Some(cut)) =>
+              div(class="surface-stack", [
+                p(
+                  "Selected cut: selected-cut · source master · \{cut.start_ms}–\{cut.end_ms} ms · \{cut.end_ms - cut.start_ms} ms long",
+                ),
+                a(
+                  class="primary-link",
+                  href="/api/v2/projects/\{project.id}/delivery-captions/cut/\{cut.start_ms}/\{cut.end_ms}/view",
+                  "Preview selected cut captions and download SRT",
+                ),
+              ])
+            Ok(None) =>
+              p("No cut selected; full-master captions are unchanged.")
+            Err(message) => p(class="inline-error", message)
+          },
+          p(
+            class="boundary-note",
+            "Cues intersecting the selected cut are clipped to its boundaries and rebased to start at zero. Reordering, speed changes and cut chains require a corrected Cut Editor export.",
+          ),
+        ]),
         if model.delivery_builds.is_empty() {
           div(class="panel empty-large", [
             h3("No build yet"),
@@ -2765,6 +2983,7 @@ fn render_commercial(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
         ),
       ]),
     ]),
+    render_quote_initializations(dispatch, model),
     section(class="panel", [
       div(class="panel-heading", [
         div([small("Design partner intake"), h2("Record a lead")]),
@@ -3227,6 +3446,20 @@ fn render_status(model : Model) -> @rabbita.Html {
       @html.nothing,
     ),
     p(model.status),
+    div(
+      class="command-notices",
+      model.command_notices.map(message => p(class="muted", message)),
+    ),
+    if !model.project_pending.is_empty() {
+      p("Still loading: " + model.project_pending.join(", "))
+    } else {
+      @html.nothing
+    },
+    div(
+      model.project_load_errors.map(item => {
+        p(class="global-error", item.0 + ": " + item.1)
+      }),
+    ),
     match model.error {
       Some(value) => p(class="global-error", value)
       None => @html.nothing
@@ -3236,6 +3469,30 @@ fn render_status(model : Model) -> @rabbita.Html {
 
 ///|
 fn render_surface(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
+  if model.selected_project_id != "" &&
+    model.project is None &&
+    model.tab != ControlTower &&
+    model.tab != NeedsStrategy &&
+    model.tab != Commercial {
+    return div(class="empty-large", [
+      h2(
+        if model.loading {
+          "Loading selected project"
+        } else {
+          "Project could not be loaded"
+        },
+      ),
+      p("Selected project: " + model.selected_project_id),
+      p(
+        "Local creative edits are retained. You can select another project or retry this one.",
+      ),
+      button(
+        class="secondary",
+        on_click=dispatch(RefreshProject),
+        "Retry project",
+      ),
+    ])
+  }
   match model.tab {
     Overview => render_overview(dispatch, model, model.project)
     ControlTower => render_control_tower(dispatch, model)

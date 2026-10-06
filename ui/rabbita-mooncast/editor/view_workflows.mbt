@@ -180,6 +180,7 @@ fn production_handoff_view(
         @html.span("G4 production project"),
         @html.input(
           value=model.production_project_id,
+          read_only=model.busy,
           placeholder="project-id",
           on_input=dispatch.map(value => ProductionProjectChanged(value)),
         ),
@@ -221,6 +222,7 @@ fn production_handoff_view(
         @html.span("Export job / resume key"),
         @html.input(
           value=state.job_id,
+          read_only=model.busy,
           placeholder="production-master-1",
           on_input=dispatch.map(value => ExportChanged("job_id", value)),
         ),
@@ -234,7 +236,7 @@ fn production_handoff_view(
       ),
       @html.button(
         type_="button",
-        disabled=state.job_id == "",
+        disabled=state.job_id == "" || model.busy,
         on_click=dispatch(PollExport),
         "Receipt",
       ),
@@ -251,7 +253,11 @@ fn production_handoff_view(
       if state.download_url != "" {
         @html.a(href=state.download_url, target=@html.Blank, "Download")
       } else {
-        @html.nothing
+        @html.small(
+          "No verified export loaded for " +
+          model.project_id +
+          ". Use its resume key and Receipt to retrieve an existing result.",
+        )
       },
       @html.small(
         "\{state.receipt_state} · canonical r\{state.canonical_revision} · timeline r\{state.timeline_revision} · full \{timecode(model, duration_ticks(model))}",
@@ -370,8 +376,13 @@ fn editor_footer(dispatch : @rabbita.Emit[Msg], model : Model) -> @rabbita.Html 
         @html.button(
           type_="button",
           hidden=model.retry is None,
+          disabled=model.catalog_state == CatalogLoading || model.busy,
           on_click=dispatch(RetryPending),
-          "Retry operation",
+          if model.retry is Some(RetryCatalog) {
+            "Retry project catalog"
+          } else {
+            "Retry operation"
+          },
         ),
         @html.button(type_="button", on_click=dispatch(ClearError), "Dismiss"),
       ]

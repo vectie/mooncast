@@ -12,6 +12,8 @@ import {
 // Values
 pub fn delivery_build_request_from_json(StringView) -> DeliveryBuildRequest raise
 
+pub fn delivery_output_captions(Bytes, Double, @vectie/mooncast/execution.DeliveryOutputSpec) -> DeliveryOutputCaptions raise
+
 pub fn provider_authority_from_json(StringView) -> ProviderAuthorityReceipt raise
 
 pub fn provider_authority_receipt_digest(ProviderAuthorityReceipt) -> String
@@ -162,6 +164,12 @@ pub async fn DeliveryFactoryService::publication_authority_request(Self, String,
 pub async fn DeliveryFactoryService::record_acceptance(Self, String, @vectie/mooncast/execution.DeliveryBuildAcceptance) -> DeliveryAcceptanceRecord
 pub async fn DeliveryFactoryService::recover_interrupted(Self) -> Int
 pub async fn DeliveryFactoryService::retry(Self, String, Int, String, String) -> DeliveryFactoryRecord
+
+pub(all) struct DeliveryOutputCaptions {
+  content : String
+  digest : String
+  mapping : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct ProviderAdapterConfig {
   adapter_id : String
@@ -330,4 +338,3 @@ pub(all) struct ShotProviderAuthorization {
 // Type aliases
 
 // Traits
-

@@ -18,6 +18,13 @@ struct AnnotationDraft {
 }
 
 ///|
+priv struct ClientOperation {
+  portal_generation : Int
+  operation_id : Int
+  context : String
+} derive(Eq)
+
+///|
 struct DecisionDraft {
   actor : String
   decision : String
@@ -33,6 +40,13 @@ struct Model {
   projection : ClientProjection?
   availability : PortalAvailability
   busy : Bool
+  portal_generation : Int
+  projection_generation : Int
+  operation_sequence : Int
+  pending_annotation : ClientOperation?
+  pending_decision : ClientOperation?
+  annotation_version : Int
+  annotation_drafts : Map[String, AnnotationDraft]
   playhead_seconds : Double
   annotation : AnnotationDraft
   decision : DecisionDraft
@@ -44,20 +58,20 @@ struct Model {
 enum Msg {
   UrlChanged(@url.Url)
   Reload
-  ProjectionLoaded(Result[ClientProjection, Error])
+  ProjectionLoaded(Int, Int, Result[ClientProjection, Error])
   MediaTimeChanged(Double)
   CaptureTimecode
   AnnotationTimecodeChanged(String)
   AnnotationAuthorChanged(String)
   AnnotationBodyChanged(String)
   SubmitAnnotation
-  AnnotationSaved(Result[ClientAnnotation, Error])
+  AnnotationSaved(ClientOperation, Int, Result[ClientAnnotation, Error])
   DecisionActorChanged(String)
   DecisionNoteChanged(String)
   SelectDecision(String)
   ToggleDecisionConfirmation
   SubmitDecision
-  DecisionSaved(String, Result[ClientDecisionReceipt, Error])
+  DecisionSaved(ClientOperation, String, Result[ClientDecisionReceipt, Error])
   ClearError
 }
 
@@ -165,8 +179,15 @@ fn initial_model(url : @url.Url?) -> Model {
       Unavailable
     },
     busy: false,
+    portal_generation: 0,
+    projection_generation: 0,
+    operation_sequence: 0,
+    pending_annotation: None,
+    pending_decision: None,
+    annotation_version: 0,
+    annotation_drafts: {},
     playhead_seconds: 0.0,
-    annotation: { timecode: "0.000", author: "", body: "" },
+    annotation: { timecode: "0.000", author: "", body: "", },
     decision: {
       actor: "",
       decision: "accept",

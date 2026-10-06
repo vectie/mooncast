@@ -15,7 +15,7 @@ fn main {
   let startup = if token_from_url(model.url) == "" {
     @rabbita.none
   } else {
-    load_projection(emit, model)
+    emit(Reload)
   }
   @rabbita.new(app)..with_init(startup).mount("app")
 }

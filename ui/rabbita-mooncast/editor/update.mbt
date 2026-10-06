@@ -38,27 +38,28 @@ fn workspace_bootstrap_http(
 }
 
 ///|
-fn update(
-  dispatch : @rabbita.Emit[Msg],
+fn update_project(
+  raw_dispatch : @rabbita.Emit[Msg],
   msg : Msg,
   model : Model,
 ) -> (@rabbita.Cmd, Model) {
+  let dispatch = project_dispatch(raw_dispatch, model, msg)
   match msg {
+    ProjectReply(_, _, _) | ExportReply(_, _, _) => (@rabbita.none, model)
     Bootstrap => {
       guard !model.bootstrapped else { return (@rabbita.none, model) }
-      (
-        @http.get("/api/editor/projects").expect_json(result => {
-          dispatch(ProjectsLoaded(result))
-        }),
-        {
-          ..model,
-          bootstrapped: true,
-          loading: true,
-          status: "Loading editor projects…",
-        },
+      load_project_catalog(
+        dispatch,
+        { ..model, bootstrapped: true, },
+        auto_open=true,
       )
     }
-    ProjectsLoaded(result) =>
+    ReloadProjects => load_project_catalog(dispatch, model, auto_open=false)
+    ProjectsLoaded(generation, result) => {
+      guard generation == model.catalog_generation &&
+        model.catalog_state == CatalogLoading else {
+        return (@rabbita.none, model)
+      }
       match result {
         Ok(response) => {
           guard decode_project_response(response) is Some(projects) else {
@@ -67,28 +68,56 @@ fn update(
               {
                 ..model,
                 loading: false,
+                catalog_state: CatalogFailed,
+                status: "Editor project catalog unavailable.",
                 error: "Editor project catalog used an unsupported response contract.",
+                retry: Some(RetryCatalog),
               },
             )
           }
           if projects.is_empty() {
             return (
-              workspace_bootstrap_http(dispatch, model, model.project_id),
+              if model.catalog_auto_open {
+                workspace_bootstrap_http(dispatch, model, model.project_id)
+              } else {
+                @rabbita.none
+              },
               {
                 ..model,
                 projects,
-                loading: true,
-                status: "No editor project. Loading the project-free creative workspace…",
+                catalog_state: CatalogEmpty,
+                loading: model.catalog_auto_open,
+                status: if model.catalog_auto_open {
+                  "No editor project. Loading the project-free creative workspace…"
+                } else {
+                  "No editor projects yet. Open the creative workspace to begin."
+                },
                 error: "",
+                retry: None,
               },
             )
           }
           let requested = projects
             .iter()
-            .find_first(item => item.project_id == model.project_id)
+            .find_first(item => item.project_id == chosen_project(model))
           let project_id = option_or(requested, projects.get(0))
             .map(item => item.project_id)
             .unwrap_or(model.project_id)
+          if !model.catalog_auto_open {
+            return (
+              @rabbita.none,
+              {
+                ..model,
+                projects,
+                selected_project_id: Some(project_id),
+                catalog_state: CatalogReady,
+                loading: false,
+                status: "Project catalog recovered. Choose a project, then Open project.",
+                error: "",
+                retry: None,
+              },
+            )
+          }
           let opened = @http.get("/api/editor/projects/" + project_id).expect_json(value => {
               dispatch(WorkspaceOpened(model.open_generation + 1, value))
             },
@@ -102,10 +131,12 @@ fn update(
               ..model,
               projects,
               project_id,
+              catalog_state: CatalogReady,
               open_generation: model.open_generation + 1,
               loading: true,
               status: "Opening \{project_id}…",
               error: "",
+              retry: None,
             },
           )
         }
@@ -115,17 +146,20 @@ fn update(
             {
               ..model,
               loading: false,
+              catalog_state: CatalogFailed,
+              status: "Editor project catalog unavailable.",
               error: "Could not load editor projects.",
-              retry: Some(RetryOpen(model.project_id)),
+              retry: Some(RetryCatalog),
             },
           )
       }
+    }
     WorkspaceCatalogLoaded(result) =>
       match result {
         Err(_) =>
           (
             @rabbita.none,
-            { ..model, error: "Could not load the governed node catalog." },
+            { ..model, error: "Could not load the governed node catalog.", },
           )
         Ok(response) => {
           let (definitions, rejected) = decode_workspace_catalog(response)
@@ -214,6 +248,26 @@ fn update(
             _ => None
           }
           match decoded {
+            Some(graph) if graph.project_id != model.project_id =>
+              (
+                @rabbita.none,
+                {
+                  ..model,
+                  loading: false,
+                  error: "The returned graph belongs to another project.",
+                },
+              )
+            Some(graph) if model.workspace_graph_dirty &&
+              model.workspace_graph.map(value => value.graph_id) ==
+              Some(graph.graph_id) =>
+              (
+                @rabbita.none,
+                {
+                  ..model,
+                  loading: false,
+                  status: "Local graph edits retained for this project. Save a new revision before closing the tab.",
+                },
+              )
             Some(graph) =>
               (
                 @rabbita.none,
@@ -372,12 +426,20 @@ fn update(
           }
           match decoded {
             Some(value) =>
-              (@rabbita.none, { ..model, workspace_proposals: value.proposals })
+              (
+                @rabbita.none,
+                { ..model, workspace_proposals: value.proposals, },
+              )
             None => (@rabbita.none, model)
           }
         }
       }
-    SelectProject(project_id) => (@rabbita.none, { ..model, project_id, })
+    SelectProject(project_id) =>
+      if model.projects.any(item => item.project_id == project_id) {
+        (@rabbita.none, { ..model, selected_project_id: Some(project_id), })
+      } else {
+        (@rabbita.none, model)
+      }
     SwitchWorkspaceLens(workspace_lens) =>
       (@rabbita.none, { ..model, workspace_lens, })
     SelectWorkspaceRecipe(selected_workspace_recipe) => {
@@ -848,7 +910,7 @@ fn update(
     WorkspaceAssetDragStarted(workspace_dragged_asset) =>
       (@rabbita.none, { ..model, workspace_dragged_asset, })
     WorkspaceAssetAddRequested(workspace_dragged_asset) =>
-      update(dispatch, WorkspaceAssetDropped, {
+      update(raw_dispatch, WorkspaceAssetDropped, {
         ..model,
         workspace_dragged_asset,
       })
@@ -1507,7 +1569,7 @@ fn update(
       }
       let prepared = workspace_graph_bind_public_input(model)
       if prepared.workspace_graph_dirty {
-        update(dispatch, SaveWorkspaceGraph("selected"), prepared)
+        update(raw_dispatch, SaveWorkspaceGraph("selected"), prepared)
       } else {
         (
           start_workspace_graph_http(dispatch, prepared, true),
@@ -1533,7 +1595,7 @@ fn update(
       }
       let prepared = workspace_graph_bind_public_input(model)
       if prepared.workspace_graph_dirty {
-        update(dispatch, SaveWorkspaceGraph("all"), prepared)
+        update(raw_dispatch, SaveWorkspaceGraph("all"), prepared)
       } else {
         (
           start_workspace_graph_http(dispatch, prepared, false),
@@ -1575,9 +1637,9 @@ fn update(
             ["Saved graph revision validated, frozen, and queued"],
           }
           if model.selected_workspace_recipe == CombineVideosRecipe {
-            update(dispatch, StartUtilityConcat, started)
+            update(raw_dispatch, StartUtilityConcat, started)
           } else {
-            update(dispatch, ClaimWorkspaceNode, started)
+            update(raw_dispatch, ClaimWorkspaceNode, started)
           }
         }
         Err(_) =>
@@ -1793,7 +1855,7 @@ fn update(
                 status: "Human gate decision recorded with evidence.",
                 error: "",
               }
-              update(dispatch, ClaimWorkspaceNode, decided)
+              update(raw_dispatch, ClaimWorkspaceNode, decided)
             }
           }
         }
@@ -1897,10 +1959,29 @@ fn update(
         Err(_) =>
           (
             @rabbita.none,
-            { ..model, busy: false, error: "Workspace " + action + " failed." },
+            { ..model, busy: false, error: "Workspace " + action + " failed.", },
           )
       }
     OpenProject => {
+      guard !model.busy && !model.workspace_graph_saving else {
+        return (@rabbita.none, model)
+      }
+      if model.catalog_state == CatalogEmpty {
+        return (
+          workspace_bootstrap_http(dispatch, model, model.project_id),
+          {
+            ..model,
+            loading: true,
+            status: "Loading the project-free creative workspace…",
+            error: "",
+            retry: None,
+          },
+        )
+      }
+      guard model.catalog_state == CatalogReady else {
+        return (@rabbita.none, model)
+      }
+      let model = activate_editor_project(model, chosen_project(model))
       let generation = model.open_generation + 1
       let opened = @http.get("/api/editor/projects/" + model.project_id).expect_json(result => {
           dispatch(WorkspaceOpened(generation, result))
@@ -1945,10 +2026,7 @@ fn update(
         {
           ..model,
           workspace: None,
-          selected_take_id: "",
-          selected_clip_ids: [],
           selected_transition_id: "",
-          playhead_ticks: 0,
           last_animation_ms: None,
           timeline_drag: None,
           timeline_scroll_x: 0,
@@ -1962,7 +2040,11 @@ fn update(
       )
     }
     ProductionProjectChanged(value) =>
-      (@rabbita.none, { ..model, production_project_id: value })
+      if model.busy {
+        (@rabbita.none, model)
+      } else {
+        (@rabbita.none, { ..model, production_project_id: value, })
+      }
     UtilityConcatFilesSelected(files) =>
       (
         @rabbita.none,
@@ -2291,10 +2373,11 @@ fn update(
         }
       }
     ImportProduction => {
+      guard !model.busy else { return (@rabbita.none, model) }
       guard model.production_project_id.trim().length() > 0 else {
         return (
           @rabbita.none,
-          { ..model, error: "Enter a G4 production project id." },
+          { ..model, error: "Enter a G4 production project id.", },
         )
       }
       (
@@ -2328,6 +2411,7 @@ fn update(
             )
           }
           let project_id = model.production_project_id
+          let model = activate_editor_project(model, project_id)
           let generation = model.open_generation + 1
           (
             @http.get("/api/editor/projects/" + project_id).expect_json(value => {
@@ -2336,6 +2420,7 @@ fn update(
             {
               ..model,
               project_id,
+              catalog_state: CatalogReady,
               open_generation: generation,
               busy: false,
               loading: true,
@@ -2366,6 +2451,16 @@ fn update(
                 ..model,
                 loading: false,
                 error: "Editor workspace used an unsupported response contract.",
+              },
+            )
+          }
+          guard workspace_matches_project(workspace, model.project_id) else {
+            return (
+              @rabbita.none,
+              {
+                ..model,
+                loading: false,
+                error: "The returned workspace belongs to another project.",
               },
             )
           }
@@ -2411,6 +2506,16 @@ fn update(
               },
             )
           }
+          guard workspace_matches_project(workspace, model.project_id) else {
+            return (
+              @rabbita.none,
+              {
+                ..model,
+                loading: false,
+                error: "The returned snapshot belongs to another project.",
+              },
+            )
+          }
           let next = normalized_after_snapshot(model, workspace)
           let command = match selected_take(next) {
             Some(take) if take.source.analysis_url is Some(url) =>
@@ -2442,21 +2547,21 @@ fn update(
           })
         _ => @rabbita.none
       }
-      (command, { ..model, selected_take_id: take_id, analysis: None })
+      (command, { ..model, selected_take_id: take_id, analysis: None, })
     }
     SelectAdjacentTake(direction) => {
       let visible = filtered_takes(model)
       guard visible.length() > 0 else { return (@rabbita.none, model) }
       let index = take_position(visible, model.selected_take_id)
       let next = Int::min(Int::max(0, index + direction), visible.length() - 1)
-      update(dispatch, SelectTake(visible[next].take_id), model)
+      update(raw_dispatch, SelectTake(visible[next].take_id), model)
     }
     AnalysisLoaded(take_id, result) =>
       match result {
         Ok(response) if take_id == model.selected_take_id =>
           match decode_analysis_response(response) {
             Some(analysis) =>
-              (@rabbita.none, { ..model, analysis: Some(analysis), error: "" })
+              (@rabbita.none, { ..model, analysis: Some(analysis), error: "", })
             None =>
               (
                 @rabbita.none,
@@ -2525,7 +2630,7 @@ fn update(
       let index = clip_position(ordered, clip.clip_id)
       let next = Int::min(Int::max(0, index + direction), ordered.length() - 1)
       update(
-        dispatch,
+        raw_dispatch,
         SelectClip(ordered[next].clip_id, extend_selection),
         model,
       )
@@ -2549,7 +2654,7 @@ fn update(
     ScrubChanged(value) => {
       let seconds = parse_number(value, 0.0)
       update(
-        dispatch,
+        raw_dispatch,
         SeekTicks(
           (seconds * Double::from_int(ticks_per_second(model))).to_int(),
         ),
@@ -2558,9 +2663,9 @@ fn update(
     }
     StepFrame(direction) =>
       update(
-        dispatch,
+        raw_dispatch,
         SeekTicks(model.playhead_ticks + direction * frame_ticks(model)),
-        { ..model, playing: false, last_animation_ms: None },
+        { ..model, playing: false, last_animation_ms: None, },
       )
     TogglePlay => {
       let playing = duration_ticks(model) > 0 && !model.playing
@@ -2727,7 +2832,7 @@ fn update(
             clip.start_tick + local_tick,
           ),
         )
-        return update(dispatch, SplitSelection, {
+        return update(raw_dispatch, SplitSelection, {
           ..model,
           selected_clip_ids: [clip_id],
           selected_transition_id: "",
@@ -2801,22 +2906,26 @@ fn update(
       match model.timeline_drag {
         None => (@rabbita.none, model)
         Some(drag) => {
-          let next = { ..model, timeline_drag: None }
+          let next = { ..model, timeline_drag: None, }
           if drag.preview_delta_ticks == 0 {
             (@rabbita.none, next)
           } else {
             match drag.mode {
               DragMove =>
-                update(dispatch, MoveSelection(drag.preview_delta_ticks), next)
+                update(
+                  raw_dispatch,
+                  MoveSelection(drag.preview_delta_ticks),
+                  next,
+                )
               DragTrimStart =>
                 update(
-                  dispatch,
+                  raw_dispatch,
                   TrimSelection("start", drag.preview_delta_ticks),
                   next,
                 )
               DragTrimEnd =>
                 update(
-                  dispatch,
+                  raw_dispatch,
                   TrimSelection("end", drag.preview_delta_ticks),
                   next,
                 )
@@ -3156,8 +3265,18 @@ fn update(
               },
             )
           }
+          guard workspace_matches_project(incoming, model.project_id) else {
+            return (
+              @rabbita.none,
+              {
+                ..model,
+                busy: false,
+                error: "The returned edit belongs to another project; reload this project to reconcile.",
+              },
+            )
+          }
           let next = normalized_after_snapshot(
-            { ..model, undo_stack, redo_stack },
+            { ..model, undo_stack, redo_stack, },
             incoming,
           )
           (
@@ -3987,15 +4106,33 @@ fn update(
           )
       }
     ExportChanged(field, value) => {
+      guard field != "job_id" || !model.busy else {
+        return (@rabbita.none, model)
+      }
       let state = model.export_state
       let export_state = match field {
-        "preset" => { ..state, output_preset: value }
-        "job_id" => { ..state, job_id: value }
-        "actor" => { ..state, actor: value }
-        "authority_ref" => { ..state, authority_ref: value }
+        "preset" => { ..state, output_preset: value, }
+        "job_id" if value != state.job_id =>
+          {
+            ..initial_model().export_state,
+            job_id: value,
+            output_preset: state.output_preset,
+            actor: state.actor,
+            authority_ref: state.authority_ref,
+          }
+        "actor" => { ..state, actor: value, }
+        "authority_ref" => { ..state, authority_ref: value, }
         _ => state
       }
-      (@rabbita.none, { ..model, export_state, })
+      (
+        @rabbita.none,
+        {
+          ..model,
+          export_state,
+          export_generation: model.export_generation +
+          (if field == "job_id" && value != state.job_id { 1 } else { 0 }),
+        },
+      )
     }
     ApplyOutputPreset => {
       let payload : Json = {
@@ -4170,7 +4307,7 @@ fn update(
     }
     RetryPreview => {
       guard model.preview_job_id != "" else {
-        return update(dispatch, StartPreview, model)
+        return update(raw_dispatch, StartPreview, model)
       }
       let generation = model.preview_generation + 1
       (
@@ -4193,6 +4330,7 @@ fn update(
       )
     }
     StartExport => {
+      guard !model.busy else { return (@rabbita.none, model) }
       guard timeline(model) is Some(value) else {
         return (@rabbita.none, model)
       }
@@ -4242,6 +4380,7 @@ fn update(
           export_state: {
             ..model.export_state,
             job_id: id,
+            download_url: "",
             promoted: false,
             handed_off: false,
             receipt_state: "requested",
@@ -4255,6 +4394,7 @@ fn update(
             handoff_status: "not-prepared",
           },
           status: "Freezing and exporting canonical r\{selected_revision(model)} / timeline r\{value.revision}…",
+          export_generation: model.export_generation + 1,
         },
       )
     }
@@ -4349,6 +4489,7 @@ fn update(
           )
       }
     PollExport => {
+      guard !model.busy else { return (@rabbita.none, model) }
       guard model.export_state.job_id != "" else {
         return (@rabbita.none, model)
       }
@@ -4359,7 +4500,12 @@ fn update(
           "/exports/" +
           model.export_state.job_id,
         ).expect_json(result => dispatch(ExportPolled(result))),
-        { ..model, busy: true, status: "Reading exact export receipt…" },
+        {
+          ..model,
+          busy: true,
+          export_generation: model.export_generation + 1,
+          status: "Reading exact export receipt…",
+        },
       )
     }
     ExportPolled(result) =>
@@ -4425,10 +4571,11 @@ fn update(
         Err(_) =>
           (
             @rabbita.none,
-            { ..model, busy: false, error: "Could not read export receipt." },
+            { ..model, busy: false, error: "Could not read export receipt.", },
           )
       }
     RetryExport => {
+      guard !model.busy else { return (@rabbita.none, model) }
       guard model.export_state.job_id != "" else {
         return (@rabbita.none, model)
       }
@@ -4446,11 +4593,13 @@ fn update(
           ..model,
           busy: true,
           status: "Retrying the exact typed production export…",
+          export_generation: model.export_generation + 1,
           error: "",
         },
       )
     }
     PromoteMaster => {
+      guard !model.busy else { return (@rabbita.none, model) }
       guard model.export_state.job_id != "" else {
         return (@rabbita.none, model)
       }
@@ -4490,8 +4639,9 @@ fn update(
         {
           ..model,
           busy: true,
-          export_state: { ..model.export_state, promoted: false },
+          export_state: { ..model.export_state, promoted: false, },
           status: "Promoting exact export under named authority…",
+          export_generation: model.export_generation + 1,
         },
       )
     }
@@ -4543,12 +4693,13 @@ fn update(
             {
               ..model,
               busy: false,
-              export_state: { ..model.export_state, promoted: false },
+              export_state: { ..model.export_state, promoted: false, },
               error: "Master promotion failed; verify authority and project revision.",
             },
           )
       }
     PrepareDeliverableHandoff => {
+      guard !model.busy else { return (@rabbita.none, model) }
       let state = model.export_state
       let duration = duration_ticks(model) / ticks_per_second(model)
       guard state.promoted &&
@@ -4613,6 +4764,7 @@ fn update(
             handoff_status: "recording-request",
           },
           status: "Verifying G5, real client acceptance, and preparing the opaque MoonFlow request…",
+          export_generation: model.export_generation + 1,
         },
       )
     }
@@ -4678,8 +4830,13 @@ fn update(
       }
     RetryPending =>
       match model.retry {
+        Some(RetryCatalog) => update(raw_dispatch, ReloadProjects, model)
         Some(RetryOpen(project_id)) =>
-          update(dispatch, OpenProject, { ..model, project_id, retry: None })
+          update(raw_dispatch, OpenProject, {
+            ..model,
+            selected_project_id: Some(project_id),
+            retry: None,
+          })
         Some(RetryCommand(kind, payload)) =>
           (
             @http.post("/api/editor/projects/" + model.project_id + "/commands")
@@ -4696,24 +4853,24 @@ fn update(
             },
           )
         Some(RetryComment(value)) =>
-          update(dispatch, PostReviewComment, {
+          update(raw_dispatch, PostReviewComment, {
             ..model,
             review_comment: value,
             retry: None,
           })
         Some(RetryPreview) =>
-          update(dispatch, RetryPreview, { ..model, retry: None })
+          update(raw_dispatch, RetryPreview, { ..model, retry: None, })
         None => (@rabbita.none, model)
       }
-    ClearError => (@rabbita.none, { ..model, error: "", conflict: "" })
+    ClearError => (@rabbita.none, { ..model, error: "", conflict: "", })
     KeyPressed(keyboard) => {
       let key = lower(keyboard.key())
       let command = keyboard.meta_key() || keyboard.ctrl_key()
       if model.workspace_lens == GraphLens && command && key == "s" {
-        update(dispatch, SaveWorkspaceGraph(""), model)
+        update(raw_dispatch, SaveWorkspaceGraph(""), model)
       } else if model.workspace_lens == GraphLens && command && key == "z" {
         update(
-          dispatch,
+          raw_dispatch,
           if keyboard.shift_key() {
             WorkspaceGraphRedo
           } else {
@@ -4722,21 +4879,29 @@ fn update(
           model,
         )
       } else if model.workspace_lens == GraphLens && command && key == "d" {
-        update(dispatch, DuplicateSelectedWorkspaceNode, model)
+        update(raw_dispatch, DuplicateSelectedWorkspaceNode, model)
       } else if model.workspace_lens == GraphLens &&
         (key == "delete" || key == "backspace") {
-        update(dispatch, DeleteSelectedWorkspaceNode, model)
+        update(raw_dispatch, DeleteSelectedWorkspaceNode, model)
       } else if command && key == "z" {
-        update(dispatch, if keyboard.shift_key() { Redo } else { Undo }, model)
+        update(
+          raw_dispatch,
+          if keyboard.shift_key() {
+            Redo
+          } else {
+            Undo
+          },
+          model,
+        )
       } else if key == " " || keyboard.code() == "Space" {
-        update(dispatch, TogglePlay, model)
+        update(raw_dispatch, TogglePlay, model)
       } else if key == "arrowleft" {
-        update(dispatch, StepFrame(-1), model)
+        update(raw_dispatch, StepFrame(-1), model)
       } else if key == "arrowright" {
-        update(dispatch, StepFrame(1), model)
+        update(raw_dispatch, StepFrame(1), model)
       } else if key == "delete" || key == "backspace" {
         update(
-          dispatch,
+          raw_dispatch,
           if model.selected_transition_id != "" {
             RemoveTransition
           } else {
@@ -4745,13 +4910,13 @@ fn update(
           model,
         )
       } else if key == "s" && !command && !keyboard.alt_key() {
-        update(dispatch, SplitSelection, model)
+        update(raw_dispatch, SplitSelection, model)
       } else {
         (@rabbita.none, model)
       }
     }
     Resized(viewport) =>
-      (@rabbita.none, { ..model, viewport_width: viewport.width })
+      (@rabbita.none, { ..model, viewport_width: viewport.width, })
     UrlRequested(request) =>
       match request {
         Internal(url) => (@nav.push_url(url.to_string()), model)

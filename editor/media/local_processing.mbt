@@ -85,12 +85,19 @@ fn parse_cue(
     !text.contains(">") else {
     fail("subtitle cue text is empty or unsafe")
   }
-  let start_tick = start_ms * ticks_per_second / 1000
-  let end_tick = end_ms * ticks_per_second / 1000
+  // Convert through Int64: millisecond cue clocks can overflow Int during
+  // multiplication even when the final timeline tick is in range.
+  let start_wide = start_ms.to_int64() * ticks_per_second.to_int64() / 1000L
+  let end_wide = end_ms.to_int64() * ticks_per_second.to_int64() / 1000L
+  guard start_wide >= 0L && end_wide <= 2147483647L else {
+    fail("subtitle timing exceeds the supported timeline")
+  }
+  let start_tick = start_wide.to_int()
+  let end_tick = end_wide.to_int()
   guard end_tick <= duration_ticks else {
     fail("subtitle cue exceeds media duration")
   }
-  Some({ cue_id: "cue-" + cue_number.to_string(), start_tick, end_tick, text })
+  Some({ cue_id: "cue-" + cue_number.to_string(), start_tick, end_tick, text, })
 }
 
 ///|
@@ -249,7 +256,11 @@ pub fn inspect_visual(bytes : Bytes, mime : String) -> VisualInspection raise {
     width * height <= 33554432 else {
     fail("image dimensions exceed editor limits")
   }
-  { inspector_version: "mooncast-raster-header-inspector@1.0.0", width, height }
+  {
+    inspector_version: "mooncast-raster-header-inspector@1.0.0",
+    width,
+    height,
+  }
 }
 
 ///|

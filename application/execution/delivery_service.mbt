@@ -152,10 +152,15 @@ fn output_kind_valid(output : @execution_domain.DeliveryOutputSpec) -> Bool {
         output.framing_policy == Some("pad") ||
         output.framing_policy == Some("scale")
       ) &&
-      output.source_output_id == None
+      output.source_output_id == None &&
+      output.in_seconds == None &&
+      output.out_seconds == None &&
+      output.timestamp_seconds == None &&
+      output.output_id != "master"
     "channel-cut" =>
       output.container == "mp4" &&
       output.source_output_id != None &&
+      output.timestamp_seconds == None &&
       (match (output.in_seconds, output.out_seconds) {
         (Some(start), Some(finish)) =>
           start >= 0.0 && finish > start && finish - start <= 180.0
@@ -252,7 +257,7 @@ fn normalized_sha256(value : String) -> String {
 fn seal_delivery_build(
   build : @execution_domain.DeliveryBuild,
 ) -> @execution_domain.DeliveryBuild {
-  let unsealed = { ..build, record_digest: "" }
+  let unsealed = { ..build, record_digest: "", }
   {
     ..build,
     record_digest: sha256(@utf8.encode(unsealed.to_json().stringify())),
@@ -285,6 +290,33 @@ pub async fn DeliveryFactoryService::create(
     raise DeliveryRequestInvalid(
       "exact accepted master, delivery, and bounded profile are required",
     )
+  }
+  if request.profile.outputs.any(output => {
+      output.kind == "channel-cut" && output.subtitle_mode == "sidecar"
+    }) {
+    let source = @fs.read_file(request.subtitle_path.unwrap()).binary()
+    guard request.provenance_manifest is Some(Object(provenance)) &&
+      provenance.get("caption_selection") is Some(Object(selection)) &&
+      selection.get("contract") ==
+      Some("mooncast.delivery-caption-selection.v1".to_json()) &&
+      selection.get("sha256") == Some(sha256(source).to_json()) &&
+      selection.get("project_id") == Some(request.project_id.to_json()) &&
+      selection.get("master_sha256") == Some(request.master_sha256.to_json()) else {
+      raise DeliveryRequestInvalid(
+        "Trimmed captions require the exact verified master SRT and its project/master provenance. Restore it or export and promote corrected captions in Cut Editor.",
+      )
+    }
+    for output in request.profile.outputs {
+      if output.subtitle_mode == "sidecar" {
+        ignore(
+          delivery_output_captions(
+            source,
+            request.master_duration_seconds,
+            output,
+          ),
+        )
+      }
+    }
   }
   let build_digest = sha256(
     @utf8.encode(
@@ -779,16 +811,92 @@ pub async fn DeliveryFactoryService::build(
   )
   artifacts.push(label_artifact)
   output_paths.push(label_path)
+  let caption_output_mappings : Array[Json] = []
   if building.request.profile.outputs.any(output => {
       output.subtitle_mode == "sidecar"
     }) {
     let source_path = building.request.subtitle_path.unwrap()
     let subtitle_name = build_id + "-subtitles.srt"
     let copied_subtitle_path = self.outputs.prepare_owned_path(subtitle_name)
-    if !run_delivery_process(
-        self.ffmpeg_executable,
-        subtitle_copy_args(source_path, copied_subtitle_path),
-      ) {
+    let selected = match building.request.provenance_manifest {
+      Some(Object(values)) => values.get("caption_selection")
+      _ => None
+    }
+    let copy_ok = try {
+      match selected {
+        Some(Object(selection)) => {
+          let source = @fs.read_file(source_path).binary() catch { _ => b"" }
+          if source.is_empty() ||
+            selection.get("contract") !=
+            Some("mooncast.delivery-caption-selection.v1".to_json()) ||
+            selection.get("sha256") != Some(sha256(source).to_json()) ||
+            selection.get("project_id") !=
+            Some(building.request.project_id.to_json()) ||
+            selection.get("master_sha256") !=
+            Some(building.request.master_sha256.to_json()) {
+            false
+          } else {
+            // Derive every mapping before writing any sidecar. A cut can never
+            // borrow the full-master SRT or silently drop required captions.
+            let derived = building.request.profile.outputs
+              .filter(output => output.subtitle_mode == "sidecar")
+              .map(output => {
+                (
+                  output,
+                  delivery_output_captions(
+                    source,
+                    building.request.master_duration_seconds,
+                    output,
+                  ),
+                )
+              })
+            for pair in derived {
+              let output = pair.0
+              let captions = pair.1
+              let filename = if output.kind == "channel-cut" {
+                build_id + "-" + output.output_id + "-subtitles.srt"
+              } else {
+                subtitle_name
+              }
+              caption_output_mappings.push({
+                "output_id": output.output_id,
+                "filename": filename,
+                "mapping": captions.mapping,
+              })
+              if output.kind == "channel-cut" {
+                let blob = self.outputs.put_blob(
+                  filename,
+                  @utf8.encode(captions.content),
+                )
+                artifacts.push(
+                  support_artifact(
+                    build_id + "-" + output.output_id + "-subtitles",
+                    "subtitle-sidecar",
+                    filename,
+                    "application/x-subrip",
+                    blob,
+                  ),
+                )
+                output_paths.push(self.outputs.owned_path(filename))
+              }
+            }
+            ignore(self.outputs.put_blob(subtitle_name, source))
+            true
+          }
+        }
+        _ =>
+          !building.request.profile.outputs.any(output => {
+            output.kind == "channel-cut" && output.subtitle_mode == "sidecar"
+          }) &&
+          run_delivery_process(
+            self.ffmpeg_executable,
+            subtitle_copy_args(source_path, copied_subtitle_path),
+          )
+      }
+    } catch {
+      _ => false
+    }
+    if !copy_ok {
       let failed = @execution_domain.reduce_delivery_command(
         delivery_command(
           building,
@@ -828,6 +936,13 @@ pub async fn DeliveryFactoryService::build(
       "subtitle-manifest",
       Json::object({
         "source_path_bound": (building.request.subtitle_path is Some(_)).to_json(),
+        "source_sidecar_filename": (build_id + "-subtitles.srt").to_json(),
+        "outputs": caption_output_mappings.to_json(),
+        "caption_selection": match building.request.provenance_manifest {
+          Some(Object(values)) =>
+            values.get("caption_selection").unwrap_or(Json::null())
+          _ => Json::null()
+        },
         "modes": building.request.profile.outputs
         .map(output => output.subtitle_mode)
         .to_json(),
@@ -1073,27 +1188,11 @@ pub async fn DeliveryFactoryService::record_acceptance(
       durable.to_json(),
     ),
   )
-  if acceptance.decision == "accept" && record.build.archive is Some(archive) {
+  // Acceptance is a separate fact about the exact immutable archive. Adding
+  // a receipt to that ZIP would change bytes after its digest was approved.
+  if acceptance.decision == "accept" {
     let acceptance_name = build_id + "-accepted-receipt.json"
     ignore(self.outputs.put_json(acceptance_name, durable.to_json()))
-    let zip_result = @host_process.run_capture({
-      executable: self.zip_executable,
-      arguments: [
-        "-j",
-        self.output_root + "/" + archive.filename,
-        self.output_root + "/" + acceptance_name,
-      ],
-      working_directory: None,
-      timeout_ms: 600000,
-      max_output_bytes: 1048576,
-    })
-    if zip_result.timed_out ||
-      zip_result.output_truncated ||
-      zip_result.exit_code != Some(0) {
-      raise DeliveryProcessFailed(
-        "accepted receipt could not be added to the customer archive",
-      )
-    }
   }
   durable
 }
@@ -1151,12 +1250,21 @@ pub async fn DeliveryFactoryService::accepted_archive(
     }
     None => return None
   }
-  if acceptance.decision != "accept" ||
-    acceptance.build_digest != record.build.build_digest {
+  if record.build.state != "completed" ||
+    acceptance.decision != "accept" ||
+    acceptance.build_digest != record.build.build_digest ||
+    acceptance.build_record_digest != record.build.record_digest {
     return None
   }
   match record.build.archive {
-    Some(archive) => self.outputs.get_blob(archive.filename)
+    Some(archive) => {
+      let blob = self.outputs.get_blob(archive.filename)
+      match blob {
+        Some(value) if archive.digest == "sha256:" + value.sha256 &&
+          archive.bytes == value.bytes.length() => Some(value)
+        _ => None
+      }
+    }
     None => None
   }
 }
