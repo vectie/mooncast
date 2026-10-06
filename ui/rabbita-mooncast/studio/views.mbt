@@ -54,6 +54,17 @@ fn status_chip(status : String) -> @rabbita.Html {
 }
 
 ///|
+fn control_tower_portfolio_status(project_count : Int, projects_at_sla_risk : Int) -> String {
+  if project_count == 0 {
+    "no projects"
+  } else if projects_at_sla_risk == 0 {
+    "on-track"
+  } else {
+    "attention-required"
+  }
+}
+
+///|
 fn metric(label_ : String, value : String, note : String) -> @rabbita.Html {
   article(class="metric-card", [small(label_), strong(value), p(note)])
 }
@@ -863,13 +874,10 @@ fn render_control_tower(
             ),
             div(class="chips", [
               status_chip("pack " + tower.pack_version),
-              status_chip(
-                if totals.projects_at_sla_risk == 0 {
-                  "on-track"
-                } else {
-                  "attention-required"
-                },
-              ),
+              status_chip(control_tower_portfolio_status(
+                totals.project_count,
+                totals.projects_at_sla_risk,
+              )),
             ]),
           ]),
           div(class="hero-facts", [
@@ -3035,9 +3043,12 @@ fn render_commercial(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
         ),
       ]),
       div(class="form-actions", [
+        p(
+          "Enter the buyer, problem, acceptance, repeat hypothesis, nonnegative baseline cost, and observed baseline hours greater than 0 to record a lead.",
+        ),
         button(
           class="primary",
-          disabled=model.busy,
+          disabled=model.busy || !commercial_lead_form_ready(form),
           on_click=dispatch(CreateLead),
           "Record lead draft",
         ),

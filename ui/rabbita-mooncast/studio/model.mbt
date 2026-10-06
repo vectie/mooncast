@@ -1111,6 +1111,22 @@ struct CommercialForm {
 }
 
 ///|
+fn commercial_lead_form_ready(form : CommercialForm) -> Bool {
+  let baseline_hours = @string.parse_double(form.baseline_hours) catch {
+    _ => 0.0
+  }
+  let baseline_cost = @string.parse_double(form.baseline_cost_cny) catch {
+    _ => -1.0
+  }
+  form.customer.trim() != "" &&
+  form.payable_problem.trim() != "" &&
+  form.measurable_acceptance.trim() != "" &&
+  form.repeat_hypothesis.trim() != "" &&
+  baseline_cost >= 0.0 &&
+  baseline_hours > 0.0
+}
+
+///|
 struct QuoteForm {
   project_id : String
   title : String
@@ -1746,7 +1762,7 @@ fn initial_model() -> Model {
     operator: {
       actor: "creative-director",
       role: "creative-director",
-      recorded_at: "2026-07-19T00:00:00+08:00",
+      recorded_at: "",
       note: "Reviewed in Mooncast Studio against the exact displayed revision.",
       human_confirmed: false,
     },
@@ -1755,7 +1771,7 @@ fn initial_model() -> Model {
       contact_ref: "",
       payable_problem: "",
       baseline_cost_cny: "0",
-      baseline_hours: "0",
+      baseline_hours: "",
       measurable_acceptance: "Accepted 3–8 minute master\nRights and provenance package",
       repeat_hypothesis: "Quarterly content-operation retainer",
     },
@@ -1767,8 +1783,8 @@ fn initial_model() -> Model {
       rights_owner: "",
       duration_seconds: "240",
       production_budget_cny: "20000",
-      start_date: "2026-07-26",
-      delivery_date: "2026-08-26",
+      start_date: "",
+      delivery_date: "",
       deliverables: "Horizontal master\nVertical master\nSubtitles\nCover images\nRights and provenance manifest",
       quoted_revenue_cny: "40000",
       provider_cost_cny: "6000",
@@ -1785,13 +1801,13 @@ fn initial_model() -> Model {
       resource_role: "creative-director",
       resource_skills: "creative-direction, editorial-review",
       weekly_hours: "20",
-      available_from: "2026-07-26",
-      available_to: "2026-08-26",
+      available_from: "",
+      available_to: "",
       resource_id: "",
       reservation_skills: "creative-direction",
       depends_on: "",
-      reservation_start: "2026-07-26",
-      reservation_end: "2026-08-26",
+      reservation_start: "",
+      reservation_end: "",
       reservation_hours: "20",
     },
     control_tower_actuals_form: {
@@ -1801,11 +1817,13 @@ fn initial_model() -> Model {
       recognized_revenue_cny: "",
       founder_hours: "",
       completed_labor_hours: "",
-      forecast_completion_date: "2026-08-26",
+      forecast_completion_date: "",
       evidence_refs: "",
       provider_cost_reconciled: false,
     },
-    control_tower_ownership_form: { action_due_date: "2026-08-01", },
+    control_tower_ownership_form: {
+      action_due_date: "",
+    },
     routing_form: {
       route_id: "primary-video-route",
       provider: "configured-video-provider",
