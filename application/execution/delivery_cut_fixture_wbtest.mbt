@@ -1,5 +1,11 @@
 ///|
 async test "actual trimmed media ZIP captions align and previous archive stays immutable" {
+  let ffmpeg = @env.get_env_var("MOONCAST_FFMPEG_BIN").unwrap_or(
+    "/usr/bin/ffmpeg",
+  )
+  let ffprobe = @env.get_env_var("MOONCAST_FFPROBE_BIN").unwrap_or(
+    "/usr/bin/ffprobe",
+  )
   let root = "/tmp/mooncast-cut-caption-" + @runtime.new_id(prefix="fixture")
   let inputs = @store.AtomicStore::new(root + "/inputs")
   let files = @store.AtomicStore::new(root + "/outputs")
@@ -9,7 +15,7 @@ async test "actual trimmed media ZIP captions align and previous archive stays i
   let source_blob = inputs.put_blob("source.srt", source_srt)
   let master_path = inputs.prepare_owned_path("master.mp4")
   let made = @host_process.run_capture({
-    executable: "/usr/bin/ffmpeg",
+    executable: ffmpeg,
     arguments: [
       "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=24:duration=12",
       "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100:duration=12", "-c:v",
@@ -25,7 +31,7 @@ async test "actual trimmed media ZIP captions align and previous archive stays i
   let service = DeliveryFactoryService::new(
     root + "/state",
     root + "/outputs",
-    "/usr/bin/ffmpeg",
+    ffmpeg,
   )
   let output : @execution_domain.DeliveryOutputSpec = {
     output_id: "master",
@@ -138,7 +144,7 @@ async test "actual trimmed media ZIP captions align and previous archive stays i
   let id = cut_build.build.build_id
   let cut_video = files.owned_path(id + "-selected-cut.mp4")
   let probe = @host_process.run_capture({
-    executable: "/usr/bin/ffprobe",
+    executable: ffprobe,
     arguments: [
       "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", cut_video,
     ],
