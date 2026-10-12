@@ -9,6 +9,10 @@ async fn assert_cut_caption_delivery(
   let selected = service.verified_delivery_captions(project_id)
   let cut = delivery_caption_cut("1000", "4000")
   let cut_selected = service.verified_delivery_cut_captions(project_id, cut)
+  let portrait_selected = service.verified_delivery_cut_captions(
+    project_id,
+    delivery_caption_cut("13000", "16750"),
+  )
   let page = service.dispatch_http({
     request_method: Get,
     path: "/api/v2/projects/" +
@@ -72,8 +76,16 @@ async fn assert_cut_caption_delivery(
     profile: {
       contract: "mooncast.delivery-build-profile.v1",
       version: 1,
-      include_source_master: false,
-      variants: [],
+      include_source_master: true,
+      variants: [
+        {
+          variant_id: "vertical-1080p",
+          orientation: "vertical",
+          width: 240,
+          height: 320,
+          policy: "crop",
+        },
+      ],
       cuts: [
         {
           cut_id: "selected-cut",
@@ -82,12 +94,45 @@ async fn assert_cut_caption_delivery(
           in_seconds: 1.0,
           out_seconds: 4.0,
         },
+        {
+          cut_id: "portrait-teaser",
+          channel: "shorts-review",
+          source_variant: "vertical-1080p",
+          in_seconds: 13.0,
+          out_seconds: 16.75,
+        },
       ],
       covers: [],
       include_subtitles: true,
       include_metadata: true,
       include_provenance_rights_ai_manifest: true,
     },
+  }
+  for
+    invalid in [
+      {
+        ..input,
+        profile: {
+          ..input.profile,
+          cuts: [input.profile.cuts[0], input.profile.cuts[0]],
+        },
+      },
+      {
+        ..input,
+        profile: {
+          ..input.profile,
+          cuts: [{ ..input.profile.cuts[0], out_seconds: 181.0, }],
+        },
+      },
+    ] {
+    let rejected = service.dispatch_http({
+      request_method: Post,
+      path: "/api/v2/projects/" + project_id + "/delivery-builds",
+      query: None,
+      headers: {},
+      body: @utf8.encode(invalid.to_json().stringify()),
+    })
+    assert_true(rejected.status >= 400)
   }
   let created = service.dispatch_http({
     request_method: Post,
@@ -119,6 +164,27 @@ async fn assert_cut_caption_delivery(
   )
   let caption_name = complete.build_id + "-selected-cut-subtitles.srt"
   assert_eq(files.get_blob(caption_name).unwrap().bytes, cut_selected.bytes)
+  assert_eq(
+    files
+    .get_blob(complete.build_id + "-portrait-teaser-subtitles.srt")
+    .unwrap().bytes,
+    portrait_selected.bytes,
+  )
+  assert_true(cut_selected.bytes != portrait_selected.bytes)
+  let built_record = service.delivery_application
+    .load(complete.build_id)
+    .unwrap()
+  let portrait_output = built_record.request.profile.outputs
+    .iter()
+    .find_first(output => output.output_id == "portrait-teaser")
+    .unwrap()
+  assert_eq(portrait_output.width, 240)
+  assert_eq(portrait_output.height, 320)
+  let metadata = files.get_json(complete.build_id + "-metadata.json").unwrap()
+  assert_eq(
+    json_member(metadata, "delivery_profile"),
+    Some(input.profile.to_json()),
+  )
   assert_eq(
     service.verified_delivery_captions(project_id).bytes,
     selected.bytes,

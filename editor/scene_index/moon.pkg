@@ -1,0 +1,15 @@
+import {
+  "moonbitlang/core/string",
+  "vectie/mooncast/editor/chapters",
+  "vectie/mooncast/editor/caption_media" @media,
+  "vectie/mooncast/native_host/process",
+}
+
+supported_targets = "native"
+
+import {
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/chapters",
+  "vectie/mooncast/editor/screening",
+  "vectie/mooncast/editor/caption_media" @media,
+} for "test"

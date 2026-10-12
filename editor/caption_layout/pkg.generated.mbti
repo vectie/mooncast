@@ -1,0 +1,68 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/caption_layout"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/captions",
+}
+
+// Values
+pub fn default_profile() -> Profile
+
+pub fn paginate(@captions.CaptionDraft, Profile) -> Layout raise
+
+pub fn read_profile(String) -> Profile raise
+
+pub fn reflow(@captions.CaptionDraft, Profile) -> Layout raise
+
+pub fn review(@captions.CaptionDraft, Profile) -> Review raise
+
+pub fn tsv(@captions.CaptionDraft, Profile) -> String raise
+
+// Errors
+
+// Types and methods
+pub(all) struct CueOrigin {
+  output_cue : Int
+  source_cue : Int
+  page : Int
+  page_count : Int
+  estimated_timing : Bool
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct CueReview {
+  cue : Int
+  start_ms : Int
+  end_ms : Int
+  characters : Int
+  line_count : Int
+  longest_line : Int
+  chars_per_second_milli : Int
+  issues : Array[String]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct Layout {
+  draft : @captions.CaptionDraft
+  origins : Array[CueOrigin]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct Profile {
+  contract : String
+  max_line_chars : Int
+  max_lines : Int
+  min_duration_ms : Int
+  max_chars_per_second : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Profile::validate(Self) -> Unit raise
+
+pub(all) struct Review {
+  profile : Profile
+  cue_count : Int
+  flagged_cues : Int
+  cues : Array[CueReview]
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits

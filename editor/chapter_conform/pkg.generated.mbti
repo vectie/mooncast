@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/chapter_conform"
+
+import {
+  "vectie/mooncast/editor/chapters",
+  "vectie/mooncast/editor/domain",
+}
+
+// Values
+pub fn conform(@domain.EditorProject, Array[SourceChapters]) -> ConformedChapters raise
+
+// Errors
+
+// Types and methods
+pub(all) struct ChapterOrigin {
+  output_marker_id : String
+  clip_id : String
+  media_ref_id : String
+  source_marker_id : String
+  source_start_tick : Int
+  source_end_tick : Int
+  source_ticks_per_second : Int
+  output_start_tick : Int
+  output_end_tick : Int
+  clipped_at_start : Bool
+  clipped_at_end : Bool
+} derive(Eq, ToJson)
+
+pub(all) struct ChapterUse {
+  media_ref_id : String
+  source_marker_id : String
+  output_marker_ids : Array[String]
+} derive(Eq, ToJson)
+
+pub(all) struct ConformedChapters {
+  contract : String
+  draft : @chapters.Draft
+  origins : Array[ChapterOrigin]
+  source_uses : Array[ChapterUse]
+} derive(Eq, ToJson)
+
+pub(all) struct SourceChapters {
+  media_ref_id : String
+  draft : @chapters.Draft
+} derive(Eq)
+
+// Type aliases
+
+// Traits

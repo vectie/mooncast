@@ -22,7 +22,9 @@ fn allowed_intake_mime(role : String, mime : String) -> Bool {
     "subtitle" =>
       mime == "text/plain" ||
       mime == "text/vtt" ||
-      mime == "application/x-subrip"
+      mime == "application/x-subrip" ||
+      mime == "application/json" ||
+      mime == "text/tab-separated-values"
     "image" | "logo" =>
       mime == "image/png" || mime == "image/jpeg" || mime == "image/webp"
     _ => false
@@ -99,7 +101,7 @@ pub fn prepare_intake(
     created_at,
     request_digest: "",
   }
-  let request = { ..provisional, request_digest: intake_digest(provisional) }
+  let request = { ..provisional, request_digest: intake_digest(provisional), }
   let intake_id = "intake-" +
     @crypto.bytes_to_hex_string(
       @crypto.sha256(
@@ -223,7 +225,7 @@ pub async fn complete_intake(
   let media_ref : @domain.MediaRef = {
     contract: "mooncast.editor-media-ref.v1",
     media_ref_id,
-    locator: { kind: "pack-relative", uri: record.locator },
+    locator: { kind: "pack-relative", uri: record.locator, },
     metadata: {
       sha256: digest_key(record.digest),
       mime_type: record.mime,
@@ -231,5 +233,5 @@ pub async fn complete_intake(
       duration_ticks: request.duration_ticks,
     },
   }
-  { receipt, binding: processed_binding, media_ref, media_record: record }
+  { receipt, binding: processed_binding, media_ref, media_record: record, }
 }

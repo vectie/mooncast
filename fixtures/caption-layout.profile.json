@@ -1,0 +1,7 @@
+{
+  "contract": "mooncast.caption-layout-profile.v1",
+  "max_line_chars": 12,
+  "max_lines": 2,
+  "min_duration_ms": 1000,
+  "max_chars_per_second": 20
+}

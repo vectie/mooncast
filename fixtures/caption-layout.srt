@@ -1,0 +1,11 @@
+1
+00:00:00,101 --> 00:00:06,102
+Grow fresh herbs in pots today.
+
+2
+00:00:08,000 --> 00:00:14,001
+Pick bright leaves and share a cup of tea.
+
+3
+00:00:16,000 --> 00:00:20,000
+Café & 🌱.

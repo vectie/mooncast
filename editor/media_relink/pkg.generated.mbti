@@ -1,0 +1,58 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/media_relink"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/domain",
+}
+
+// Values
+pub fn binding(@domain.EditorProject) -> String raise
+
+pub fn inventory(@domain.EditorProject) -> Array[InventoryRow] raise
+
+pub fn prepare(@domain.EditorProject, RelinkMap) -> RelinkResult raise
+
+pub fn read_map(String) -> RelinkMap raise
+
+pub fn safe_uri(String) -> Bool
+
+pub fn seed(@domain.EditorProject) -> RelinkMap raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Change {
+  media_ref_id : String
+  before_uri : String
+  after_uri : String
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct InventoryRow {
+  media_ref_id : String
+  uri : String
+  sha256 : String
+  size_bytes : Int
+  clip_ids : Array[String]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct RelinkMap {
+  contract : String
+  source_binding : String
+  replacements : Array[Replacement]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RelinkResult {
+  project : @domain.EditorProject
+  changes : Array[Change]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct Replacement {
+  media_ref_id : String
+  new_uri : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

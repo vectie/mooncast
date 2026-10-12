@@ -1,0 +1,13 @@
+{
+  "contract": "mooncast.chapter-source-map.v1",
+  "bindings": [
+    {
+      "media_ref_id": "media.a",
+      "file": "chapter-conform-a.chapters.json"
+    },
+    {
+      "media_ref_id": "media.b",
+      "file": "chapter-conform-b.chapters.json"
+    }
+  ]
+}

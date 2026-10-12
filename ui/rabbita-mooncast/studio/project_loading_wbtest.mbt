@@ -137,6 +137,8 @@ fn fixture_replies(request : ProjectRequest, marker : Double) -> Array[Msg] {
             revision: 1,
             attempt_count: 0,
             recovery_count: 0,
+            cover_frames: None,
+            videos: None,
             master_sha256: "fixture",
             delivery_digest: "fixture",
             download_url: None,

@@ -1,5 +1,5 @@
 ///|
-async test "actual trimmed media ZIP captions align and previous archive stays immutable" {
+async test "actual differently named cuts ZIP captions align and previous archive stays immutable" {
   let ffmpeg = @env.get_env_var("MOONCAST_FFMPEG_BIN").unwrap_or(
     "/usr/bin/ffmpeg",
   )
@@ -124,13 +124,23 @@ async test "actual trimmed media ZIP captions align and previous archive stays i
     ..cut,
     output_id: "portrait-cut",
     source_output_id: Some("portrait"),
+    width: 240,
+    height: 320,
+    in_seconds: Some(6.0),
+    out_seconds: Some(10.0),
   }
   let cut_request = {
     ..request,
     profile: {
       ..request.profile,
       profile_digest: "synthetic-trimmed-profile",
-      outputs: [output, portrait, cut, portrait_cut],
+      outputs: [
+        output,
+        portrait,
+        cut,
+        portrait_cut,
+        ..cover_fixture_outputs(output),
+      ],
     },
   }
   let cut_queued = service.create(cut_request)
@@ -141,6 +151,9 @@ async test "actual trimmed media ZIP captions align and previous archive stays i
     "synthetic-economics",
   )
   assert_eq(cut_build.build.state, "completed")
+  assert_real_cover_outputs(
+    service, files, inputs, cut_build, cut_request, ffmpeg,
+  )
   let id = cut_build.build.build_id
   let cut_video = files.owned_path(id + "-selected-cut.mp4")
   let probe = @host_process.run_capture({
@@ -154,20 +167,49 @@ async test "actual trimmed media ZIP captions align and previous archive stays i
   })
   assert_eq(probe.exit_code, Some(0))
   assert_eq(@utf8.decode(probe.stdout).trim(), "3.000000")
+  let portrait_probe = @host_process.run_capture({
+    executable: ffprobe,
+    arguments: [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration:stream=width,height",
+      "-of",
+      "json",
+      files.owned_path(id + "-portrait-cut.mp4"),
+    ],
+    working_directory: None,
+    timeout_ms: 30000,
+    max_output_bytes: 8192,
+  })
+  assert_eq(portrait_probe.exit_code, Some(0))
+  let portrait_info = @json.parse(@utf8.decode(portrait_probe.stdout))
+  assert_true(
+    portrait_info
+    is {
+      "format": { "duration": "4.000000", .. },
+      "streams": Array(streams),
+      ..
+    } &&
+    streams.any(stream => stream is { "width": 240, "height": 320, .. }),
+  )
   let expected = @utf8.encode(
     "1\n00:00:00,000 --> 00:00:01,000\n跨越开始\nSecond line unchanged\n\n2\n00:00:01,500 --> 00:00:02,250\nInside\n\n3\n00:00:02,750 --> 00:00:03,000\nCrossing end\n",
   )
   let cut_sidecars = cut_build.build.artifacts.filter(item => {
     item.kind == "subtitle-sidecar"
   })
-  // This assertion fails against source-current: it shipped only the master SRT.
   assert_eq(cut_sidecars.length(), 3)
   let name = id + "-selected-cut-subtitles.srt"
   assert_eq(files.get_blob(name).unwrap().bytes, expected)
+  let portrait_expected = @utf8.encode(
+    "1\n00:00:00,000 --> 00:00:02,000\nCrossing end\n\n2\n00:00:02,000 --> 00:00:04,000\nAfter cut\n",
+  )
   assert_eq(
     files.get_blob(id + "-portrait-cut-subtitles.srt").unwrap().bytes,
-    expected,
+    portrait_expected,
   )
+  assert_true(expected != portrait_expected)
   let archive_path = files.owned_path(cut_build.build.archive.unwrap().filename)
   let zipped = @host_process.run_capture({
     executable: "/usr/bin/unzip",
@@ -178,6 +220,27 @@ async test "actual trimmed media ZIP captions align and previous archive stays i
   })
   assert_eq(zipped.exit_code, Some(0))
   assert_eq(zipped.stdout, expected)
+  let portrait_zipped = @host_process.run_capture({
+    executable: "/usr/bin/unzip",
+    arguments: ["-p", archive_path, id + "-portrait-cut-subtitles.srt"],
+    working_directory: None,
+    timeout_ms: 30000,
+    max_output_bytes: 8192,
+  })
+  assert_eq(portrait_zipped.exit_code, Some(0))
+  assert_eq(portrait_zipped.stdout, portrait_expected)
+  for media in ["selected-cut", "portrait-cut"] {
+    let media_name = id + "-" + media + ".mp4"
+    let zipped_media = @host_process.run_capture({
+      executable: "/usr/bin/unzip",
+      arguments: ["-p", archive_path, media_name],
+      working_directory: None,
+      timeout_ms: 30000,
+      max_output_bytes: 16777216,
+    })
+    assert_eq(zipped_media.exit_code, Some(0))
+    assert_eq(zipped_media.stdout, files.get_blob(media_name).unwrap().bytes)
+  }
   let subtitle_manifest = files.get_json(id + "-subtitles.json").unwrap()
   assert_true(subtitle_manifest.stringify().contains("contiguous-trim"))
   assert_true(subtitle_manifest.stringify().contains("zh-Hans"))
@@ -193,6 +256,8 @@ async test "actual trimmed media ZIP captions align and previous archive stays i
       "fixture": "synthetic only",
       "cut_duration_seconds": 3,
       "cut_range_seconds": [3, 6],
+      "portrait_cut_range_seconds": [6, 10],
+      "portrait_cut_srt_sha256": sha256(portrait_expected),
       "cut_srt_sha256": sha256(expected),
       "original_archive_sha256": original_archive.sha256,
       "original_master_sha256": master.sha256,

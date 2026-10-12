@@ -110,9 +110,25 @@ pub fn parse_subtitles(
   guard bytes.length() > 0 && bytes.length() <= 2097152 else {
     fail("subtitle bytes exceed the bounded intake")
   }
-  let text = @utf8.decode(bytes)
+  let decoded = @utf8.decode(bytes)
     .replace_all(old="\r\n", new="\n")
     .replace_all(old="\r", new="\n")
+  let text = if decoded.has_prefix("\u{FEFF}") {
+    decoded[1:].to_owned()
+  } else {
+    decoded
+  }
+  if mime == "application/json" {
+    return parse_whisper_json(text, duration_ticks, ticks_per_second)
+  }
+  if mime == "text/tab-separated-values" ||
+    (
+      mime == "text/plain" &&
+      text.split("\n").next().unwrap_or("").contains("\t") &&
+      !text.contains("-->")
+    ) {
+    return parse_transcript_table(text, duration_ticks, ticks_per_second)
+  }
   guard mime == "text/plain" ||
     mime == "text/vtt" ||
     mime == "application/x-subrip" else {

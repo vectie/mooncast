@@ -1,0 +1,7 @@
+{
+  "segments": [
+    {"start": 0.5, "end": 1.5, "text": "Introduce the garden."},
+    {"start": 2.0, "end": 3.0, "text": "Explain the seedlings."},
+    {"start": 4.0, "end": 5.0, "text": "Harvest time. Thanks for watching."}
+  ]
+}

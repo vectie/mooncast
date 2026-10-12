@@ -71,11 +71,15 @@ fn begin_project_load(
   model : Model,
   project_id : String,
 ) -> (@rabbita.Cmd, Model) {
+  let model = load_delivery_cut_drafts(model, project_id)
+  let model = load_delivery_cover_drafts(model, project_id)
   let changed = model.selected_project_id != project_id
   let next = {
     ..model,
     selected_project_id: project_id,
     project_generation: model.project_generation + 1,
+    cut_player: None,
+    cut_player_generation: model.cut_player_generation + 1,
     project_selection_generation: model.project_selection_generation +
     (if changed || project_id == "" { 1 } else { 0 }),
     project_pending: if project_id == "" {
@@ -111,15 +115,33 @@ fn begin_project_load(
     } else {
       model.delivery_builds
     },
-    delivery_cut_start: if changed || project_id == "" {
-      ""
+    delivery_media_selection: if changed {
+      None
     } else {
-      model.delivery_cut_start
+      model.delivery_media_selection
     },
-    delivery_cut_end: if changed || project_id == "" {
-      ""
+    delivery_media_generation: model.delivery_media_generation +
+    (if changed { 1 } else { 0 }),
+    delivery_caption_preview: if changed {
+      None
     } else {
-      model.delivery_cut_end
+      model.delivery_caption_preview
+    },
+    delivery_caption_error: if changed {
+      None
+    } else {
+      model.delivery_caption_error
+    },
+    delivery_caption_loading: !changed && model.delivery_caption_loading,
+    delivery_caption_identity: if changed {
+      None
+    } else {
+      model.delivery_caption_identity
+    },
+    delivery_transcript: if changed {
+      empty_delivery_transcript()
+    } else {
+      model.delivery_transcript
     },
     client_portals: if changed {
       []
@@ -333,7 +355,7 @@ fn update(
         return (@rabbita.none, model)
       }
       let (cmd, next) = if failure is Some(_) {
-        (@rabbita.none, model)
+        (@rabbita.none, invalidate_cut_player(model))
       } else {
         update_current(emit, msg, model)
       }

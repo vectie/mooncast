@@ -1,0 +1,41 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/bilingual_captions"
+
+import {
+  "vectie/mooncast/editor/captions",
+}
+
+// Values
+pub fn compose(@captions.CaptionDraft, @captions.CaptionDraft) -> Composition raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Composition {
+  contract : String
+  primary_source_file : String
+  secondary_source_file : String
+  primary_cue_count : Int
+  secondary_cue_count : Int
+  coverage : Coverage
+  segments : Array[Segment]
+  draft : @captions.CaptionDraft
+} derive(ToJson)
+
+pub(all) struct Coverage {
+  shared_ms : Int
+  primary_only_ms : Int
+  secondary_only_ms : Int
+  uncaptioned_ms : Int
+} derive(Eq, ToJson)
+
+pub(all) struct Segment {
+  start_ms : Int
+  end_ms : Int
+  primary_cue : Int?
+  secondary_cue : Int?
+} derive(Eq, ToJson)
+
+// Type aliases
+
+// Traits

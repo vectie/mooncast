@@ -1,0 +1,9 @@
+{
+  "contract": "mooncast.caption-draft.v1",
+  "source_file": "Interview English.srt",
+  "duration_ms": 6000,
+  "cues": [
+    {"start_ms": 500, "end_ms": 2500, "text": "Hello, garden!"},
+    {"start_ms": 3500, "end_ms": 5000, "text": "Seeds & sunlight.\nSee you soon!"}
+  ]
+}

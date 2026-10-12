@@ -1,0 +1,42 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/chapters"
+
+import {
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/domain",
+}
+
+// Values
+pub fn read_draft(String) -> Draft raise
+
+pub fn seed(@domain.EditorProject, String) -> Draft raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Draft {
+  contract : String
+  project_id : String
+  project_revision : Int
+  timeline_id : String
+  timeline_revision : Int
+  ticks_per_second : Int
+  duration_ticks : Int
+  markers : Array[Marker]
+} derive(Eq, ToJson, @json.FromJson)
+pub fn Draft::ffmetadata(Self) -> String raise
+pub fn Draft::import_ffmetadata(Self, String) -> Self raise
+pub fn Draft::put(Self, Marker) -> Self raise
+pub fn Draft::remove(Self, String) -> Self raise
+pub fn Draft::validate(Self) -> Unit raise
+pub fn Draft::webvtt(Self) -> String raise
+
+pub(all) struct Marker {
+  marker_id : String
+  start_tick : Int
+  title : String
+} derive(Eq, ToJson, @json.FromJson)
+
+// Type aliases
+
+// Traits

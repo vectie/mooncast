@@ -141,6 +141,8 @@ type DeliveryBuildProjection derive(ToJson)
 
 type DeliveryBuildsProjection derive(ToJson)
 
+type DeliveryCoverFrameProjection derive(ToJson)
+
 type DeliveryCoverInput derive(ToJson, @json.FromJson)
 
 type DeliveryCreateInput derive(ToJson, @json.FromJson)
@@ -154,6 +156,10 @@ type DeliveryPackageRecordInput derive(@json.FromJson)
 type DeliveryProfileInput derive(ToJson, @json.FromJson)
 
 type DeliveryVariantInput derive(ToJson, @json.FromJson)
+
+type DeliveryVideoCaptionsProjection derive(ToJson)
+
+type DeliveryVideoProjection derive(ToJson)
 
 pub(all) struct EditorAddClipTemplate {
   track_id : String
@@ -298,6 +304,10 @@ pub(all) struct EditorTakeRecord {
   track_kind : String
   add_clip_template : EditorAddClipTemplate?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type EpisodeAttributionInput derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type EpisodeAttributionRecord derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type EventListResponse derive(ToJson)
 
@@ -645,7 +655,7 @@ pub async fn StudioService::dispatch_editor_command(Self, String, @domain.EditCo
 pub async fn StudioService::dispatch_http(Self, @http.Request) -> @http.Response
 pub async fn StudioService::editor_export_path_for_digest(Self, String, String) -> String
 pub async fn StudioService::episode_ledger(Self, String, String) -> Json
-pub async fn StudioService::episode_ledger_page(Self, String, String) -> @http.Response
+pub async fn StudioService::episode_ledger_page(Self, String, String, correction? : String) -> @http.Response
 pub async fn StudioService::expand_workspace_capsule_node(Self, String, String, String, WorkspaceCapsuleExpandRequest) -> @workspace.WorkspaceGraph
 pub async fn StudioService::fork_workspace_graph(Self, String, String, WorkspaceGraphForkRequest) -> @workspace.WorkspaceGraph
 pub fn StudioService::freeze_workspace_plan(Self, WorkspacePlanRequest) -> @workspace.ExecutionPlan raise

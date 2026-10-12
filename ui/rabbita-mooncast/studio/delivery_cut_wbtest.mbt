@@ -27,15 +27,16 @@ fn cut_fixture_project() -> ProjectProjection {
 ///|
 fn cut_fixture_model(start : String, end : String) -> Model {
   let project = cut_fixture_project()
-  {
+  let model = {
     ..initial_model(),
     tab: Delivery,
     loading: false,
     selected_project_id: project.id,
     project: Some(project),
-    delivery_cut_start: start,
-    delivery_cut_end: end,
   }
+  let model = edit_delivery_cuts(model, AddDeliveryCut)
+  let model = edit_delivery_cuts(model, EditDeliveryCut(1, "start", start))
+  edit_delivery_cuts(model, EditDeliveryCut(1, "end", end))
 }
 
 ///|
@@ -61,26 +62,13 @@ test "cut seconds preserve exact milliseconds and reject non-finite or ambiguous
 }
 
 ///|
-test "cut selection requires a positive at-most-180-second interval within exact master" {
-  let project = cut_fixture_project()
-  assert_eq(
-    delivery_cut_selection(cut_fixture_model("", "  "), project),
-    Ok(None),
-  )
-  assert_eq(
-    delivery_cut_selection(cut_fixture_model("12.250", "42.750"), project),
-    Ok(Some({ start_ms: 12250, end_ms: 42750, })),
-  )
-  assert_eq(
-    delivery_cut_selection(cut_fixture_model("60", "240"), project),
-    Ok(Some({ start_ms: 60000, end_ms: 240000, })),
-  )
-  assert_eq(
-    delivery_cut_selection(cut_fixture_model("0", "0.001"), project),
-    Ok(Some({ start_ms: 0, end_ms: 1, })),
-  )
+test "cuts require positive at-most-180-second intervals within the exact master" {
+  assert_eq(delivery_cut_range("12.250", "42.750", 240), Ok((12250, 42750)))
+  assert_eq(delivery_cut_range("60", "240", 240), Ok((60000, 240000)))
+  assert_eq(delivery_cut_range("0", "0.001", 240), Ok((0, 1)))
   for
     (start, end) in [
+      ("", ""),
       ("0", ""),
       ("", "1"),
       ("0", "0"),
@@ -92,95 +80,180 @@ test "cut selection requires a positive at-most-180-second interval within exact
       ("-1", "1"),
       ("0", "0.0001"),
     ] {
+    let model = cut_fixture_model(start, end)
+    assert_true(delivery_cut_selection(model, model.project.unwrap()) is Err(_))
+    assert_false(step(model, CreateDeliveryBuild).busy)
+  }
+  let model = cut_fixture_model("0", "1")
+  assert_true(
+    delivery_cut_selection(model, { ..cut_fixture_project(), master: None, })
+    is Err(_),
+  )
+}
+
+///|
+test "bounded list edits preserve stable row identity and selected-only delivery" {
+  let first = cut_fixture_model("12.250", "42.750")
+  let mut model = first
+  for _ in 0..<13 {
+    model = edit_delivery_cuts(model, AddDeliveryCut)
+  }
+  assert_eq(delivery_cut_drafts(model).cuts.length(), 12)
+  assert_true(model.error is Some(_))
+  model = edit_delivery_cuts(
+    model,
+    EditDeliveryCut(2, "name", "portrait-teaser"),
+  )
+  model = edit_delivery_cuts(
+    model,
+    EditDeliveryCut(2, "source", "vertical-1080p"),
+  )
+  model = edit_delivery_cuts(model, EditDeliveryCut(2, "channel", "shorts"))
+  model = edit_delivery_cuts(model, EditDeliveryCut(2, "start", "45.500"))
+  model = edit_delivery_cuts(model, EditDeliveryCut(2, "end", "60.001"))
+  for key in 3..<=12 {
+    model = edit_delivery_cuts(model, ToggleDeliveryCut(key))
+  }
+  let selection = delivery_cut_selection(model, model.project.unwrap()).unwrap()
+  assert_eq(selection.length(), 2)
+  assert_eq(selection[1], {
+    cut_id: "portrait-teaser",
+    channel: "shorts",
+    source_variant: "vertical-1080p",
+    start_ms: 45500,
+    end_ms: 60001,
+  })
+  model = edit_delivery_cuts(model, RemoveDeliveryCut(1))
+  model = edit_delivery_cuts(
+    model,
+    EditDeliveryCut(2, "name", "retained-second"),
+  )
+  assert_eq(delivery_cut_drafts(model).cuts[0].cut_id, "retained-second")
+  assert_eq(delivery_cut_drafts(first).cuts[0].cut_id, "cut-1")
+  assert_eq(
+    edit_delivery_cuts({ ..model, busy: true, }, RemoveDeliveryCut(2)).delivery_cut_drafts,
+    model.delivery_cut_drafts,
+  )
+}
+
+///|
+test "named selections reject collisions unsafe names sources and channels but allow shared ranges" {
+  let mut model = edit_delivery_cuts(
+    cut_fixture_model("1", "3"),
+    AddDeliveryCut,
+  )
+  model = edit_delivery_cuts(model, EditDeliveryCut(2, "start", "1"))
+  model = edit_delivery_cuts(model, EditDeliveryCut(2, "end", "3"))
+  assert_eq(
+    delivery_cut_selection(model, model.project.unwrap()).unwrap().length(),
+    2,
+  )
+  for
+    invalid in [
+      "", "../cut", "-cut", "a/b", "<script>", "master", "MASTER", "Horizontal-1080p",
+      "horizontal-1080p", "vertical-1080p", "CUT-1",
+    ] {
+    let edited = edit_delivery_cuts(model, EditDeliveryCut(2, "name", invalid))
     assert_true(
-      delivery_cut_selection(cut_fixture_model(start, end), project) is Err(_),
+      delivery_cut_selection(edited, edited.project.unwrap()) is Err(_),
     )
   }
-  assert_true(
-    delivery_cut_selection(cut_fixture_model("0", "1"), {
-      ..project,
-      master: None,
-    })
-    is Err(_),
+  for
+    (field, value) in [
+      ("channel", "  "),
+      ("source", "cut-1"),
+      ("source", "unknown"),
+    ] {
+    let edited = edit_delivery_cuts(model, EditDeliveryCut(2, field, value))
+    assert_true(
+      delivery_cut_selection(edited, edited.project.unwrap()) is Err(_),
+    )
+  }
+  let excluded = edit_delivery_cuts(
+    edit_delivery_cuts(model, EditDeliveryCut(2, "name", "CUT-1")),
+    ToggleDeliveryCut(2),
   )
-  let master = project.master.unwrap()
-  assert_true(
-    delivery_cut_selection(cut_fixture_model("0", "1"), {
-      ..project,
-      master: Some({ ..master, media: { duration_seconds: 0, }, }),
-    })
-    is Err(_),
+  assert_eq(
+    delivery_cut_selection(excluded, excluded.project.unwrap())
+    .unwrap()
+    .length(),
+    1,
   )
 }
 
 ///|
-test "delivery profile keeps master variants and exact selected cut with captions enabled" {
-  let profile = delivery_profile(Some({ start_ms: 12250, end_ms: 42750, }))
-  match profile {
-    {
-      "cuts": Array([cut]),
+test "delivery profile includes every exact selected cut and retains master variants captions rights" {
+  let mut model = cut_fixture_model("12.250", "42.750")
+  model = edit_delivery_cuts(model, AddDeliveryCut)
+  model = edit_delivery_cuts(model, EditDeliveryCut(2, "start", "70"))
+  model = edit_delivery_cuts(model, EditDeliveryCut(2, "end", "90"))
+  model = edit_delivery_cuts(
+    model,
+    EditDeliveryCut(2, "source", "vertical-1080p"),
+  )
+  let profile = delivery_profile(
+    delivery_cut_selection(model, model.project.unwrap()).unwrap(),
+  )
+  guard profile
+    is {
+      "cuts": Array(cuts),
+      "variants": Array(variants),
       "include_source_master": True,
       "include_subtitles": True,
-      "variants": Array(variants),
+      "include_provenance_rights_ai_manifest": True,
       ..
-    } => {
-      assert_eq(cut, {
-        "cut_id": "selected-cut",
-        "channel": "review-only",
-        "source_variant": "master",
-        "in_seconds": 12.25,
-        "out_seconds": 42.75,
-      })
-      assert_eq(variants.length(), 2)
-    }
-    _ => fail("selected cut or existing delivery profile was lost")
+    } else {
+    fail("missing required profile fields")
   }
+  assert_eq(variants.length(), 2)
+  assert_eq(cuts.length(), 2)
+  assert_eq(cuts[0], {
+    "cut_id": "cut-1",
+    "channel": "review-only",
+    "source_variant": "master",
+    "in_seconds": 12.25,
+    "out_seconds": 42.75,
+  })
+  assert_eq(cuts[1], {
+    "cut_id": "cut-2",
+    "channel": "review-only",
+    "source_variant": "vertical-1080p",
+    "in_seconds": 70,
+    "out_seconds": 90,
+  })
   assert_true(
-    delivery_profile(None)
-    is { "cuts": Array([]), "include_subtitles": True, .. },
+    delivery_profile([]) is { "cuts": Array([]), "include_subtitles": True, .. },
   )
 }
 
 ///|
-test "delivery cut reducer validates before submission and ignores repeated create while busy" {
-  let model = cut_fixture_model("", "")
-  let edited = step(
-    step(model, SetDeliveryCutStart("12.250")),
-    SetDeliveryCutEnd("42.750"),
-  )
-  assert_eq(edited.delivery_cut_start, "12.250")
-  assert_eq(edited.delivery_cut_end, "42.750")
-  let started = step(edited, CreateDeliveryBuild)
+test "delivery submission ignores repeated clicks and retains edits while busy" {
+  let model = cut_fixture_model("12.250", "42.750")
+  let started = step(model, CreateDeliveryBuild)
   assert_true(started.busy)
-  assert_eq(started.error, None)
   let repeated = step(started, CreateDeliveryBuild)
   assert_eq(repeated.command_sequence, started.command_sequence)
   assert_eq(repeated.status, started.status)
-  assert_true(repeated.busy)
-  for (start, end) in [("0", ""), ("0", "181"), ("239", "241"), ("NaN", "10")] {
-    let rejected = step(cut_fixture_model(start, end), CreateDeliveryBuild)
-    assert_false(rejected.busy)
-    assert_true(rejected.error is Some(_))
-  }
-  assert_true(step(model, CreateDeliveryBuild).busy)
+  assert_eq(
+    step(started, RemoveDeliveryCut(1)).delivery_cut_drafts,
+    started.delivery_cut_drafts,
+  )
+  let none = edit_delivery_cuts(model, ToggleDeliveryCut(1))
+  assert_eq(delivery_cut_selection(none, none.project.unwrap()), Ok([]))
+  assert_true(step(none, CreateDeliveryBuild).busy)
 }
 
 ///|
-test "selected cut preview shows exact source and boundary rule without changing master preview" {
+test "cut preview shows exact source and boundaries and escapes labels" {
   let model = cut_fixture_model("12.250", "42.750")
   let html = rendered(render_delivery(_ => @rabbita.none, model, model.project))
+  assert_true(html.contains("Named channel cuts"))
   assert_true(html.contains("Cut start (seconds)"))
-  assert_true(html.contains("Cut end (seconds)"))
-  assert_false(
-    html.split("Create delivery build").to_array()[0].contains("disabled"),
-  )
   assert_true(html.contains("value=\"12.250\""))
-  assert_true(html.contains("value=\"42.750\""))
   assert_true(html.contains("Promoted master · approved-master · v3"))
-  assert_true(html.contains("sha256:master-file"))
   assert_true(
     html.contains(
-      "selected-cut · source master · 12250–42750 ms · 30500 ms long",
+      "cut-1 · channel review-only · source master · 12250–42750 ms · 30500 ms long",
     ),
   )
   assert_true(
@@ -197,27 +270,25 @@ test "selected cut preview shows exact source and boundary rule without changing
       "Reordering, speed changes and cut chains require a corrected Cut Editor export",
     ),
   )
-  let no_cut = cut_fixture_model("", "")
-  let blank = rendered(
-    render_delivery(_ => @rabbita.none, no_cut, no_cut.project),
-  )
-  assert_true(blank.contains("No cut selected"))
+  let none = edit_delivery_cuts(model, ToggleDeliveryCut(1))
+  let blank = rendered(render_delivery(_ => @rabbita.none, none, none.project))
+  assert_true(blank.contains("No cuts selected"))
   assert_false(blank.contains("delivery-captions/cut/"))
-  let invalid = cut_fixture_model("0", "181")
-  let rejected = rendered(
-    render_delivery(_ => @rabbita.none, invalid, invalid.project),
+  let escaped = edit_delivery_cuts(
+    model,
+    EditDeliveryCut(1, "channel", "<script>unsafe</script>"),
   )
-  assert_true(rejected.contains("at most 180 seconds long"))
-  assert_false(rejected.contains("delivery-captions/cut/"))
-  assert_true(
-    rejected.split("Create delivery build").to_array()[0].contains("disabled"),
+  let safe_html = rendered(
+    render_delivery(_ => @rabbita.none, escaped, escaped.project),
   )
+  assert_false(safe_html.contains("<script>unsafe</script>"))
+  assert_true(safe_html.contains("&lt;script&gt;unsafe&lt;/script&gt;"))
 }
 
 ///|
-test "cut selection revalidates against refreshed master and escapes its identity" {
+test "changed promoted master blocks cut reuse until explicit rebind and range validation" {
   let model = cut_fixture_model("200", "230")
-  let project = cut_fixture_project()
+  let project = model.project.unwrap()
   let master = project.master.unwrap()
   let newer = {
     ..project,
@@ -229,38 +300,36 @@ test "cut selection revalidates against refreshed master and escapes its identit
       media: { duration_seconds: 220, },
     }),
   }
-  let html = rendered(render_delivery(_ => @rabbita.none, model, Some(newer)))
-  assert_true(html.contains("Cut end exceeds the promoted master duration"))
+  let model = { ..model, project: Some(newer), }
+  assert_false(step(model, CreateDeliveryBuild).busy)
+  let html = rendered(render_delivery(_ => @rabbita.none, model, model.project))
+  assert_true(html.contains("Use current master"))
   assert_false(html.contains("delivery-captions/cut/"))
   assert_true(html.contains("&lt;script&gt;new-master&lt;/script&gt; · v4"))
-  assert_true(html.contains("sha256:new-master-file"))
-  assert_false(html.contains("sha256:master-file"))
-  assert_false(html.contains("<script>new-master</script>"))
-  let rejected = step({ ..model, project: Some(newer), }, CreateDeliveryBuild)
-  assert_false(rejected.busy)
-  assert_eq(
-    rejected.error,
-    Some("Cut end exceeds the promoted master duration."),
+  let rebound = edit_delivery_cuts(model, RebindDeliveryCuts)
+  assert_true(
+    delivery_cut_selection(rebound, newer) is Err(message) &&
+    message.contains("exceeds the promoted master"),
   )
+  let valid = edit_delivery_cuts(rebound, EditDeliveryCut(1, "end", "220"))
+  assert_true(delivery_cut_selection(valid, newer) is Ok(_))
 }
 
 ///|
-test "cut form resets on project change and empty selection but survives same-project refresh" {
+test "cut edits survive project refresh and A B A switches without cross-project selection" {
   let model = cut_fixture_model("12.250", "42.750")
-  let refreshed = step(model, RefreshProject)
-  assert_eq(refreshed.delivery_cut_start, "12.250")
-  assert_eq(refreshed.delivery_cut_end, "42.750")
+  assert_eq(
+    delivery_cut_drafts(step(model, RefreshProject)),
+    delivery_cut_drafts(model),
+  )
   let changed = step(model, SelectProject("caption-project-B"))
-  assert_eq(changed.delivery_cut_start, "")
-  assert_eq(changed.delivery_cut_end, "")
+  assert_true(delivery_cut_drafts(changed).cuts.is_empty())
   let returned = step(changed, SelectProject("caption-cut-project"))
-  assert_eq(returned.delivery_cut_start, "")
-  assert_eq(returned.delivery_cut_end, "")
-  let cleared = step(model, SelectProject(""))
-  assert_eq(cleared.delivery_cut_start, "")
-  assert_eq(cleared.delivery_cut_end, "")
-  let other = cut_fixture_project()
-  let other = { ..other, id: "caption-project-B", }
+  assert_eq(delivery_cut_drafts(returned), delivery_cut_drafts(model))
+  assert_true(
+    delivery_cut_drafts(step(model, SelectProject(""))).cuts.is_empty(),
+  )
+  let other = { ..cut_fixture_project(), id: "caption-project-B", }
   let html = rendered(
     render_delivery(
       _ => @rabbita.none,
@@ -270,5 +339,5 @@ test "cut form resets on project change and empty selection but survives same-pr
   )
   assert_false(html.contains("caption-cut-project/delivery-captions"))
   assert_false(html.contains("delivery-captions/cut/"))
-  assert_true(html.contains("caption-project-B/delivery-captions/view"))
+  assert_true(delivery_cut_selection(changed, model.project.unwrap()) is Err(_))
 }

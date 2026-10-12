@@ -1,0 +1,60 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/scene_index"
+
+import {
+  "vectie/mooncast/editor/chapters",
+  "vectie/mooncast/native_host/process",
+}
+
+// Values
+pub fn command(String, Int, Int) -> @process.CommandSpec raise
+
+pub fn index(String, Int, Int, Int, Array[Detection]) -> Index raise
+
+pub fn inspect_probe(Json) -> Input raise
+
+pub fn parse_detections(String, Int) -> Array[Detection] raise
+
+pub fn validate_options(Int, Int) -> Unit raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Candidate {
+  start_ms : Int
+  score : Double
+  included : Bool
+  reason : String
+} derive(Eq, ToJson)
+
+pub(all) struct Detection {
+  start_ms : Int
+  score : Double
+} derive(Eq, ToJson)
+
+pub(all) struct Index {
+  contract : String
+  source_sha256 : String
+  threshold : Int
+  min_scene_ms : Int
+  duration_ms : Int
+  candidates : Array[Candidate]
+  scenes : Array[Scene]
+  chapters : @chapters.Draft
+} derive(ToJson)
+
+pub(all) struct Input {
+  duration_ms : Int
+  video_index : Int
+} derive(Eq, ToJson)
+
+pub(all) struct Scene {
+  number : Int
+  start_ms : Int
+  end_ms : Int
+  title : String
+} derive(Eq, ToJson)
+
+// Type aliases
+
+// Traits

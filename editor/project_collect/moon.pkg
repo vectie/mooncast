@@ -1,0 +1,13 @@
+import {
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x/crypto",
+  "vectie/mooncast/editor/domain",
+  "vectie/mooncast/editor/media_relink" @relink,
+}
+
+supported_targets = "native"
+
+import {
+  "vectie/mooncast/editor/project_collect" @collect,
+  "vectie/mooncast/editor/render_plan",
+} for "test"

@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/ass_captions"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/mooncast/editor/captions",
+}
+
+// Values
+pub fn import_plain(Bytes, String, Int) -> Import raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Import {
+  draft : @captions.CaptionDraft
+  script_type : String
+  comment_events : Int
+  override_cues : Int
+  effect_cues : Int
+  reordered : Bool
+  source_lines : Array[Int]
+} derive(ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits

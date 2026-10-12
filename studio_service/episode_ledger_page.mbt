@@ -37,6 +37,7 @@ pub async fn StudioService::episode_ledger_page(
   self : StudioService,
   project_id : String,
   episode_id : String,
+  correction? : String = "",
 ) -> @host_http.Response {
   let ledger = self.episode_ledger(project_id, episode_id)
   let escape = workspace_html_escape
@@ -137,7 +138,7 @@ pub async fn StudioService::episode_ledger_page(
     })
     .join("")
   let quote = json_member(ledger, "quote_evidence").unwrap_or(Json::null())
-  let html = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Episode ledger · MoonCast</title><style>body{background:#101619;color:#e7f1ef;font:16px system-ui;line-height:1.5;margin:0}main{max-width:1100px;margin:auto;padding:32px 24px}a{color:#a2e9cd}a:focus-visible,summary:focus-visible{outline:3px solid #ffce70;outline-offset:5px}header,section{padding:24px 0;border-bottom:1px solid #425256}h1{font-size:2.5rem;margin:.3em 0}h2{font-size:1.4rem}.next{border:1px solid #81bda8;background:#1a3029;border-radius:14px;padding:20px}ul{list-style:none;padding:0;display:grid;gap:12px}li,details{padding:14px;background:#192328;border-radius:8px}li>span{display:block;color:#b8ccc5}details{margin:10px 0}summary{cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.85rem}dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}dt{color:#b8ccc5}dd{margin:4px 0;font-size:1.35rem}video{max-width:100%;width:720px}small{color:#b8ccc5}</style></head><body><main><header><small>MoonCast · Internal producer view · read only</small><h1>" +
+  let html = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Episode ledger · MoonCast</title><style>body{background:#101619;color:#e7f1ef;font:16px system-ui;line-height:1.5;margin:0}main{max-width:1100px;margin:auto;padding:32px 24px}a{color:#a2e9cd}a:focus-visible,summary:focus-visible{outline:3px solid #ffce70;outline-offset:5px}header,section{padding:24px 0;border-bottom:1px solid #425256}h1{font-size:2.5rem;margin:.3em 0}h2{font-size:1.4rem}.next{border:1px solid #81bda8;background:#1a3029;border-radius:14px;padding:20px}ul{list-style:none;padding:0;display:grid;gap:12px}li,details{padding:14px;background:#192328;border-radius:8px}li>span{display:block;color:#b8ccc5}details{margin:10px 0}summary{cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.85rem}dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}dt{color:#b8ccc5}dd{margin:4px 0;font-size:1.35rem}video{max-width:100%;width:720px}small{color:#b8ccc5}</style></head><body><main><header><small>MoonCast · Internal producer evidence</small><h1>" +
     escape(ledger_text(ledger, "title")) +
     "</h1><p>Project " +
     escape(project_id) +
@@ -175,7 +176,7 @@ pub async fn StudioService::episode_ledger_page(
       "Retained master, gate and revision history",
       json_member(ledger, "production_history").unwrap_or(Json::null()),
     ) +
-    "</section><section><h2>Quote, capacity and actual costs</h2><p>Commercial amounts belong to the whole project and are not allocated across episodes. A forecast is not actual cost. Missing actuals stay unknown; no margin is inferred.</p><dl>" +
+    "</section><section><h2>Quote, capacity and actual costs</h2><p>Commercial totals belong to the whole project. Explicit episode attribution is recorded separately below. A forecast is not actual cost. Missing actuals stay unknown; no margin is inferred.</p><dl>" +
     costs +
     "</dl><p>Actuals match the current project revision: " +
     (if json_member(ledger, "actuals_current_revision") == Some(true.to_json()) {
@@ -193,7 +194,9 @@ pub async fn StudioService::episode_ledger_page(
       "Separate billing and payment references",
       json_member(ledger, "billing_records").unwrap_or(Json::null()),
     ) +
-    "</section><section><h2>Delivery packages</h2><ul>" +
+    "</section>" +
+    self.episode_attribution_section(project_id, episode_id, correction) +
+    "<section><h2>Delivery packages</h2><ul>" +
     (if builds == "" {
       "<li>No delivery build recorded yet</li>"
     } else {
@@ -217,7 +220,7 @@ pub async fn StudioService::episode_ledger_page(
     headers={
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
-      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; media-src 'self'; base-uri 'none'; frame-ancestors 'none'",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; media-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
     },
   )
 }

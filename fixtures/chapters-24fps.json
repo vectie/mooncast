@@ -1,0 +1,13 @@
+{
+  "contract": "mooncast.chapter-draft.v1",
+  "project_id": "synthetic.project",
+  "project_revision": 1,
+  "timeline_id": "synthetic.timeline",
+  "timeline_revision": 1,
+  "ticks_per_second": 24,
+  "duration_ticks": 72,
+  "markers": [
+    { "marker_id": "opening", "start_tick": 0, "title": "Opening" },
+    { "marker_id": "answer", "start_tick": 25, "title": "Answer at frame 25" }
+  ]
+}

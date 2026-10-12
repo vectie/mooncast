@@ -292,6 +292,8 @@ struct DeliveryBuildProjection {
   attempt_count : Int
   recovery_count : Int
   artifacts : Array[DeliveryArtifactProjection]
+  cover_frames : Array[DeliveryCoverFrameProjection]
+  videos : Array[DeliveryVideoProjection]
   archive : DeliveryArtifactProjection?
   download_url : String?
   economics_receipt : String?
@@ -1046,6 +1048,8 @@ fn delivery_build_projection(
     attempt_count: build.attempt_count,
     recovery_count: build.recovery_count,
     artifacts: build.artifacts.map(delivery_artifact_projection),
+    cover_frames: delivery_cover_frames(build),
+    videos: delivery_videos(build),
     archive: build.archive.map(delivery_artifact_projection),
     download_url: if build.state == "completed" {
       Some(
@@ -1169,11 +1173,14 @@ async fn StudioService::create_delivery_from_ui(
     })
   }
   for cut in input.profile.cuts {
+    let variant = input.profile.variants
+      .iter()
+      .find_first(variant => variant.variant_id == cut.source_variant)
     let output = delivery_output(
       cut.cut_id,
       "channel-cut",
-      1920,
-      1080,
+      variant.map(variant => variant.width).unwrap_or(1920),
+      variant.map(variant => variant.height).unwrap_or(1080),
       subtitle_mode,
       "sha256:" + sha256_text(cut.to_json().stringify()),
     )
@@ -1285,6 +1292,7 @@ async fn StudioService::create_delivery_from_ui(
         "title": canonical.snapshot.graph.title.to_json(),
         "target_duration_seconds": canonical.snapshot.graph.target_duration_seconds.to_json(),
         "profile_digest": profile_digest.to_json(),
+        "delivery_profile": input.profile.to_json(),
       }),
     ),
     provenance_manifest: Some(
@@ -2346,6 +2354,108 @@ pub async fn StudioService::dispatch_application_http(
         body: selected.bytes,
       })
     }
+    (
+      Get,
+      [
+        "api",
+        "v2",
+        "projects",
+        project_id,
+        "delivery-builds",
+        build_id,
+        "covers",
+        cover_id,
+        digest,
+      ],
+    ) =>
+      Some(
+        self.delivery_cover_response(
+          project_id, build_id, cover_id, digest, false,
+        ),
+      )
+    (
+      Get,
+      [
+        "api",
+        "v2",
+        "projects",
+        project_id,
+        "delivery-builds",
+        build_id,
+        "covers",
+        cover_id,
+        digest,
+        "download",
+      ],
+    ) =>
+      Some(
+        self.delivery_cover_response(
+          project_id, build_id, cover_id, digest, true,
+        ),
+      )
+    (
+      Get
+      | Head,
+      [
+        "api",
+        "v2",
+        "projects",
+        project_id,
+        "delivery-builds",
+        build_id,
+        "media",
+        output_id,
+        digest,
+      ],
+    ) =>
+      Some(
+        self.delivery_media_response(
+          project_id, build_id, output_id, digest, false, "inline", request,
+        ),
+      )
+    (
+      Get
+      | Head,
+      [
+        "api",
+        "v2",
+        "projects",
+        project_id,
+        "delivery-builds",
+        build_id,
+        "media",
+        output_id,
+        digest,
+        "download",
+      ],
+    ) =>
+      Some(
+        self.delivery_media_response(
+          project_id, build_id, output_id, digest, false, "download", request,
+        ),
+      )
+    (
+      Get
+      | Head,
+      [
+        "api",
+        "v2",
+        "projects",
+        project_id,
+        "delivery-builds",
+        build_id,
+        "media",
+        output_id,
+        "captions",
+        digest,
+        action,
+      ],
+    ) if action == "preview" || action == "download" =>
+      Some(
+        self.delivery_media_response(
+          project_id, build_id, output_id, digest, true, action, request,
+        ),
+      )
     (Get, ["api", "v2", "projects", project_id, "delivery-builds"]) =>
       Some(
         json_value_response(200, DeliveryBuildsProjection::{

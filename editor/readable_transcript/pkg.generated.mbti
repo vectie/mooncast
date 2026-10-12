@@ -1,0 +1,35 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/readable_transcript"
+
+import {
+  "vectie/mooncast/editor/captions",
+  "vectie/mooncast/editor/chapters",
+}
+
+// Values
+pub fn compose(@captions.CaptionDraft, @chapters.Draft, String) -> Transcript raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Section {
+  marker_id : String?
+  title : String
+  start_ms : Int
+  end_ms : Int
+  cue_numbers : Array[Int]
+  continuing_cue_numbers : Array[Int]
+} derive(Eq, ToJson)
+
+pub(all) struct Transcript {
+  title : String
+  captions : @captions.CaptionDraft
+  chapters : @chapters.Draft
+  sections : Array[Section]
+} derive(Eq, ToJson)
+pub fn Transcript::html(Self) -> String
+pub fn Transcript::plain_text(Self) -> String
+
+// Type aliases
+
+// Traits

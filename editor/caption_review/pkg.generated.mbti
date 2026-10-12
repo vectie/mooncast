@@ -1,0 +1,32 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/caption_review"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/mooncast/editor/captions",
+}
+
+// Values
+pub fn apply_sheet(@captions.CaptionDraft, String) -> Review raise
+
+pub fn binding(@captions.CaptionDraft) -> String raise
+
+pub fn export_sheet(@captions.CaptionDraft) -> String raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Change {
+  cue_key : String
+  before : @captions.Caption
+  after : @captions.Caption
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct Review {
+  draft : @captions.CaptionDraft
+  changes : Array[Change]
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits

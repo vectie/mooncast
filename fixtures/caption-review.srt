@@ -1,0 +1,12 @@
+1
+00:00:00,100 --> 00:00:02,000
+Hello, "garden"
+Café 🌱 & herbs
+
+2
+00:00:03,000 --> 00:00:05,000
+=literal formula-looking words
+
+3
+00:00:06,000 --> 00:00:09,000
+Last cue

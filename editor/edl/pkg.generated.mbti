@@ -1,0 +1,90 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/edl"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/domain",
+}
+
+// Values
+pub fn export_edl(@domain.EditorProject, ReelMap, String) -> String raise
+
+pub fn frames_timecode(Int, Int) -> String raise
+
+pub fn import_edl(@domain.EditorProject, String, ReelMap) -> ImportedCut raise
+
+pub fn parse_edl(String, Int) -> EditList raise
+
+pub fn read_reel_map(String) -> ReelMap raise
+
+pub fn timecode_frames(String, Int) -> Int raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Cut {
+  event_number : Int
+  reel : String
+  source_in_frame : Int
+  source_out_frame : Int
+  record_in_frame : Int
+  record_out_frame : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CutPreview {
+  event_number : Int
+  reel : String
+  media_ref_id : String
+  clip_id : String
+  source_in_frame : Int
+  source_out_frame : Int
+  start_frame : Int
+  end_frame : Int
+  gap_before_frames : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct DraftPreview {
+  contract : String
+  title : String
+  source_project_id : String
+  source_revision : Int
+  source_timeline_id : String
+  fps : Int
+  record_start_timecode : String
+  ticks_per_second : Int
+  duration_frames : Int
+  gap_frames : Int
+  cuts : Array[CutPreview]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EditList {
+  title : String
+  fps : Int
+  cuts : Array[Cut]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ImportedCut {
+  project : @domain.EditorProject
+  preview : DraftPreview
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ReelBinding {
+  reel : String
+  media_ref_id : String
+  template_clip_id : String
+  source_start_timecode : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ReelMap {
+  contract : String
+  fps : Int
+  record_start_timecode : String
+  draft_timeline_id : String
+  bindings : Array[ReelBinding]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ReelMap::validate(Self) -> Unit raise
+
+// Type aliases
+
+// Traits

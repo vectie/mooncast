@@ -1,0 +1,26 @@
+{
+  "contract": "mooncast.chapter-draft.v1",
+  "project_id": "source.a",
+  "project_revision": 2,
+  "timeline_id": "original.a",
+  "timeline_revision": 3,
+  "ticks_per_second": 1000,
+  "duration_ticks": 10000,
+  "markers": [
+    {
+      "marker_id": "opening",
+      "start_tick": 0,
+      "title": "Opening 🌙"
+    },
+    {
+      "marker_id": "details",
+      "start_tick": 1000,
+      "title": "Details & <care>"
+    },
+    {
+      "marker_id": "ending",
+      "start_tick": 3000,
+      "title": "Ending"
+    }
+  ]
+}

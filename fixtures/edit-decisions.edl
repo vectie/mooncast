@@ -1,0 +1,6 @@
+TITLE: Synthetic interview cut
+FCM: NON-DROP FRAME
+
+001  CAM_A  V  C  10:00:00:01 10:00:02:02 01:00:00:03 01:00:02:04
+* FROM CLIP NAME: synthetic-a.mp4
+002  CAM_B  V  C  02:00:01:00 02:00:03:00 01:00:03:00 01:00:05:00

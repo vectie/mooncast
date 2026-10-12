@@ -1,0 +1,11 @@
+import {
+  "vectie/mooncast/editor/captions",
+  "vectie/mooncast/editor/chapters",
+}
+
+supported_targets = "native"
+
+import {
+  "vectie/mooncast/editor/captions",
+  "vectie/mooncast/editor/chapters",
+} for "test"

@@ -5,7 +5,12 @@ fn main {
     model=initial_model(),
     update~,
     view=(dispatch, model) => render_app(dispatch, model),
-    subscriptions=fn(_, _) { @sub.none },
+    subscriptions=(emit, model) => {
+      @sub.batch([
+        cut_player_subscriptions(emit, model),
+        delivery_player_subscriptions(emit, model),
+      ])
+    },
   )
   @rabbita.new(cell)..with_init(emit(Bootstrap)).mount("app")
 }

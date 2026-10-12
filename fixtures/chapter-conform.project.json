@@ -1,0 +1,231 @@
+{
+  "contract": "mooncast.editor-project.v1",
+  "project_id": "project.demo",
+  "revision": 7,
+  "identity_graph": [
+    {
+      "project_id": "project.demo",
+      "episode_id": "episode.1",
+      "scene_id": "scene.1",
+      "shot_id": "shot.1",
+      "asset_id": "asset.a"
+    },
+    {
+      "project_id": "project.demo",
+      "episode_id": "episode.1",
+      "scene_id": "scene.1",
+      "shot_id": "shot.2",
+      "asset_id": "asset.b"
+    }
+  ],
+  "media_refs": [
+    {
+      "contract": "mooncast.editor-media-ref.v1",
+      "media_ref_id": "media.a",
+      "locator": {
+        "kind": "pack-relative",
+        "uri": "synthetic-a.mp4"
+      },
+      "metadata": {
+        "sha256": "synthetic",
+        "mime_type": "video/mp4",
+        "size_bytes": 1,
+        "duration_ticks": 10000
+      }
+    },
+    {
+      "contract": "mooncast.editor-media-ref.v1",
+      "media_ref_id": "media.b",
+      "locator": {
+        "kind": "pack-relative",
+        "uri": "synthetic-b.mp4"
+      },
+      "metadata": {
+        "sha256": "synthetic",
+        "mime_type": "video/mp4",
+        "size_bytes": 1,
+        "duration_ticks": 10000
+      }
+    }
+  ],
+  "artifacts": [],
+  "intent_refs": [
+    {
+      "intent_ref": "intent.demo"
+    }
+  ],
+  "timeline": {
+    "contract": "mooncast.editor-timeline.v1",
+    "timeline_id": "timeline.cut",
+    "revision": 8,
+    "timebase": {
+      "ticks_per_second": 1000
+    },
+    "output": {
+      "preset": "horizontal-1080p",
+      "orientation": "horizontal",
+      "width": 1920,
+      "height": 1080,
+      "fps": {
+        "numerator": 24,
+        "denominator": 1
+      },
+      "background": "#000000"
+    },
+    "tracks": [
+      {
+        "track_id": "video",
+        "kind": "video",
+        "order": 0,
+        "clips": [
+          {
+            "clip_id": "a",
+            "media_ref_id": "media.a",
+            "identity": {
+              "project_id": "project.demo",
+              "episode_id": "episode.1",
+              "scene_id": "scene.1",
+              "shot_id": "shot.1",
+              "asset_id": "asset.a"
+            },
+            "intent": {
+              "intent_ref": "intent.demo"
+            },
+            "start_tick": 0,
+            "duration_ticks": 2000,
+            "source_in_tick": 500,
+            "source_out_tick": 2500,
+            "settings": {
+              "fit": "contain",
+              "opacity": 1,
+              "scale": 1,
+              "position_x": 0,
+              "position_y": 0,
+              "rotation_degrees": 0,
+              "brightness": 0,
+              "contrast": 1,
+              "saturation": 1,
+              "gamma": 1,
+              "volume_db": 0,
+              "pan": 0
+            },
+            "keyframes": {
+              "opacity": [],
+              "scale": [],
+              "position_x": [],
+              "position_y": [],
+              "brightness": [],
+              "contrast": [],
+              "saturation": [],
+              "gamma": [],
+              "volume_db": [],
+              "pan": []
+            },
+            "effects": [],
+            "effect_stack_digest": ""
+          },
+          {
+            "clip_id": "b",
+            "media_ref_id": "media.b",
+            "identity": {
+              "project_id": "project.demo",
+              "episode_id": "episode.1",
+              "scene_id": "scene.1",
+              "shot_id": "shot.2",
+              "asset_id": "asset.b"
+            },
+            "intent": {
+              "intent_ref": "intent.demo"
+            },
+            "start_tick": 2000,
+            "duration_ticks": 2000,
+            "source_in_tick": 2000,
+            "source_out_tick": 4000,
+            "settings": {
+              "fit": "contain",
+              "opacity": 1,
+              "scale": 1,
+              "position_x": 0,
+              "position_y": 0,
+              "rotation_degrees": 0,
+              "brightness": 0,
+              "contrast": 1,
+              "saturation": 1,
+              "gamma": 1,
+              "volume_db": 0,
+              "pan": 0
+            },
+            "keyframes": {
+              "opacity": [],
+              "scale": [],
+              "position_x": [],
+              "position_y": [],
+              "brightness": [],
+              "contrast": [],
+              "saturation": [],
+              "gamma": [],
+              "volume_db": [],
+              "pan": []
+            },
+            "effects": [],
+            "effect_stack_digest": ""
+          },
+          {
+            "clip_id": "a-repeat",
+            "media_ref_id": "media.a",
+            "identity": {
+              "project_id": "project.demo",
+              "episode_id": "episode.1",
+              "scene_id": "scene.1",
+              "shot_id": "shot.1",
+              "asset_id": "asset.a"
+            },
+            "intent": {
+              "intent_ref": "intent.demo"
+            },
+            "start_tick": 4000,
+            "duration_ticks": 2000,
+            "source_in_tick": 500,
+            "source_out_tick": 2500,
+            "settings": {
+              "fit": "contain",
+              "opacity": 1,
+              "scale": 1,
+              "position_x": 0,
+              "position_y": 0,
+              "rotation_degrees": 0,
+              "brightness": 0,
+              "contrast": 1,
+              "saturation": 1,
+              "gamma": 1,
+              "volume_db": 0,
+              "pan": 0
+            },
+            "keyframes": {
+              "opacity": [],
+              "scale": [],
+              "position_x": [],
+              "position_y": [],
+              "brightness": [],
+              "contrast": [],
+              "saturation": [],
+              "gamma": [],
+              "volume_db": [],
+              "pan": []
+            },
+            "effects": [],
+            "effect_stack_digest": ""
+          }
+        ]
+      }
+    ],
+    "transitions": [],
+    "audio_buses": [],
+    "delivery_audio": {
+      "target_lufs": -14,
+      "true_peak_limit_dbtp": -1,
+      "limiter_enabled": false,
+      "delivery_audio_digest": ""
+    }
+  }
+}

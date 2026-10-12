@@ -1,0 +1,31 @@
+{
+  "contract": "mooncast.chapter-draft.v1",
+  "project_id": "demo",
+  "project_revision": 2,
+  "timeline_id": "cut",
+  "timeline_revision": 3,
+  "ticks_per_second": 24,
+  "duration_ticks": 144,
+  "markers": [
+    {
+      "marker_id": "0",
+      "start_tick": 24,
+      "title": "First & introduction"
+    },
+    {
+      "marker_id": "1",
+      "start_tick": 48,
+      "title": "<Review> \"demo\""
+    },
+    {
+      "marker_id": "2",
+      "start_tick": 96,
+      "title": "Silent start"
+    },
+    {
+      "marker_id": "3",
+      "start_tick": 120,
+      "title": "Last"
+    }
+  ]
+}

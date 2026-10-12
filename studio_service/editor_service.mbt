@@ -128,7 +128,7 @@ fn production_source_evidence_valid(
   snapshot : @kernel.ProjectSnapshot,
   source : @editor_integration.ProductionSourceBinding,
 ) -> Bool {
-  let unsigned = { ..source, binding_digest: "" }
+  let unsigned = { ..source, binding_digest: "", }
   source.contract == "mooncast.editor-production-source-binding.v1" &&
   source.project_id == snapshot.graph.project_id &&
   snapshot.graph.episodes.any(episode => episode.episode_id == source.episode_id) &&
@@ -338,7 +338,7 @@ async fn StudioService::materialize_approved_subtitles(
       territory: "contracted-delivery-territories",
       channels: ["master", "review"],
     },
-    { kind: "original", source_id: script_digest + ":" + storyboard_digest },
+    { kind: "original", source_id: script_digest + ":" + storyboard_digest, },
     "mooncast-production-import",
     now_string(),
   )
@@ -378,7 +378,7 @@ fn approved_subtitle_clip(
     clip_id: "clip-approved-project-subtitles",
     media_ref_id: completed.media_ref.media_ref_id,
     identity,
-    intent: { intent_ref: "mooncast:approved-script-subtitles" },
+    intent: { intent_ref: "mooncast:approved-script-subtitles", },
     artifact_id: None,
     start_tick: 0,
     duration_ticks,
@@ -404,7 +404,7 @@ fn empty_editor_track(
     kind,
     order,
     mix: if kind == "audio" {
-      Some({ volume_db: 0.0, pan: 0.0, muted: false })
+      Some({ volume_db: 0.0, pan: 0.0, muted: false, })
     } else {
       None
     },
@@ -426,7 +426,7 @@ fn empty_editor_bus(
     pan: 0.0,
     muted: false,
     solo: false,
-    automation: { gain_db: [], pan: [] },
+    automation: { gain_db: [], pan: [], },
     bus_digest: "sha256:" + sha256_text(id + ":editor-bus-v1"),
   }
 }
@@ -455,13 +455,13 @@ fn editor_from_production_graph(
     contract: "mooncast.editor-timeline.v1",
     timeline_id: "timeline-main",
     revision: 0,
-    timebase: { ticks_per_second: 1000 },
+    timebase: { ticks_per_second: 1000, },
     output: {
       preset: "horizontal-1080p",
       orientation: "horizontal",
       width: 1920,
       height: 1080,
-      fps: { numerator: 24, denominator: 1 },
+      fps: { numerator: 24, denominator: 1, },
       background: "#000000",
     },
     tracks: [
@@ -498,7 +498,7 @@ fn editor_from_production_graph(
     identity_graph: identities,
     media_refs: [],
     artifacts: [],
-    intent_refs: [{ intent_ref: "moonwiki:project:" + graph.project_id }],
+    intent_refs: [{ intent_ref: "moonwiki:project:" + graph.project_id, }],
     timeline,
   }
 }
@@ -521,9 +521,9 @@ async fn StudioService::bind_editor_moonwiki_intents(
   {
     ..project,
     intent_refs: [
-      { intent_ref: binding.brief_intent_ref.provenance_ref },
-      { intent_ref: binding.bible_intent_ref.provenance_ref },
-      { intent_ref: binding.script_intent_ref.provenance_ref },
+      { intent_ref: binding.brief_intent_ref.provenance_ref, },
+      { intent_ref: binding.bible_intent_ref.provenance_ref, },
+      { intent_ref: binding.script_intent_ref.provenance_ref, },
     ],
   }
 }
@@ -653,7 +653,7 @@ async fn StudioService::hydrate_generated_editor_project(
           clip_id: "clip-generated-" + shot.shot_id,
           media_ref_id,
           identity,
-          intent: { intent_ref: "mooncast:approved-shot:" + shot.shot_id },
+          intent: { intent_ref: "mooncast:approved-shot:" + shot.shot_id, },
           artifact_id: Some(artifact_id),
           start_tick: cursor,
           duration_ticks: shot.duration_ms,
@@ -697,7 +697,7 @@ async fn StudioService::hydrate_generated_editor_project(
   )
   media_refs.push(completed_subtitles.media_ref)
   let subtitle_clip = approved_subtitle_clip(video_project, completed_subtitles)
-  tracks[subtitle_index] = { ..tracks[subtitle_index], clips: [subtitle_clip] }
+  tracks[subtitle_index] = { ..tracks[subtitle_index], clips: [subtitle_clip], }
   {
     ..base,
     identity_graph: identities,
@@ -732,7 +732,7 @@ async fn StudioService::ensure_approved_editor_subtitles(
     if sha256.has_prefix("sha256:") {
       {
         ..reference,
-        metadata: { ..reference.metadata, sha256: sha256[7:].to_owned() },
+        metadata: { ..reference.metadata, sha256: sha256[7:].to_owned(), },
       }
     } else {
       reference
@@ -743,7 +743,7 @@ async fn StudioService::ensure_approved_editor_subtitles(
     }) {
     base_refs.push(completed.media_ref)
   }
-  let base = { ..stored.base_snapshot, media_refs: base_refs }
+  let base = { ..stored.base_snapshot, media_refs: base_refs, }
   let session = @editor_domain.replay(
     base,
     stored.command_log.map(record => record.command),
@@ -1368,7 +1368,7 @@ pub async fn StudioService::complete_editor_intake(
       value.media_ref_id != media_ref_id
     })
     base_refs.push(completed.media_ref)
-    let base = { ..stored.base_snapshot, media_refs: base_refs }
+    let base = { ..stored.base_snapshot, media_refs: base_refs, }
     let session = @editor_domain.replay(
       base,
       stored.command_log.map(entry => entry.command),
@@ -1383,7 +1383,7 @@ pub async fn StudioService::complete_editor_intake(
       clip_id: "clip-" + intake_id,
       media_ref_id,
       identity: request.identity,
-      intent: { intent_ref: "mooncast:editor-role:" + request.role },
+      intent: { intent_ref: "mooncast:editor-role:" + request.role, },
       artifact_id: None,
       start_tick: 0,
       duration_ticks: request.duration_ticks,
@@ -1423,7 +1423,7 @@ pub async fn StudioService::complete_editor_intake(
       already_placed: false,
       track_id,
       track_kind,
-      add_clip_template: Some({ track_id, clip }),
+      add_clip_template: Some({ track_id, clip, }),
     }
     save_value(self.store, editor_take_key(project_id, take_id), take)
     self.save_editor_catalog(session.snapshot, now_string())
@@ -1617,7 +1617,13 @@ pub async fn StudioService::analyze_editor_media(
           height: None,
         }
       None =>
-        { state: "failed", digest: None, mime: None, width: None, height: None }
+        {
+          state: "failed",
+          digest: None,
+          mime: None,
+          width: None,
+          height: None,
+        }
     },
     waveform: {
       state: if peaks.is_empty() {
@@ -1709,8 +1715,43 @@ async fn StudioService::materialize_plan_media(
   for track in plan.tracks {
     for clip in track.clips {
       if !seen.contains(clip.selected_digest) {
-        let path = self.materialize_media(clip.selected_digest, ".media")
-        result.push({ digest: clip.selected_digest, path })
+        let path = if clip.local_media is Some(binding) &&
+          binding.role == "subtitle" &&
+          (
+            binding.parser_version == "mooncast-whisper-json-parser@1.0.0" ||
+            binding.parser_version == "mooncast-whisper-tsv-parser@1.0.0" ||
+            binding.parser_version == "mooncast-audacity-label-parser@1.0.0"
+          ) {
+          // Verify retained source bytes before using the frozen cue derivative.
+          guard self.editor_media.bytes(normalized_digest(clip.selected_digest))
+            is Some(_) else {
+            fail("transcript source bytes are missing")
+          }
+          // Use the same source trim, placement and selected range as export.
+          // Group repeated uses of one source so its renderer input is unique.
+          let source_plan = {
+            ..plan,
+            tracks: plan.tracks.map(track => {
+              ..track,
+              clips: track.clips.filter(item => {
+                item.selected_digest == clip.selected_digest
+              }),
+            }),
+          }
+          let sidecar = @editor_render.subtitle_sidecar(source_plan)
+          if sidecar.cue_count == 0 {
+            continue
+          }
+          let content = sidecar.content
+          let key = "transcript-" +
+            sha256_text(clip.selected_digest + ":" + content) +
+            ".srt"
+          ignore(self.editor_render_files.put_blob(key, @utf8.encode(content)))
+          self.editor_render_files.owned_path(key)
+        } else {
+          self.materialize_media(clip.selected_digest, ".media")
+        }
+        result.push({ digest: clip.selected_digest, path, })
         seen.push(clip.selected_digest)
       }
     }
@@ -1819,7 +1860,7 @@ fn production_render_plan(
   @editor_plan.rehash({
     ..base,
     output,
-    range: { start_tick: 0, duration_ticks: range.duration_ticks },
+    range: { start_tick: 0, duration_ticks: range.duration_ticks, },
     tracks,
     transitions,
   })

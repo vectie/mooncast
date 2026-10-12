@@ -1,0 +1,47 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/reel_edl"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/mooncast/editor/domain",
+  "vectie/mooncast/editor/edl",
+  "vectie/mooncast/editor/render_exec",
+}
+
+// Values
+pub fn export_reel_edl(@render_exec.ReelRecipe, Array[Array[@domain.SubtitleCue]], Int, String) -> ReelEdl raise
+
+// Errors
+
+// Types and methods
+pub(all) struct ReelEdl {
+  contract : String
+  fps : Int
+  rounding : String
+  record_start_timecode : String
+  duration_frames : Int
+  sources : Array[ReelEdlSource]
+  excerpts : Array[ReelEdlExcerpt]
+  edl : String
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ReelEdlExcerpt {
+  source_id : String
+  first_cue : Int
+  last_cue : Int
+  source_start_ms : Int
+  source_end_ms : Int
+  rounded : Bool
+  cut : @edl.Cut
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ReelEdlSource {
+  reel : String
+  source_id : String
+  media : String
+  transcript : String
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits

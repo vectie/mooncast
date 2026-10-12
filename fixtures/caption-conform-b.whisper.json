@@ -1,0 +1,7 @@
+{
+  "segments": [
+    { "start": 0.5, "end": 1.5, "text": "A second voice 🌙" },
+    { "start": 1.5, "end": 3.5, "text": "Reorder & repeat the useful parts." },
+    { "start": 4.0, "end": 5.0, "text": "This unused line must not appear." }
+  ]
+}

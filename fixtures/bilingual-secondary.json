@@ -1,0 +1,10 @@
+{
+  "contract": "mooncast.caption-draft.v1",
+  "source_file": "访谈 中文.vtt",
+  "duration_ms": 6000,
+  "cues": [
+    {"start_ms": 1000, "end_ms": 2000, "text": "你好，花园！"},
+    {"start_ms": 2000, "end_ms": 3000, "text": "欢迎回来。"},
+    {"start_ms": 4000, "end_ms": 5500, "text": "种子与阳光。\n下次见 🌙"}
+  ]
+}

@@ -35,7 +35,7 @@ fn media_intake_view(
         @html.span("Local file selection"),
         @html.input(
           input_type=@html.File,
-          accept="audio/*,image/*,.srt,.vtt,.txt",
+          accept="audio/*,image/*,.srt,.vtt,.txt,.json,.tsv",
           id="media-intake-file",
           on_change=dispatch.map(_ => {
             IntakeFileSelected(selected_local_media_blob())
@@ -77,7 +77,7 @@ fn media_intake_view(
       ],
       @html.p(
         class="wide microcopy",
-        "Rabbita reads the selected Blob, computes its SHA-256 in the browser, freezes rights and source metadata, then uploads those exact bytes. Text paste remains available for subtitle fixtures.",
+        "Choose subtitle for SRT, WebVTT, Whisper JSON, Whisper TSV (milliseconds), or Audacity region-label TXT/TSV (seconds). Set the full source duration and confirm rights. Original file bytes and source evidence are retained; transcript captions become an editable timeline overlay and SRT on export. Point labels, frequency labels and word-level styling are not supported.",
       ),
       @html.button(
         class="primary wide",

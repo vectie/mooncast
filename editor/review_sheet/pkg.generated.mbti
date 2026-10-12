@@ -1,0 +1,48 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/review_sheet"
+
+import {
+  "vectie/mooncast/editor/captions",
+  "vectie/mooncast/editor/chapters",
+}
+
+// Values
+pub fn by_chapters(Int, @chapters.Draft, String, captions? : @captions.CaptionDraft) -> Sheet raise
+
+pub fn time(Int) -> String
+
+pub fn uniform(Int, Int, String, captions? : @captions.CaptionDraft) -> Sheet raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Card {
+  number : Int
+  title : String
+  start_ms : Int
+  end_ms : Int
+  requested_ms : Int
+  image : String
+  excerpts : Array[Excerpt]
+} derive(Eq, ToJson)
+
+pub(all) struct Excerpt {
+  cue_number : Int
+  start_ms : Int
+  end_ms : Int
+  text : String
+} derive(Eq, ToJson)
+
+pub(all) struct Sheet {
+  contract : String
+  title : String
+  mode : String
+  duration_ms : Int
+  has_captions : Bool
+  cards : Array[Card]
+} derive(Eq, ToJson)
+pub fn Sheet::html(Self, String, String) -> String
+
+// Type aliases
+
+// Traits

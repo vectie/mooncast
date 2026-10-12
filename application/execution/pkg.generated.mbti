@@ -164,6 +164,9 @@ pub async fn DeliveryFactoryService::publication_authority_request(Self, String,
 pub async fn DeliveryFactoryService::record_acceptance(Self, String, @vectie/mooncast/execution.DeliveryBuildAcceptance) -> DeliveryAcceptanceRecord
 pub async fn DeliveryFactoryService::recover_interrupted(Self) -> Int
 pub async fn DeliveryFactoryService::retry(Self, String, Int, String, String) -> DeliveryFactoryRecord
+pub async fn DeliveryFactoryService::verified_cover_frame(Self, String, String, String, String) -> (@vectie/mooncast/execution.DeliveryBuildArtifact, @store.StoredBlob)?
+pub async fn DeliveryFactoryService::verified_delivery_video(Self, String, String, String, String) -> (@vectie/mooncast/execution.DeliveryBuildArtifact, @store.StoredBlob)?
+pub async fn DeliveryFactoryService::verified_delivery_video_captions(Self, String, String, String, String) -> (@vectie/mooncast/execution.DeliveryBuildArtifact, @store.StoredBlob)?
 
 pub(all) struct DeliveryOutputCaptions {
   content : String

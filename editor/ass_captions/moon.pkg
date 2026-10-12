@@ -1,0 +1,13 @@
+import {
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/string",
+  "vectie/mooncast/editor/captions",
+}
+
+supported_targets = "native"
+
+import {
+  "vectie/mooncast/editor/ass_captions" @ass,
+  "vectie/mooncast/editor/captions",
+  "moonbitlang/core/encoding/utf8",
+} for "test"

@@ -1,0 +1,7 @@
+import {
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "vectie/mooncast/editor/chapters",
+}
+
+supported_targets = "native"

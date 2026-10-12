@@ -1,0 +1,40 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/captions"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn import_draft(Bytes, String, String, Int) -> CaptionDraft raise
+
+pub fn read_draft(String) -> CaptionDraft raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Caption {
+  start_ms : Int
+  end_ms : Int
+  text : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CaptionDraft {
+  contract : String
+  source_file : String
+  duration_ms : Int
+  cues : Array[Caption]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn CaptionDraft::merge_cues(Self, Int, Int, String) -> Self raise
+pub fn CaptionDraft::set_cue(Self, Int, Int, Int, String) -> Self raise
+pub fn CaptionDraft::shift(Self, Int) -> Self raise
+pub fn CaptionDraft::split_cue(Self, Int, Int, String, String) -> Self raise
+pub fn CaptionDraft::srt(Self) -> String raise
+pub fn CaptionDraft::sync(Self, Int, Int, Int, Int) -> Self raise
+pub fn CaptionDraft::validate(Self) -> Unit raise
+pub fn CaptionDraft::vtt(Self) -> String raise
+
+// Type aliases
+
+// Traits

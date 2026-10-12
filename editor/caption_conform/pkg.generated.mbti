@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/caption_conform"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/mooncast/editor/captions",
+  "vectie/mooncast/editor/domain",
+}
+
+// Values
+pub fn conform(@domain.EditorProject, Array[SourceCaptions]) -> ConformedCaptions raise
+
+pub fn media_duration_ms(@domain.EditorProject, String) -> Int raise
+
+// Errors
+
+// Types and methods
+pub(all) struct ConformedCaptions {
+  contract : String
+  project_id : String
+  project_revision : Int
+  timeline_id : String
+  timeline_revision : Int
+  ticks_per_second : Int
+  silent_media_ref_ids : Array[String]
+  draft : @captions.CaptionDraft
+  origins : Array[CueOrigin]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct CueOrigin {
+  output_cue : Int
+  clip_id : String
+  media_ref_id : String
+  source_file : String
+  source_cue : Int
+  source_start_ms : Int
+  source_end_ms : Int
+  clipped_at_cut : Bool
+  rounded_inward : Bool
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct SourceCaptions {
+  media_ref_id : String
+  draft : @captions.CaptionDraft?
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

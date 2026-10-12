@@ -12,9 +12,15 @@ import {
 // Values
 pub fn compile(String, @render_plan.RenderPlan, Array[ResolvedMedia], String) -> RenderInvocation raise
 
+pub fn compile_audio_edition(String, Int, Int, String, String, String) -> @process.CommandSpec
+
 pub fn compile_concat(String, Array[String], String, String, Int) -> ConcatInvocation raise
 
 pub fn compile_proxy(String, String, String, String, String) -> ProxyInvocation
+
+pub fn compile_review_frame(String, Int, Int, String) -> @process.CommandSpec
+
+pub fn compile_review_probe(String) -> @process.CommandSpec
 
 pub fn compile_thumbnail(String, String, String, String) -> AnalysisInvocation
 
@@ -34,7 +40,23 @@ pub async fn execute_proxy(ProxyInvocation) -> RenderReceipt
 
 pub async fn inspect_render_output(String, String, String, Int, OutputExpectation) -> OutputInspection
 
+pub fn multi_source_reel(ReelRecipe, Array[Array[@domain.SubtitleCue]]) -> MultiSourceReel raise
+
+pub fn parse_reel_recipe(String) -> ReelRecipe raise
+
+pub async fn probe_reel_source(String) -> Json
+
+pub async fn reel_tool_versions() -> Json
+
+pub async fn render_multi_source_reel(MultiSourceReel, Array[String], Array[Bool], String, String, String) -> RenderReceipt
+
+pub async fn render_transcript_reel(TranscriptReel, String, String, String, Bool) -> RenderReceipt
+
 pub fn subtitle_sidecar(@render_plan.RenderPlan) -> SubtitleSidecar
+
+pub fn transcript_reel(Array[@domain.SubtitleCue], String) -> TranscriptReel raise
+
+pub fn validate_reel_recipe(ReelRecipe) -> Unit raise
 
 // Errors
 
@@ -55,6 +77,16 @@ pub(all) struct ConcatInvocation {
   manifest_text : String
   command : @process.CommandSpec
 } derive(@debug.Debug)
+
+pub(all) struct MultiSourceReel {
+  contract : String
+  canvas : ReelCanvas
+  excerpts : Array[SourceExcerpt]
+  cues : Array[@domain.SubtitleCue]
+  duration_frames : Int
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn MultiSourceReel::srt(Self) -> String
 
 pub(all) struct OutputExpectation {
   project_id : String
@@ -104,6 +136,38 @@ pub(all) struct ProxyInvocation {
   command : @process.CommandSpec
 } derive(@debug.Debug)
 
+pub(all) struct ReelCanvas {
+  width : Int
+  height : Int
+  fit : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ReelChoice {
+  source_id : String
+  selection : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ReelExcerpt {
+  first_cue : Int
+  last_cue : Int
+  source_start_ms : Int
+  source_end_ms : Int
+  output_start_ms : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ReelRecipe {
+  contract : String
+  canvas : ReelCanvas
+  sources : Array[ReelSource]
+  choices : Array[ReelChoice]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ReelSource {
+  id : String
+  media : String
+  transcript : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct RenderEncoding {
   container : String
   video_codec : String
@@ -145,6 +209,17 @@ pub(all) struct SidecarCue {
   evidence_digest : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct SourceExcerpt {
+  source_id : String
+  source_index : Int
+  first_cue : Int
+  last_cue : Int
+  source_start_ms : Int
+  source_end_ms : Int
+  output_start_frame : Int
+  output_frames : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub(all) struct SubtitleSidecar {
   contract : String
   project_id : String
@@ -157,7 +232,15 @@ pub(all) struct SubtitleSidecar {
   publication_authority : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+pub(all) struct TranscriptReel {
+  contract : String
+  excerpts : Array[ReelExcerpt]
+  cues : Array[@domain.SubtitleCue]
+  duration_ms : Int
+  publication_authority : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn TranscriptReel::srt(Self) -> String
+
 // Type aliases
 
 // Traits
-

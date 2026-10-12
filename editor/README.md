@@ -59,3 +59,38 @@ and render-plan packages remain deterministic and I/O-free.
   and export validation in the release-validation phase.
 
 No MoonBit validation command was run while creating these packages, by design.
+
+## Offline reading handoff
+
+`editor/readable_transcript` joins existing caption and chapter drafts into an
+offline HTML/plain-text transcript without media I/O or project mutation.
+`cmd/readable_transcript` provides preview and new-file export, including exact
+input provenance. See [the readable transcript guide](../docs/readable-transcript.md).
+
+## Portable editing folder
+
+`editor/project_collect` prepares a content-deduplicated media copy plan while
+retaining the native snapshot. `cmd/project_collect` previews, copies and verifies
+actual local media. See [project collection](../docs/project-collection.md).
+
+## Visual cut review
+
+`editor/review_sheet` plans bounded uniform/chapter contact sheets and joins
+existing caption drafts without I/O. `editor/render_exec` owns the FFmpeg frame
+and probe command descriptions; `cmd/review_sheet` runs them against local media
+and writes a portable image/HTML folder. See
+[visual review sheets](../docs/visual-review-sheet.md).
+
+## Offline full-motion screening
+
+`editor/screening` joins existing caption/chapter drafts with a browser-oriented
+MP4 profile and emits the standalone interactive player. `cmd/screening` probes
+and copies the actual local media with preserved sidecars and a completion
+manifest. See [offline screening](../docs/offline-screening.md).
+
+## Chaptered listening edition
+
+`editor/audio_edition` selects a mono/stereo soundtrack and verifies its
+chaptered audio-only derivative. `editor/render_exec` owns the M4A encoding
+command; `cmd/audio_edition` exposes inspect, preview and new-folder export.
+See [listening editions](../docs/audio-edition.md).

@@ -1,0 +1,10 @@
+import {
+  "vectie/mooncast/editor/captions",
+}
+
+supported_targets = "native"
+
+import {
+  "vectie/mooncast/editor/bilingual_captions" @bilingual,
+  "vectie/mooncast/editor/captions",
+} for "test"

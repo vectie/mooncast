@@ -1,0 +1,32 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/screening"
+
+import {
+  "vectie/mooncast/editor/caption_media",
+  "vectie/mooncast/editor/captions",
+  "vectie/mooncast/editor/chapters",
+}
+
+// Values
+pub fn plan(@caption_media.Media, String, captions? : @captions.CaptionDraft, chapters? : @chapters.Draft) -> Plan raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Chapter {
+  title : String
+  start_ms : Int
+} derive(Eq, ToJson)
+
+pub(all) struct Plan {
+  contract : String
+  title : String
+  duration_ms : Int
+  cues : Array[@captions.Caption]
+  chapters : Array[Chapter]
+} derive(Eq, ToJson)
+pub fn Plan::html(Self, String, String) -> String
+
+// Type aliases
+
+// Traits

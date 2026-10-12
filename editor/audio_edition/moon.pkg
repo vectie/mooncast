@@ -1,0 +1,11 @@
+import {
+  "moonbitlang/core/string",
+  "vectie/mooncast/editor/chapters",
+  "vectie/mooncast/editor/chapter_media",
+}
+
+supported_targets = "native"
+
+import {
+  "vectie/mooncast/editor/chapters",
+} for "test"

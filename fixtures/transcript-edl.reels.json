@@ -1,0 +1,20 @@
+{
+  "contract": "mooncast.edl-reel-map.v1",
+  "fps": 24,
+  "record_start_timecode": "01:00:00:00",
+  "draft_timeline_id": "timeline.transcript-cut",
+  "bindings": [
+    {
+      "reel": "SRC00001",
+      "media_ref_id": "media.a",
+      "template_clip_id": "template.a",
+      "source_start_timecode": "00:00:00:00"
+    },
+    {
+      "reel": "SRC00002",
+      "media_ref_id": "media.b",
+      "template_clip_id": "template.b",
+      "source_start_timecode": "00:00:00:00"
+    }
+  ]
+}

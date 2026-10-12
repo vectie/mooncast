@@ -37,6 +37,23 @@ economics. The checked-in deterministic provider makes a real three-minute
 H.264/AAC fixture with an embedded subtitle stream, visible AI labels, and full
 shot-to-master SHA-256 lineage in seconds.
 
+For an editable video-cut handoff, `transcript_reel export-edl` turns the same
+ordered transcript recipe into a CMX3600 EDL plus source/reel mapping and exact
+rounding details. Continue the cut in an NLE or the existing native EDL importer
+without rendering first. See [transcript-to-EDL handoff](docs/transcript-edl-handoff.md).
+
+For a portable editing folder, `project_collect` copies all native snapshot media,
+preserves the editable timeline and lets you verify/reopen it after relocation.
+See [collect an editable project](docs/project-collection.md).
+
+For external ASS/SSA subtitles, `ass_captions` previews and imports dialogue
+into editable plain captions, preserving the original styled source. See
+[ASS/SSA caption import](docs/ass-captions.md).
+
+For selectable captions in an actual MP4/MKV, `caption_media` appends a labelled
+caption track and reopens a selected embedded track in the existing caption
+editor. See [caption media interchange](docs/caption-media.md).
+
 ## Build and run the native production studio
 
 ```bash
@@ -83,6 +100,11 @@ every operation.
 See [the endpoint contract](docs/local-studio-api.md) for request and response
 details.
 
+Cut Editor can import local Whisper JSON/TSV and Audacity region-label files as
+timed caption overlays, alongside SRT and WebVTT. Original source bytes remain
+bound to their rights receipts; native preview/export uses deterministic SRT
+derivatives. See [local transcript import](docs/local-transcript-import.md).
+
 ## Validate
 
 ```bash
@@ -99,3 +121,102 @@ references, symlink containment, and forbidden cross-product imports. The
 runtime, validation, installation, and CI paths are MoonBit/Rabbita-only. The
 completed source cutover and promotion requirements are recorded under
 `migrations/`.
+
+For transcript-driven rough cuts, inspect/search numbered lines and select
+spoken excerpts in playback order with the local `cmd/transcript_reel` utility.
+It renders an MP4 with retimed captions and an edit-decision record. See
+[transcript reel workflow](docs/transcript-reels.md).
+
+For a rough cut combining several interviews or demonstrations, the
+[multi-source transcript recipe](docs/multi-source-transcript-reels.md) preserves
+ordered and repeated cue selections, fits an explicit letterboxed canvas and
+normalizes audio/silent spans. It exports MP4, retimed SRT and content-bound
+edit provenance without changing Studio or granting production approval.
+
+To correct caption text and timing without rebuilding a reel, use the local
+`cmd/caption_edit` utility. It supports editable JSON drafts, cue corrections,
+split/merge, offset or two-point synchronization, and SRT/WebVTT export. See
+[caption editing](docs/caption-editing.md).
+
+For cuts-only interchange with another editor, use `cmd/edit_decisions` to
+preview/import CMX3600 EDL into a native timeline draft and export it again.
+See [edit-decision interchange](docs/edit-decision-interchange.md).
+
+After a cut changes, use `cmd/caption_conform` to carry source captions through
+reordered, repeated and trimmed clips. It exports synchronized SRT/WebVTT,
+an editable caption draft and cue-to-source tracing. See
+[caption conforming](docs/caption-conforming.md).
+
+To add navigation chapters to an edited episode, use `cmd/chapters` to seed
+markers from a chosen timeline track, rename/move/add/remove chapters, and
+export chapter WebVTT, exact-clock FFmetadata and a reusable JSON draft. See
+[timeline chapters](docs/timeline-chapters.md).
+
+To turn existing captions into shorter lines or timed screens, use
+`cmd/caption_layout` to preview word wrapping, optionally paginate with explicit
+estimated timing, and export editable drafts plus SRT/WebVTT. Reading-speed
+feedback and source-cue mappings support manual review. See
+[caption layout](docs/caption-layout.md).
+
+To edit many caption cues in a spreadsheet and bring the changes back, use
+`cmd/caption_review`: export keyed multiline CSV, optionally preview differences,
+then apply to a new draft with SRT/WebVTT outputs. See
+[caption review sheets](docs/caption-review.md).
+
+## Relink moved project media
+
+Inventory a native editor snapshot, edit a source-bound media-ID/path map, and
+verify every relocated file by SHA-256 and size before saving a separate native
+snapshot. See [media relinking](docs/media-relinking.md). This offline utility
+preserves the cut and media identities; it does not mutate the live Studio.
+
+## Local chapter interchange
+
+Existing FFmetadata chapters can be imported into an editable chapter draft,
+then renamed, moved and exported. See [chapter import](docs/chapter-import.md).
+
+## Carry chapters through a recut
+
+Use the local `cmd/chapter_conform` workflow to carry source chapter titles
+through trimmed, reordered and repeated video clips into an editable draft,
+chapter WebVTT and FFmetadata. [Chapter conforming](docs/chapter-conforming.md)
+explains explicit source bindings, exact clocks and the per-chapter trace.
+
+## Embed chapters in playable media
+
+Use `cmd/chapter_media` to preview an authored chapter draft, embed its chapters
+in a new MP4/MKV without re-encoding existing video/audio/captions, and extract
+embedded chapters back into an editable draft. See
+[chaptered media interchange](docs/chapter-media.md).
+
+## Offline visual cut review
+
+Use `cmd/review_sheet` to export a portable contact sheet from actual local video:
+real sampled frame images, timestamps, optional chapter titles and editable-draft
+caption excerpts. Preview the intervals first, then open or print the generated
+HTML. See [the visual review sheet guide](docs/visual-review-sheet.md) for exact
+commands, supported media and recovery limits. This is local editorial aid;
+client acceptance, publication and full-motion/audio review remain separate.
+
+## Offline full-motion screening
+
+Use `cmd/screening` to copy a local H.264/AAC MP4 into a portable player with
+searchable click-to-seek captions, chapter navigation, caption toggle and playback
+speed controls. Existing caption/chapter drafts remain editable alongside the
+video. See [offline screening bundles](docs/offline-screening.md) for the bounded
+media profile, relative-file layout, controls and local-review limits.
+
+## Find navigation boundaries in unchaptered media
+
+`cmd/scene_index` detects visual changes in a local video and exports editable
+chapter suggestions with complete candidate scores and suppressed-boundary
+explanations. Rename or move the markers with `chapters`, then use them in the
+existing offline player. See [local scene indexing](docs/scene-index.md).
+
+## Show two caption languages together
+
+`cmd/bilingual_captions` combines independently timed caption drafts into one
+editable track, preserving the exact active text at every input boundary.
+Preview coverage, export both originals with SRT/WebVTT and source mappings,
+then edit or embed the result using the existing caption tools. See
+[bilingual caption composition](docs/bilingual-captions.md).

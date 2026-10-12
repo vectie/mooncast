@@ -1,0 +1,26 @@
+{
+  "contract": "mooncast.chapter-draft.v1",
+  "project_id": "source.b",
+  "project_revision": 2,
+  "timeline_id": "original.b",
+  "timeline_revision": 3,
+  "ticks_per_second": 24,
+  "duration_ticks": 240,
+  "markers": [
+    {
+      "marker_id": "setup",
+      "start_tick": 0,
+      "title": "Set up"
+    },
+    {
+      "marker_id": "demo",
+      "start_tick": 60,
+      "title": "Demonstration"
+    },
+    {
+      "marker_id": "result",
+      "start_tick": 84,
+      "title": "Result"
+    }
+  ]
+}

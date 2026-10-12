@@ -53,7 +53,7 @@ pub fn delivery_encoding(
       )
     )
   guard supported else { fail("unsupported render encoding") }
-  { container, video_codec, audio_codec, pixel_format: "yuv420p" }
+  { container, video_codec, audio_codec, pixel_format: "yuv420p", }
 }
 
 ///|
@@ -470,6 +470,31 @@ pub fn compile_with_encoding(
   let track_mixes : Array[@domain.TrackMix?] = []
   for track in render_plan.tracks {
     for clip in track.clips {
+      if clip.local_media is Some(binding) &&
+        binding.role == "subtitle" &&
+        (
+          binding.parser_version == "mooncast-whisper-json-parser@1.0.0" ||
+          binding.parser_version == "mooncast-whisper-tsv-parser@1.0.0" ||
+          binding.parser_version == "mooncast-audacity-label-parser@1.0.0"
+        ) {
+        let visible = binding.cues.any(cue => {
+          let source_start = Int::max(cue.start_tick, clip.source_in_tick)
+          let source_end = Int::min(cue.end_tick, clip.source_out_tick)
+          let start = Int::max(
+            render_plan.range.start_tick,
+            clip.start_tick + source_start - clip.source_in_tick,
+          )
+          let end = Int::min(
+            render_plan.range.start_tick + render_plan.range.duration_ticks,
+            clip.start_tick + source_end - clip.source_in_tick,
+          )
+          end > start
+        })
+        if !visible ||
+          clips.any(item => item.selected_digest == clip.selected_digest) {
+          continue
+        }
+      }
       clips.push(clip)
       track_kinds.push(track.kind)
       track_mixes.push(track.mix)

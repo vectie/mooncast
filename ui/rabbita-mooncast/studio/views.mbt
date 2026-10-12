@@ -54,7 +54,10 @@ fn status_chip(status : String) -> @rabbita.Html {
 }
 
 ///|
-fn control_tower_portfolio_status(project_count : Int, projects_at_sla_risk : Int) -> String {
+fn control_tower_portfolio_status(
+  project_count : Int,
+  projects_at_sla_risk : Int,
+) -> String {
   if project_count == 0 {
     "no projects"
   } else if projects_at_sla_risk == 0 {
@@ -874,10 +877,12 @@ fn render_control_tower(
             ),
             div(class="chips", [
               status_chip("pack " + tower.pack_version),
-              status_chip(control_tower_portfolio_status(
-                totals.project_count,
-                totals.projects_at_sla_risk,
-              )),
+              status_chip(
+                control_tower_portfolio_status(
+                  totals.project_count,
+                  totals.projects_at_sla_risk,
+                ),
+              ),
             ]),
           ]),
           div(class="hero-facts", [
@@ -1124,7 +1129,7 @@ fn render_overview(
                     "/episodes/" +
                     episode.id +
                     "/ledger/view",
-                  "Open episode ledger",
+                  "Open episode ledger and actual costs",
                 ),
                 ul(
                   episode.scenes.map(scene => {
@@ -2192,6 +2197,8 @@ fn render_delivery_build(
       Some(value) => p(class="inline-error", value)
       None => @html.nothing
     },
+    render_delivery_media(dispatch, model, build),
+    render_delivery_cover_gallery(model, build),
     div(class="review-actions", [
       button(
         class="secondary",
@@ -2248,7 +2255,8 @@ fn render_delivery(
               disabled=model.busy ||
                 project.master is None ||
                 project.delivery_package is None ||
-                delivery_cut_selection(model, project) is Err(_),
+                delivery_cut_selection(model, project) is Err(_) ||
+                delivery_cover_selection(model, project) is Err(_),
               on_click=dispatch(CreateDeliveryBuild),
               "Create delivery build",
             ),
@@ -2311,45 +2319,13 @@ fn render_delivery(
                 "Promote an exact reviewed master to select a cut and its caption source.",
               )
           },
-          h3("Optional contiguous cut"),
-          p(
-            "Leave both fields blank for no cut. Use seconds with up to 3 decimal places; a cut may be at most 180 seconds long and must fit within the promoted master.",
-          ),
-          div(class="form-grid", [
-            form_field(
-              "Cut start (seconds)",
-              model.delivery_cut_start,
-              "e.g. 12.250",
-              value => dispatch(SetDeliveryCutStart(value)),
-            ),
-            form_field(
-              "Cut end (seconds)",
-              model.delivery_cut_end,
-              "e.g. 42.750",
-              value => dispatch(SetDeliveryCutEnd(value)),
-            ),
-          ]),
-          match delivery_cut_selection(model, project) {
-            Ok(Some(cut)) =>
-              div(class="surface-stack", [
-                p(
-                  "Selected cut: selected-cut · source master · \{cut.start_ms}–\{cut.end_ms} ms · \{cut.end_ms - cut.start_ms} ms long",
-                ),
-                a(
-                  class="primary-link",
-                  href="/api/v2/projects/\{project.id}/delivery-captions/cut/\{cut.start_ms}/\{cut.end_ms}/view",
-                  "Preview selected cut captions and download SRT",
-                ),
-              ])
-            Ok(None) =>
-              p("No cut selected; full-master captions are unchanged.")
-            Err(message) => p(class="inline-error", message)
-          },
+          render_delivery_cuts(dispatch, model, project),
           p(
             class="boundary-note",
             "Cues intersecting the selected cut are clipped to its boundaries and rebased to start at zero. Reordering, speed changes and cut chains require a corrected Cut Editor export.",
           ),
         ]),
+        render_delivery_covers(dispatch, model, project),
         if model.delivery_builds.is_empty() {
           div(class="panel empty-large", [
             h3("No build yet"),

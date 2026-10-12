@@ -632,6 +632,19 @@ struct DeliveryBuildProjection {
   last_error : String?
   record_digest : String
   publication_authority : Bool
+  cover_frames : Array[DeliveryCoverFrameProjection]?
+  videos : Array[DeliveryVideoProjection]?
+} derive(FromJson)
+
+///|
+struct DeliveryCoverFrameProjection {
+  cover_id : String
+  source_variant : String
+  timestamp_seconds : Double
+  format : String
+  name : String
+  sha256 : String
+  preview_url : String
 } derive(FromJson)
 
 ///|
@@ -1277,8 +1290,21 @@ struct Model {
   project : ProjectProjection?
   routed : Array[RoutedExecutionSummary]
   delivery_builds : Array[DeliveryBuildProjection]
-  delivery_cut_start : String
-  delivery_cut_end : String
+  delivery_media_selection : (String, String, String)?
+  delivery_media_generation : Int
+  delivery_caption_preview : String?
+  delivery_caption_error : String?
+  delivery_caption_loading : Bool
+  delivery_caption_identity : (String, String, String)?
+  delivery_transcript : DeliveryTranscript
+  delivery_cut_drafts : Map[String, DeliveryCutDraftSet]
+  cut_player : CutPlayer?
+  cut_player_generation : Int
+  delivery_cut_storage_notices : Map[String, String]
+  delivery_cut_storage_blocked : Array[String]
+  delivery_cover_drafts : Map[String, DeliveryCoverDraftSet]
+  delivery_cover_storage_notices : Map[String, String]
+  delivery_cover_storage_blocked : Array[String]
   client_portals : Array[ClientPortalProjection]
   billing_entries : Array[BillingProjection]
   latest_client_url : String?
@@ -1329,6 +1355,16 @@ enum Msg {
   LoadedProject(ProjectRequest, Result[ProjectProjection, Error])
   LoadedRouted(ProjectRequest, Result[RoutedListProjection, Error])
   LoadedDeliveries(ProjectRequest, Result[DeliveryListProjection, Error])
+  SelectDeliveryMedia(String, String)
+  RetryDeliveryMedia
+  SearchDeliveryTranscript(Int, String)
+  SeekDeliveryCue(Int, Int)
+  DeliveryPlayerEvent(Int, String, Double, Double)
+  LoadedDeliveryMediaCaptions(
+    Int,
+    String,
+    Result[DeliveryCaptionPreviewProjection, Error]
+  )
   LoadedPortals(ProjectRequest, Result[PortalListProjection, Error])
   LoadedBilling(ProjectRequest, Result[BillingListProjection, Error])
   CreatedClientPortal(
@@ -1421,8 +1457,25 @@ enum Msg {
   RunRoutedShot(String, String, String)
   RunAllPendingShots(String)
   ConfirmBatchQc
-  SetDeliveryCutStart(String)
-  SetDeliveryCutEnd(String)
+  AddDeliveryCut
+  EditDeliveryCut(Int, String, String)
+  ToggleDeliveryCut(Int)
+  RemoveDeliveryCut(Int)
+  RebindDeliveryCuts
+  SaveDeliveryCutDrafts
+  SelectCutPlayer(Int)
+  CloseCutPlayer
+  RetryCutPlayer
+  LoadedCutPlayer(Int, Result[PromotedMasterPlayback, Error])
+  CutPlayerEvent(Int, String, Double, Double)
+  MarkCutPlayer(Int, String)
+  PreviewCutPlayer(Int)
+  AddDeliveryCover
+  EditDeliveryCover(Int, String, String)
+  ToggleDeliveryCover(Int)
+  RemoveDeliveryCover(Int)
+  RebindDeliveryCovers
+  SaveDeliveryCoverDrafts
   CreateDeliveryBuild
   RunDeliveryAction(String, String)
   AcceptDelivery(String)
@@ -1722,8 +1775,21 @@ fn initial_model() -> Model {
     project: None,
     routed: [],
     delivery_builds: [],
-    delivery_cut_start: "",
-    delivery_cut_end: "",
+    delivery_media_selection: None,
+    delivery_media_generation: 0,
+    delivery_caption_preview: None,
+    delivery_caption_error: None,
+    delivery_caption_loading: false,
+    delivery_caption_identity: None,
+    delivery_transcript: empty_delivery_transcript(),
+    delivery_cut_drafts: {},
+    cut_player: None,
+    cut_player_generation: 0,
+    delivery_cut_storage_notices: {},
+    delivery_cut_storage_blocked: [],
+    delivery_cover_drafts: {},
+    delivery_cover_storage_notices: {},
+    delivery_cover_storage_blocked: [],
     client_portals: [],
     billing_entries: [],
     latest_client_url: None,
@@ -1821,9 +1887,7 @@ fn initial_model() -> Model {
       evidence_refs: "",
       provider_cost_reconciled: false,
     },
-    control_tower_ownership_form: {
-      action_due_date: "",
-    },
+    control_tower_ownership_form: { action_due_date: "", },
     routing_form: {
       route_id: "primary-video-route",
       provider: "configured-video-provider",

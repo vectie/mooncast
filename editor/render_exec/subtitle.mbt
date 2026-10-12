@@ -30,13 +30,13 @@ fn pad_left(value : Int, width : Int) -> String {
 }
 
 ///|
-fn srt_time(milliseconds : Int) -> String {
-  let hours = milliseconds / 3600000
-  let after_hours = milliseconds % 3600000
-  let minutes = after_hours / 60000
-  let after_minutes = after_hours % 60000
-  let seconds = after_minutes / 1000
-  let millis = after_minutes % 1000
+fn srt_time(milliseconds : Int64) -> String {
+  let hours = (milliseconds / 3600000L).to_int()
+  let after_hours = milliseconds % 3600000L
+  let minutes = (after_hours / 60000L).to_int()
+  let after_minutes = after_hours % 60000L
+  let seconds = (after_minutes / 1000L).to_int()
+  let millis = (after_minutes % 1000L).to_int()
   pad_left(hours, 2) +
   ":" +
   pad_left(minutes, 2) +
@@ -88,8 +88,12 @@ pub fn subtitle_sidecar(plan : @plan.RenderPlan) -> SubtitleSidecar {
   })
   let lines : Array[String] = []
   for index, cue in cues {
-    let start_ms = cue.start_tick * 1000 / plan.timebase.ticks_per_second
-    let end_ms = cue.end_tick * 1000 / plan.timebase.ticks_per_second
+    let start_ms = cue.start_tick.to_int64() *
+      1000L /
+      plan.timebase.ticks_per_second.to_int64()
+    let end_ms = cue.end_tick.to_int64() *
+      1000L /
+      plan.timebase.ticks_per_second.to_int64()
     lines.append([
       (index + 1).to_string(),
       srt_time(start_ms) + " --> " + srt_time(end_ms),

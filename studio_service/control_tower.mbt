@@ -98,7 +98,7 @@ fn current_project_binding(
   let conversion = conversions[conversions.length() - 1]
   let quotes = commercial.quotes.filter(item => item.quote == conversion.quote)
   if quotes.length() == 1 {
-    Some({ quote: quotes[0] })
+    Some({ quote: quotes[0], })
   } else {
     None
   }
@@ -320,6 +320,17 @@ async fn StudioService::record_control_tower_actuals(
   project_id : String,
   input : ControlTowerActualsInput,
 ) -> @control_tower.OperatingActuals {
+  self.with_mutation_lock(() => {
+    self.record_control_tower_actuals_unlocked(project_id, input)
+  })
+}
+
+///|
+async fn StudioService::record_control_tower_actuals_unlocked(
+  self : StudioService,
+  project_id : String,
+  input : ControlTowerActualsInput,
+) -> @control_tower.OperatingActuals {
   guard input.human_confirmed &&
     valid_id(input.command_id) &&
     input.actor.trim() != "" &&
@@ -408,7 +419,7 @@ async fn StudioService::record_control_tower_actuals(
     observed_at: input.observed_at,
     digest: "",
   }
-  let record = { ..core, digest: tower_digest(core.to_json().stringify()) }
+  let record = { ..core, digest: tower_digest(core.to_json().stringify()), }
   save_value(self.store, control_tower_actuals_key(project_id), record)
   record
 }
@@ -514,7 +525,7 @@ async fn StudioService::assign_control_tower_exception(
     external_effect_authorized: false,
     digest: "",
   }
-  let assignment = { ..core, digest: tower_digest(core.to_json().stringify()) }
+  let assignment = { ..core, digest: tower_digest(core.to_json().stringify()), }
   save_value(self.store, control_tower_assignment_key(exception_id), assignment)
   assignment
 }
@@ -575,7 +586,7 @@ async fn StudioService::bind_exception_assignment(
   match self.control_tower_assignment(exception.exception_id) {
     Some(assignment) if normalized_digest(assignment.exception_digest) ==
       normalized_digest(exception.digest) =>
-      { ..exception, assignment: Some(assignment) }
+      { ..exception, assignment: Some(assignment), }
     _ => exception
   }
 }
@@ -860,7 +871,7 @@ async fn StudioService::build_project_control(
     missing_evidence: missing,
     digest: "",
   }
-  ({ ..core, digest: tower_digest(core.to_json().stringify()) }, exceptions)
+  ({ ..core, digest: tower_digest(core.to_json().stringify()), }, exceptions)
 }
 
 ///|
@@ -1020,7 +1031,7 @@ pub async fn StudioService::production_control_tower(
     external_effect_authorized: false,
     digest: "",
   }
-  { ..core, digest: tower_digest(core.to_json().stringify()) }
+  { ..core, digest: tower_digest(core.to_json().stringify()), }
 }
 
 ///|

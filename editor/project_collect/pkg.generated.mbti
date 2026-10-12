@@ -1,0 +1,56 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/project_collect"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/domain",
+}
+
+// Values
+pub fn digest(Bytes) -> String
+
+pub fn prepare(@domain.EditorProject) -> CollectionPlan raise
+
+pub fn read_manifest(String) -> CollectionManifest raise
+
+pub fn verify_manifest(CollectionManifest, Bytes) -> @domain.EditorProject raise
+
+// Errors
+
+// Types and methods
+pub(all) struct CollectedFile {
+  source_uri : String
+  uri : String
+  sha256 : String
+  size_bytes : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CollectionManifest {
+  contract : String
+  source_binding : String
+  project_binding : String
+  project_sha256 : String
+  files : Array[CollectedFile]
+  members : Array[Member]
+  total_size_bytes : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CollectionPlan {
+  source_binding : String
+  project : @domain.EditorProject
+  files : Array[CollectedFile]
+  members : Array[Member]
+  total_size_bytes : Int64
+} derive(ToJson)
+pub fn CollectionPlan::manifest(Self, Bytes) -> CollectionManifest raise
+
+pub(all) struct Member {
+  media_ref_id : String
+  source_uri : String
+  uri : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,14 @@
+import {
+  "vectie/mooncast/editor/captions",
+  "vectie/mooncast/editor/chapters",
+  "vectie/mooncast/editor/caption_media" @media,
+  "vectie/mooncast/editor/review_sheet" @clock,
+}
+
+supported_targets = "native"
+
+import {
+  "vectie/mooncast/editor/captions",
+  "vectie/mooncast/editor/chapters",
+  "vectie/mooncast/editor/caption_media" @media,
+} for "test"

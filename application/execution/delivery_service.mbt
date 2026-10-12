@@ -168,7 +168,12 @@ fn output_kind_valid(output : @execution_domain.DeliveryOutputSpec) -> Bool {
       })
     "cover-frame" =>
       (output.container == "jpg" || output.container == "png") &&
+      output.output_id.length() > 0 &&
+      output.output_id.length() <= 80 &&
+      output.output_id[0] is ('a'..='z' | 'A'..='Z' | '0'..='9') &&
       output.source_output_id != None &&
+      output.in_seconds == None &&
+      output.out_seconds == None &&
       (match output.timestamp_seconds {
         Some(value) => value >= 0.0
         None => false
@@ -205,11 +210,11 @@ fn delivery_profile_valid(
   }
   for output in profile.outputs {
     if !safe_output_id(output.output_id) ||
-      ids.contains(output.output_id) ||
+      ids.contains(output.output_id.to_lower()) ||
       !output_kind_valid(output) {
       return false
     }
-    ids.push(output.output_id)
+    ids.push(output.output_id.to_lower())
     match output.kind {
       "source-master" => source_master_count = source_master_count + 1
       "platform-variant" => variant_count = variant_count + 1
@@ -231,7 +236,8 @@ fn delivery_profile_valid(
           return false
         }
         match output.timestamp_seconds {
-          Some(value) if value > master_duration_seconds => return false
+          Some(value) if !(value >= 0.0 && value < master_duration_seconds) =>
+            return false
           _ => ()
         }
       }
@@ -275,7 +281,8 @@ pub async fn DeliveryFactoryService::create(
     request.master_path == "" ||
     request.master_sha256 == "" ||
     request.master_promotion_digest == "" ||
-    request.master_duration_seconds < 1.0 ||
+    !(request.master_duration_seconds >= 1.0) ||
+    request.master_duration_seconds.is_inf() ||
     request.delivery_version < 1 ||
     request.delivery_digest == "" ||
     !delivery_profile_valid(request.profile, request.master_duration_seconds) ||

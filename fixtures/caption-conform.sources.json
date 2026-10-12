@@ -1,0 +1,15 @@
+{
+  "contract": "mooncast.caption-source-map.v1",
+  "bindings": [
+    {
+      "media_ref_id": "media.a",
+      "format": "srt",
+      "file": "fixtures/caption-conform-a.srt"
+    },
+    {
+      "media_ref_id": "media.b",
+      "format": "whisper-json",
+      "file": "fixtures/caption-conform-b.whisper.json"
+    }
+  ]
+}

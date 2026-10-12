@@ -1,0 +1,16 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x/crypto",
+  "vectie/mooncast/editor/scene_index" @scenes,
+  "vectie/mooncast/editor/render_exec" @render,
+  "vectie/mooncast/native_host/process",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

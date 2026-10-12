@@ -1,0 +1,34 @@
+{
+  "contract": "mooncast.multi-source-reel-recipe.v1",
+  "canvas": {
+    "width": 320,
+    "height": 180,
+    "fit": "letterbox"
+  },
+  "sources": [
+    {
+      "id": "camera_b",
+      "media": "synthetic-b.mp4",
+      "transcript": "caption-conform-b.whisper.json"
+    },
+    {
+      "id": "camera_a",
+      "media": "synthetic-a.mp4",
+      "transcript": "caption-conform-a.srt"
+    }
+  ],
+  "choices": [
+    {
+      "source_id": "camera_b",
+      "selection": "2"
+    },
+    {
+      "source_id": "camera_a",
+      "selection": "1-2"
+    },
+    {
+      "source_id": "camera_b",
+      "selection": "1,2"
+    }
+  ]
+}

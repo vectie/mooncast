@@ -361,6 +361,9 @@ pub async fn StudioService::episode_ledger(
     "client_reviews": portal_views.to_json(),
     "client_acceptance_recorded": client_accepted.to_json(),
     "actuals": ledger_optional_json(actuals),
+    "episode_actual_attribution": self.episode_attribution_view(
+      project_id, episode_id,
+    ),
     "actuals_current_revision": actuals
     .map(value => value.project_revision == snapshot.revision)
     .unwrap_or(false)

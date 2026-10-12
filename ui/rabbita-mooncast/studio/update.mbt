@@ -30,15 +30,6 @@ fn api_error_message(value : Json) -> String? {
 }
 
 ///|
-fn optional_double_json(value : String) -> Json {
-  if value.trim() == "" {
-    Json::null()
-  } else {
-    (@string.parse_double(value) catch { _ => 0.0 }).to_json()
-  }
-}
-
-///|
 fn update_current(
   emit : @rabbita.Emit[Msg],
   msg : Msg,
@@ -69,6 +60,11 @@ fn update_current(
       )
     }
     SelectTab(tab) => {
+      let model = if tab != model.tab {
+        invalidate_delivery_media(invalidate_cut_player(model))
+      } else {
+        model
+      }
       let model = {
         ..model,
         tab_generation: model.tab_generation +
@@ -203,7 +199,42 @@ fn update_current(
     LoadedRouted(_, Err(error)) =>
       (@rabbita.none, { ..model, error: Some("Routed execution: \{error}"), })
     LoadedDeliveries(_, Ok(value)) =>
-      (@rabbita.none, { ..model, delivery_builds: value.builds, })
+      (
+        @rabbita.none,
+        reconcile_delivery_media({ ..model, delivery_builds: value.builds, }),
+      )
+    SelectDeliveryMedia(build_id, output_id) =>
+      select_delivery_media(emit, model, build_id, output_id)
+    RetryDeliveryMedia =>
+      match model.delivery_media_selection {
+        Some((build_id, output_id, _)) =>
+          select_delivery_media(emit, model, build_id, output_id)
+        None => (@rabbita.none, model)
+      }
+    LoadedDeliveryMediaCaptions(generation, url, result) =>
+      (@rabbita.none, receive_delivery_captions(model, generation, url, result))
+    SearchDeliveryTranscript(generation, query) =>
+      (
+        @rabbita.none,
+        if generation == model.delivery_media_generation &&
+          selected_delivery_video(model) is Some(_) {
+          {
+            ..model,
+            delivery_transcript: { ..model.delivery_transcript, query, },
+          }
+        } else {
+          model
+        },
+      )
+    SeekDeliveryCue(generation, index) =>
+      (delivery_cue_seek_command(emit, model, generation, index), model)
+    DeliveryPlayerEvent(generation, kind, seconds, duration) =>
+      (
+        @rabbita.none,
+        receive_delivery_player_event(
+          model, generation, kind, seconds, duration,
+        ),
+      )
     LoadedDeliveries(_, Err(error)) =>
       (@rabbita.none, { ..model, error: Some("Delivery factory: \{error}"), })
     LoadedPortals(_, Ok(value)) =>
@@ -370,41 +401,16 @@ fn update_current(
             )
           } else {
             let project = candidates[0]
-            let form = model.control_tower_actuals_form
-            let body : Json = {
-              "command_id": "tower-actuals-" +
-              (model.command_sequence + 1).to_string(),
-              "expected_project_revision": project.project_revision,
-              "expected_actuals_version": project.actuals_version
-              .map(value => value.to_json())
-              .unwrap_or(Json::null()),
-              "expected_actuals_digest": project.actuals_digest
-              .map(value => value.to_json())
-              .unwrap_or(Json::null()),
-              "provider_cost_confirmed_cny": optional_double_json(
-                form.provider_cost_confirmed_cny,
-              ),
-              "labor_cost_cny": optional_double_json(form.labor_cost_cny),
-              "other_cost_cny": optional_double_json(form.other_cost_cny),
-              "recognized_revenue_cny": optional_double_json(
-                form.recognized_revenue_cny,
-              ),
-              "founder_hours": optional_double_json(form.founder_hours),
-              "completed_labor_hours": optional_double_json(
-                form.completed_labor_hours,
-              ),
-              "forecast_completion_date": if form.forecast_completion_date.trim() ==
-                "" {
-                Json::null()
-              } else {
-                form.forecast_completion_date.to_json()
-              },
-              "provider_cost_reconciled": form.provider_cost_reconciled,
-              "evidence_refs": split_lines(form.evidence_refs),
-              "actor": model.operator.actor,
-              "actor_role": model.operator.role,
-              "observed_at": model.operator.recorded_at,
-              "human_confirmed": model.operator.human_confirmed,
+            let body = match
+              control_tower_actuals_body(
+                model,
+                project.project_revision,
+                project.actuals_version,
+                project.actuals_digest,
+              ) {
+              Ok(body) => body
+              Err(message) =>
+                return (@rabbita.none, { ..model, error: Some(message), })
             }
             let cmd = @http.post(
                 "/api/control-tower/projects/" + project.project_id + "/actuals",
@@ -2531,18 +2537,78 @@ fn update_current(
           }
         None => (@rabbita.none, model)
       }
-    SetDeliveryCutStart(value) =>
-      (@rabbita.none, { ..model, delivery_cut_start: value, error: None, })
-    SetDeliveryCutEnd(value) =>
-      (@rabbita.none, { ..model, delivery_cut_end: value, error: None, })
+    SelectCutPlayer(key) => select_cut_player(emit, model, key)
+    CloseCutPlayer => (@rabbita.none, invalidate_cut_player(model))
+    RetryCutPlayer =>
+      match current_cut_player(model) {
+        Some(player) => select_cut_player(emit, model, player.row_key)
+        None => (@rabbita.none, invalidate_cut_player(model))
+      }
+    LoadedCutPlayer(generation, result) =>
+      (@rabbita.none, receive_cut_player(model, generation, result))
+    CutPlayerEvent(generation, kind, seconds, duration) =>
+      (
+        @rabbita.none,
+        receive_cut_player_event(model, generation, kind, seconds, duration),
+      )
+    MarkCutPlayer(generation, action) =>
+      if action == "mark-start" || action == "mark-end" {
+        (cut_player_command(emit, model, generation, action), model)
+      } else {
+        (@rabbita.none, model)
+      }
+    PreviewCutPlayer(generation) => {
+      guard current_cut_player(model) is Some(player) &&
+        player.generation == generation &&
+        player.ready &&
+        !model.busy &&
+        cut_player_range(model, player) is Ok(_) else {
+        return (@rabbita.none, model)
+      }
+      (
+        cut_player_command(emit, model, generation, "preview"),
+        { ..model, cut_player: Some({ ..player, error: None, }), },
+      )
+    }
+    AddDeliveryCut
+    | EditDeliveryCut(_, _, _)
+    | ToggleDeliveryCut(_)
+    | RemoveDeliveryCut(_)
+    | RebindDeliveryCuts => {
+      let next = save_delivery_cut_drafts(edit_delivery_cuts(model, msg))
+      let next = if current_cut_player(next) is None &&
+        next.cut_player is Some(_) {
+        invalidate_cut_player(next)
+      } else {
+        next
+      }
+      let stop = match current_cut_player(model) {
+        Some(player) =>
+          cut_player_command(emit, model, player.generation, "stop")
+        None => @rabbita.none
+      }
+      (stop, next)
+    }
+    SaveDeliveryCutDrafts => (@rabbita.none, save_delivery_cut_drafts(model))
+    AddDeliveryCover
+    | EditDeliveryCover(_, _, _)
+    | ToggleDeliveryCover(_)
+    | RemoveDeliveryCover(_)
+    | RebindDeliveryCovers =>
+      (
+        @rabbita.none,
+        save_delivery_cover_drafts(edit_delivery_covers(model, msg)),
+      )
+    SaveDeliveryCoverDrafts =>
+      (@rabbita.none, save_delivery_cover_drafts(model))
     CreateDeliveryBuild if model.busy => (@rabbita.none, model)
     CreateDeliveryBuild =>
       match model.project {
         Some(project) =>
           match (project.master, project.delivery_package) {
             (Some(master), Some(delivery)) => {
-              let cut = match delivery_cut_selection(model, project) {
-                Ok(cut) => cut
+              let cuts = match delivery_cut_selection(model, project) {
+                Ok(cuts) => cuts
                 Err(message) =>
                   return (@rabbita.none, { ..model, error: Some(message), })
               }
@@ -2551,7 +2617,14 @@ fn update_current(
                 "expected_master_sha256": master.sha256,
                 "expected_delivery_version": delivery.version,
                 "expected_delivery_digest": delivery.digest,
-                "profile": delivery_profile(cut),
+                "profile": delivery_profile(
+                  cuts,
+                  covers=match delivery_cover_selection(model, project) {
+                    Ok(covers) => covers
+                    Err(message) =>
+                      return (@rabbita.none, { ..model, error: Some(message), })
+                  },
+                ),
               }
               let cmd = @http.post(
                   "/api/v2/projects/" + project.id + "/delivery-builds",

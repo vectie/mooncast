@@ -847,7 +847,49 @@ async fn StudioService::dispatch_unsafe(
         "ledger",
         "view",
       ],
-    ) => self.episode_ledger_page(project_id, episode_id)
+    ) =>
+      self.episode_ledger_page(
+        project_id,
+        episode_id,
+        correction=control_tower_query_value(request.query, "correct").unwrap_or(
+          "",
+        ),
+      )
+    (
+      Post,
+      [
+        "api",
+        "v2",
+        "projects",
+        project_id,
+        "episodes",
+        episode_id,
+        "ledger",
+        "attributions",
+      ],
+    ) => {
+      let input : EpisodeAttributionInput = decode_body(request)
+      json_value_response(
+        201,
+        self.record_episode_attribution(project_id, episode_id, input),
+      )
+    }
+    (
+      Post,
+      [
+        "api",
+        "v2",
+        "projects",
+        project_id,
+        "episodes",
+        episode_id,
+        "ledger",
+        "attributions",
+        "form",
+      ],
+    ) => self.submit_episode_attribution_form(project_id, episode_id, request)
+    (Get, ["api", "v2", "projects", project_id, "promoted-master", "playback"]) =>
+      json_value_response(200, self.promoted_master_playback(project_id))
     (Get, ["api", "v2", "projects", project_id]) =>
       json_value_response(
         200,
@@ -1264,8 +1306,22 @@ async fn StudioService::dispatch_unsafe(
       | Head,
       ["api", "editor", "projects", project_id, "exports", job_id, "media"],
     ) => {
-      let content = self.resolve_editor_job_media(project_id, job_id)
       let job = self.get_editor_job(project_id, job_id)
+      if control_tower_query_value(request.query, "master_sha256")
+        is Some(wanted) {
+        guard self.get_project(project_id).snapshot.master is Some(master) &&
+          job.job.project_id == project_id &&
+          job.job.job_id == job_id &&
+          job.job.kind == "export" &&
+          normalized_digest(master.video_digest) == wanted &&
+          normalized_digest(job.job.output_digest) == wanted else {
+          raise Conflict(
+            code="promoted_master_changed",
+            message="The selected promoted master changed. Reload it before marking cuts.",
+          )
+        }
+      }
+      let content = self.resolve_editor_job_media(project_id, job_id)
       let range = request.headers.get("range")
       let if_none_match = request.headers.get("if-none-match")
       let response = @host_http.static_response(

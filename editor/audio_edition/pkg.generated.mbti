@@ -1,0 +1,47 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/audio_edition"
+
+import {
+  "vectie/mooncast/editor/chapters",
+}
+
+// Values
+pub fn inspect_source(Json) -> Source raise
+
+pub fn prepare(@chapters.Draft, Source, Int) -> Plan raise
+
+pub fn verify_output(Plan, @chapters.Draft, Json) -> Unit raise
+
+// Errors
+
+// Types and methods
+pub(all) struct AudioTrack {
+  index : Int
+  codec : String
+  language : String
+  title : String
+  channels : Int
+  sample_rate : Int
+  start_ms : Double
+  duration_ms : Double?
+} derive(Eq, ToJson)
+
+pub(all) struct Plan {
+  track : AudioTrack
+  duration_ms : Int
+  omitted_stream_indices : Array[Int]
+  output_codec : String
+  output_sample_rate : Int
+  target_bitrate : Int
+} derive(ToJson)
+
+pub(all) struct Source {
+  format : String
+  duration_ms : Double
+  audio_tracks : Array[AudioTrack]
+  stream_indices : Array[Int]
+} derive(ToJson)
+
+// Type aliases
+
+// Traits

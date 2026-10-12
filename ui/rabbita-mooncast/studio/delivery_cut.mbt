@@ -1,8 +1,138 @@
 ///|
 priv struct DeliveryCutSelection {
+  cut_id : String
+  channel : String
+  source_variant : String
   start_ms : Int
   end_ms : Int
 } derive(Eq, Debug)
+
+///|
+priv struct DeliveryCutDraft {
+  key : Int
+  selected : Bool
+  cut_id : String
+  channel : String
+  source_variant : String
+  start : String
+  end : String
+} derive(Eq, Debug, ToJson, FromJson)
+
+///|
+priv struct DeliveryCutDraftSet {
+  master_sha256 : String
+  cuts : Array[DeliveryCutDraft]
+} derive(Eq, Debug, ToJson, FromJson)
+
+///|
+fn delivery_cut_drafts(model : Model) -> DeliveryCutDraftSet {
+  model.delivery_cut_drafts
+  .get(model.selected_project_id)
+  .unwrap_or({ master_sha256: "", cuts: [], })
+}
+
+///|
+fn delivery_cut_name_valid(name : String) -> Bool {
+  name.length() > 0 &&
+  name.length() <= 80 &&
+  name[0] is ('a'..='z' | 'A'..='Z' | '0'..='9') &&
+  name
+  .iter()
+  .all(c => c is ('a'..='z' | 'A'..='Z' | '0'..='9' | '.' | '_' | '-')) &&
+  !["master", "horizontal-1080p", "vertical-1080p"].contains(name.to_lower())
+}
+
+///|
+fn edit_delivery_cuts(model : Model, msg : Msg) -> Model {
+  guard model.project is Some(project) &&
+    project.id == model.selected_project_id &&
+    !model.busy else {
+    return model
+  }
+  let current = delivery_cut_drafts(model)
+  let master_sha256 = project.master.map(master => master.sha256).unwrap_or("")
+  let mut next = current
+  match msg {
+    AddDeliveryCut => {
+      if current.cuts.length() >= 12 {
+        return {
+          ..model,
+          error: Some("A delivery draft can contain at most 12 cuts."),
+        }
+      }
+      let mut key = 1
+      while current.cuts.any(cut => cut.key == key) {
+        key += 1
+      }
+      let mut name_number = 1
+      while current.cuts.any(cut => {
+              cut.cut_id.to_lower() == "cut-\{name_number}"
+            }) {
+        name_number += 1
+      }
+      next = {
+        master_sha256: if current.cuts.is_empty() {
+          master_sha256
+        } else {
+          current.master_sha256
+        },
+        cuts: current.cuts +
+        [
+          {
+            key,
+            selected: true,
+            cut_id: "cut-\{name_number}",
+            channel: "review-only",
+            source_variant: "master",
+            start: "",
+            end: "",
+          },
+        ],
+      }
+    }
+    EditDeliveryCut(key, field, value) => {
+      // Bound retained incomplete input as well as completed selections.
+      if value.length() > 512 {
+        return model
+      }
+      next = {
+        ..current,
+        cuts: current.cuts.map(cut => {
+          if cut.key != key {
+            cut
+          } else {
+            match field {
+              "name" => { ..cut, cut_id: value, }
+              "channel" => { ..cut, channel: value, }
+              "source" => { ..cut, source_variant: value, }
+              "start" => { ..cut, start: value, }
+              "end" => { ..cut, end: value, }
+              _ => cut
+            }
+          }
+        }),
+      }
+    }
+    ToggleDeliveryCut(key) =>
+      next = {
+        ..current,
+        cuts: current.cuts.map(cut => {
+          if cut.key == key {
+            { ..cut, selected: !cut.selected, }
+          } else {
+            cut
+          }
+        }),
+      }
+    RemoveDeliveryCut(key) =>
+      next = { ..current, cuts: current.cuts.filter(cut => cut.key != key), }
+    RebindDeliveryCuts => next = { ..current, master_sha256, }
+    _ => return model
+  }
+  let drafts = model.delivery_cut_drafts.copy()
+  drafts[project.id] = next
+  { ..model, delivery_cut_drafts: drafts, error: None, }
+}
 
 ///|
 /// Parse decimal seconds directly into milliseconds without floating-point
@@ -48,14 +178,81 @@ fn delivery_cut_milliseconds(value : String) -> Int? {
 fn delivery_cut_selection(
   model : Model,
   project : ProjectProjection,
-) -> Result[DeliveryCutSelection?, String] {
-  let start = model.delivery_cut_start.trim().to_owned()
-  let end = model.delivery_cut_end.trim().to_owned()
-  if start == "" && end == "" {
-    return Ok(None)
+) -> Result[Array[DeliveryCutSelection], String] {
+  if project.id != model.selected_project_id {
+    return Err("Wait for the selected project to load.")
   }
+  let draft = delivery_cut_drafts(model)
+  if draft.cuts.length() > 12 {
+    return Err("A delivery draft can contain at most 12 cuts.")
+  }
+  let selected = draft.cuts.filter(cut => cut.selected)
+  if selected.is_empty() {
+    return Ok([])
+  }
+  let master = match project.master {
+    Some(master) if master.media.duration_seconds > 0 => master
+    _ =>
+      return Err(
+        "A promoted master with a known duration is required for a cut.",
+      )
+  }
+  if draft.master_sha256 != master.sha256 {
+    return Err(
+      "The promoted master changed. Review the ranges, then choose Use current master before building.",
+    )
+  }
+  let cuts : Array[DeliveryCutSelection] = []
+  let names : Array[String] = []
+  for cut in selected {
+    let name = cut.cut_id.trim().to_owned()
+    if !delivery_cut_name_valid(name) {
+      return Err(
+        "Each cut needs a unique 1–80 character name starting with a letter or digit; use letters, digits, dot, hyphen or underscore. Master and variant names are reserved.",
+      )
+    }
+    let folded = name.to_lower()
+    if names.contains(folded) {
+      return Err("Selected cut names must be unique, including letter case.")
+    }
+    names.push(folded)
+    let channel = cut.channel.trim().to_owned()
+    if channel == "" || channel.length() > 120 {
+      return Err("Cut \{name}: enter a channel of 1–120 characters.")
+    }
+    if !["master", "horizontal-1080p", "vertical-1080p"].contains(
+        cut.source_variant,
+      ) {
+      return Err(
+        "Cut \{name}: select master, horizontal-1080p or vertical-1080p as the source.",
+      )
+    }
+    match
+      delivery_cut_range(cut.start, cut.end, master.media.duration_seconds) {
+      Ok((start_ms, end_ms)) =>
+        cuts.push({
+          cut_id: name,
+          channel,
+          source_variant: cut.source_variant,
+          start_ms,
+          end_ms,
+        })
+      Err(message) => return Err("Cut \{name}: \{message}")
+    }
+  }
+  Ok(cuts)
+}
+
+///|
+fn delivery_cut_range(
+  start : String,
+  end : String,
+  duration : Int,
+) -> Result[(Int, Int), String] {
+  let start = start.trim().to_owned()
+  let end = end.trim().to_owned()
   if start == "" || end == "" {
-    return Err("Enter both cut start and end, or leave both blank for no cut.")
+    return Err("Enter both cut start and end, or deselect this cut.")
   }
   match (delivery_cut_milliseconds(start), delivery_cut_milliseconds(end)) {
     (Some(start_ms), Some(end_ms)) => {
@@ -67,18 +264,10 @@ fn delivery_cut_selection(
       if end_ms - start_ms > 180000 {
         return Err("A selected cut can be at most 180 seconds long.")
       }
-      match project.master {
-        Some(master) if master.media.duration_seconds > 0 =>
-          if end_ms.to_double() / 1000.0 >
-            master.media.duration_seconds.to_double() {
-            return Err("Cut end exceeds the promoted master duration.")
-          }
-        _ =>
-          return Err(
-            "A promoted master with a known duration is required for a cut.",
-          )
+      if end_ms.to_double() / 1000.0 > duration.to_double() {
+        return Err("Cut end exceeds the promoted master duration.")
       }
-      Ok(Some({ start_ms, end_ms, }))
+      Ok((start_ms, end_ms))
     }
     _ =>
       Err(
@@ -88,20 +277,17 @@ fn delivery_cut_selection(
 }
 
 ///|
-fn delivery_profile(cut : DeliveryCutSelection?) -> Json {
-  let cuts : Array[Json] = match cut {
-    None => []
-    Some(cut) =>
-      [
-        {
-          "cut_id": "selected-cut",
-          "channel": "review-only",
-          "source_variant": "master",
-          "in_seconds": cut.start_ms.to_double() / 1000.0,
-          "out_seconds": cut.end_ms.to_double() / 1000.0,
-        },
-      ]
-  }
+fn delivery_profile(
+  cuts : Array[DeliveryCutSelection],
+  covers? : Array[DeliveryCoverSelection] = [],
+) -> Json {
+  let cuts : Array[Json] = cuts.map(cut => {
+    "cut_id": cut.cut_id,
+    "channel": cut.channel,
+    "source_variant": cut.source_variant,
+    "in_seconds": cut.start_ms.to_double() / 1000.0,
+    "out_seconds": cut.end_ms.to_double() / 1000.0,
+  })
   {
     "contract": "mooncast.delivery-build-profile.v1",
     "version": 1,
@@ -123,7 +309,17 @@ fn delivery_profile(cut : DeliveryCutSelection?) -> Json {
       },
     ],
     "cuts": cuts.to_json(),
-    "covers": [],
+    "covers": covers
+    .map(cover => {
+      (
+        {
+          "cover_id": cover.cover_id,
+          "source_variant": cover.source_variant,
+          "timestamp_seconds": cover.timestamp_ms.to_double() / 1000.0,
+          "format": cover.format,
+        } : Json)
+    })
+    .to_json(),
     "include_subtitles": true,
     "include_metadata": true,
     "include_provenance_rights_ai_manifest": true,

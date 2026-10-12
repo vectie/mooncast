@@ -13,6 +13,7 @@ test "episode cards link the exact selected project and episode ledger" {
     project: Some(project),
   }
   let html = rendered(render_app(_ => @rabbita.none, model))
+  assert_true(html.contains("Open episode ledger and actual costs"))
   assert_true(
     html.contains("/api/v2/projects/project-A/episodes/episode-one/ledger/view"),
   )
