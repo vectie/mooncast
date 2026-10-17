@@ -1,5 +1,8 @@
 ///|
 async test "transcript files import persist trim and render real captioned MP4 with SRT export" {
+  let ffmpeg = @env.get_env_var("MOONCAST_FFMPEG_BIN").unwrap_or(
+    "/usr/bin/ffmpeg",
+  )
   let root = @env.get_env_var("MOONCAST_TRANSCRIPT_EVIDENCE").unwrap_or(
     "/tmp/mooncast-transcript-" + @async.now().to_string(),
   )
@@ -125,15 +128,13 @@ async test "transcript files import persist trim and render real captioned MP4 w
     ignore(files.put_json("edited-project.json", edited.snapshot.to_json()))
     ignore(files.put_json("render-plan.json", plan.to_json()))
     let output = files.prepare_owned_path("captioned.mp4")
-    let invocation = @editor_render.compile(
-      "/usr/bin/ffmpeg", plan, media, output,
-    )
+    let invocation = @editor_render.compile(ffmpeg, plan, media, output)
     let rendered = @editor_render.execute(invocation)
     ignore(files.put_json("render-receipt.json", rendered.to_json()))
     assert_true(rendered.succeeded, msg="real FFmpeg render must succeed")
     assert_true(files.get_blob("captioned.mp4").unwrap().bytes.length() > 1000)
     let extracted = @process.run_capture({
-      executable: "/usr/bin/ffmpeg",
+      executable: ffmpeg,
       arguments: [
         "-v", "error", "-i", output, "-map", "0:s:0", "-f", "srt", "-",
       ],
@@ -174,7 +175,7 @@ async test "transcript files import persist trim and render real captioned MP4 w
     let gap_media = reopened.materialize_plan_media(gap)
     assert_true(gap_media.is_empty())
     let gap_invocation = @editor_render.compile(
-      "/usr/bin/ffmpeg",
+      ffmpeg,
       gap,
       gap_media,
       files.prepare_owned_path("gap.mp4"),
