@@ -39,7 +39,7 @@ async fn save_captions(folder : String, draft : @captions.CaptionDraft) -> Unit 
 
 ///|
 async fn main {
-  let help = "usage:\n  caption_media inspect MEDIA.mp4|mkv\n  caption_media preview DRAFT.json MEDIA.mp4|mkv LANGUAGE TITLE\n  caption_media attach DRAFT.json MEDIA.mp4|mkv LANGUAGE TITLE NEW_FOLDER\n  caption_media extract MEDIA.mp4|mkv STREAM_INDEX NEW_FOLDER\n\nAppend a selectable text-caption track without re-encoding video/audio.\nExtract a specific stream into caption_edit-compatible JSON, SRT and WebVTT.\nSee docs/caption-media.md."
+  let help = "usage:\n  caption_media inspect MEDIA.mp4|mkv\n  caption_media preview DRAFT.json MEDIA.mp4|mkv LANGUAGE TITLE\n  caption_media attach DRAFT.json MEDIA.mp4|mkv LANGUAGE TITLE NEW_FOLDER\n  caption_media preview-replace DRAFT.json MEDIA.mp4|mkv STREAM_INDEX\n  caption_media replace DRAFT.json MEDIA.mp4|mkv STREAM_INDEX NEW_FOLDER\n  caption_media extract MEDIA.mp4|mkv STREAM_INDEX NEW_FOLDER\n\nAppend a selectable text-caption track without re-encoding video/audio.\nExtract a specific stream into caption_edit-compatible JSON, SRT and WebVTT.\nSee docs/caption-media.md."
   let args = @env.args()
   if args.length() == 2 && (args[1] == "help" || args[1] == "--help") {
     println(help)
@@ -48,8 +48,14 @@ async fn main {
   guard (args.length() == 3 && args[1] == "inspect") ||
     (args.length() == 6 && args[1] == "preview") ||
     (args.length() == 7 && args[1] == "attach") ||
-    (args.length() == 5 && args[1] == "extract") else {
+    (args.length() == 5 && args[1] == "extract") ||
+    (args.length() == 5 && args[1] == "preview-replace") ||
+    (args.length() == 6 && args[1] == "replace") else {
     fail(help)
+  }
+  if args[1] == "replace" || args[1] == "preview-replace" {
+    replace_captions(args)
+    return
   }
   let attaching = args[1] == "attach" || args[1] == "preview"
   let source = local_file(if attaching { args[3] } else { args[2] })

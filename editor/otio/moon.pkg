@@ -1,0 +1,14 @@
+import {
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "vectie/mooncast/editor/domain",
+  "vectie/mooncast/editor/edl",
+}
+
+supported_targets = "native"
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+} for "test"

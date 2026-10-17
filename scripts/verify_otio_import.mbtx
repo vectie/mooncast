@@ -1,0 +1,219 @@
+///|
+import {
+  "moonbitlang/async@0.19.4",
+  "moonbitlang/async@0.19.4/fs",
+  "moonbitlang/async@0.19.4/process",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.4.50/crypto",
+}
+
+///|
+fn field(value : Json, key : String) -> Json raise {
+  guard value is Object(fields) && fields.get(key) is Some(value) else {
+    fail("Missing " + key)
+  }
+  value
+}
+
+///|
+async fn hash(path : String) -> String {
+  "sha256:" +
+  @crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(path).binary()))
+}
+
+///|
+async fn run(
+  root : String,
+  records : Array[Json],
+  args : Array[String],
+  ok? : Bool = true,
+) -> String {
+  let (code, out, err) = @process.collect_output(args[0], args[1:])
+  let index = records.length().to_string()
+  @fs.write_file(
+    root + "/" + index + ".stdout",
+    out.text(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + index + ".stderr",
+    err.text(),
+    create_mode=CreateNew,
+  )
+  records.push({ "argv": args, "exit_code": code, "expected_success": ok })
+  assert_eq(code == 0, ok, msg=err.text())
+  out.text()
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  guard args.length() == 5 else {
+    fail("SOURCE_DIR OTIO_BINARY EDL_BINARY FRESH_EVIDENCE_DIR")
+  }
+  let source = args[1]
+  let binary = args[2]
+  let edl = args[3]
+  let root = args[4]
+  assert_false(@fs.exists(root), msg="Evidence directory must be new")
+  @fs.mkdir(root)
+  let records : Array[Json] = []
+  let project = source + "/fixtures/edit-decisions.project.json"
+  let otio = source + "/fixtures/otio-timeline.otio"
+  let mapping = source + "/fixtures/otio-media-map.json"
+  let paths = [project, otio, mapping]
+  let hashes : Array[String] = []
+  for path in paths {
+    hashes.push(hash(path))
+  }
+  let catalog = @json.parse(run(root, records, [binary, "catalog", otio, "24"]))
+  assert_eq(field(catalog, "duration_frames"), (120).to_json())
+  assert_eq(field(catalog, "global_start_frame"), (86400).to_json())
+  let preview = @json.parse(
+    run(root, records, [binary, "preview", project, otio, mapping]),
+  )
+  assert_eq(field(preview, "source_otio_digest"), hashes[1].to_json())
+  assert_eq(
+    field(preview, "original_otio_text"),
+    @fs.read_file(otio).text().to_json(),
+  )
+  let prefix = root + "/imported"
+  run(root, records, [binary, "import", project, otio, mapping, prefix])
+  |> ignore
+  let imported = @json.parse(@fs.read_file(prefix + ".project.json").text())
+  let report = @json.parse(@fs.read_file(prefix + ".import.json").text())
+  assert_eq(report, preview)
+  assert_eq(field(field(imported, "timeline"), "timebase"), {
+    "ticks_per_second": 3000,
+  })
+  let out_hash = hash(prefix + ".project.json")
+  run(
+    root,
+    records,
+    [binary, "import", project, otio, mapping, prefix],
+    ok=false,
+  )
+  |> ignore
+  assert_eq(hash(prefix + ".project.json"), out_hash)
+  run(root, records, [
+    edl,
+    "export",
+    prefix + ".project.json",
+    prefix + ".edl-map.json",
+    root + "/roundtrip.edl",
+    "Roundtrip OTIO",
+  ])
+  |> ignore
+  run(root, records, [
+    edl,
+    "import",
+    project,
+    root + "/roundtrip.edl",
+    prefix + ".edl-map.json",
+    root + "/roundtrip",
+  ])
+  |> ignore
+  let replay = @json.parse(
+    @fs.read_file(root + "/roundtrip.project.json").text(),
+  )
+  assert_eq(field(imported, "timeline"), field(replay, "timeline"))
+  let input = @fs.read_file(otio).text()
+  let invalids = [
+    input.replace(old="\"kind\":\"Video\"", new="\"kind\":\"Audio\""),
+    input.replace(old="\"rate\":24", new="\"rate\":23.976"),
+    input.replace(old="Clip.2", new="Transition.1"),
+    input.replace(
+      old="file:///recorded/camera-a.mp4",
+      new="file:///unmapped.mov",
+    ),
+  ]
+  for i, invalid in invalids {
+    let path = root + "/invalid-" + i.to_string() + ".otio"
+    let output = root + "/rejected-" + i.to_string()
+    @fs.write_file(path, invalid, create_mode=CreateNew)
+    run(
+      root,
+      records,
+      [binary, "import", project, path, mapping, output],
+      ok=false,
+    )
+    |> ignore
+    for suffix in [".project.json", ".import.json", ".edl-map.json", ".edl"] {
+      assert_false(@fs.exists(output + suffix))
+    }
+  }
+  @fs.write_file(
+    root + "/occupied.import.json",
+    "keep this unrelated file",
+    create_mode=CreateNew,
+  )
+  run(
+    root,
+    records,
+    [binary, "import", project, otio, mapping, root + "/occupied"],
+    ok=false,
+  )
+  |> ignore
+  assert_false(@fs.exists(root + "/occupied.project.json"))
+  assert_eq(
+    @fs.read_file(root + "/occupied.import.json").text(),
+    "keep this unrelated file",
+  )
+  run(root, records, [
+    "ln",
+    "-s",
+    root + "/missing-target",
+    root + "/symlink.project.json",
+  ])
+  |> ignore
+  run(
+    root,
+    records,
+    [binary, "import", project, otio, mapping, root + "/symlink"],
+    ok=false,
+  )
+  |> ignore
+  assert_false(@fs.exists(root + "/symlink.import.json"))
+  for i, suffix in [".import.json", ".edl-map.json", ".edl"] {
+    let prefix = root + "/sibling-link-" + i.to_string()
+    run(root, records, ["ln", "-s", root + "/missing-target", prefix + suffix])
+    |> ignore
+    run(
+      root,
+      records,
+      [binary, "import", project, otio, mapping, prefix],
+      ok=false,
+    )
+    |> ignore
+    assert_eq(@fs.kind(prefix + suffix, follow_symlink=false), @fs.SymLink)
+    for sibling in [".project.json", ".import.json", ".edl-map.json", ".edl"] {
+      assert_false(@fs.exists(prefix + sibling))
+    }
+  }
+  let preservation : Array[Json] = []
+  for i, path in paths {
+    assert_eq(hash(path), hashes[i])
+    preservation.push({ "path": path, "sha256": hashes[i], "unchanged": true })
+  }
+  @fs.write_file(
+    root + "/commands.json",
+    records.to_json().stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result : Json = {
+    "status": "passed",
+    "commands": records.length(),
+    "synthetic_fixture_only": true,
+    "native_reducer_trim_undo": "covered separately by editor/otio native tests",
+    "source_preservation": preservation,
+  }
+  @fs.write_file(
+    root + "/RESULT.json",
+    result.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS: OTIO catalog, preview, import, EDL roundtrip, invalid input/output refusals and source preservation",
+  )
+}

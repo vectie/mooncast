@@ -1,0 +1,583 @@
+///|
+import {
+  "moonbitlang/async@0.19.4",
+  "moonbitlang/async@0.19.4/fs",
+  "moonbitlang/async@0.19.4/process",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.4.50/crypto",
+}
+
+///|
+struct Run {
+  root : String
+  records : Array[Json]
+}
+
+///|
+fn field(value : Json, key : String) -> Json {
+  match value {
+    Object(fields) => fields.get(key).unwrap_or(Json::null())
+    _ => Json::null()
+  }
+}
+
+///|
+fn rows(value : Json, key : String) -> Array[Json] raise {
+  guard field(value, key) is Array(values) else {
+    fail("missing array: " + key)
+  }
+  values
+}
+
+///|
+async fn digest(path : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(path).binary()))
+}
+
+///|
+async fn Run::run(
+  self : Run,
+  args : Array[String],
+  ok? : Bool = true,
+) -> String {
+  let number = self.records.length()
+  let label = number.to_string()
+  let completed = @async.with_timeout_opt(330000, () => {
+    @process.collect_output(args[0], args[1:])
+  })
+  guard completed is Some((code, output, error)) else {
+    fail("command timed out")
+  }
+  @fs.write_file(
+    self.root + "/" + label + ".stdout",
+    output.text(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    self.root + "/" + label + ".stderr",
+    error.text(),
+    create_mode=CreateNew,
+  )
+  self.records.push({ "argv": args, "exit_code": code, "expected_success": ok })
+  @fs.write_file(
+    self.root + "/commands.json",
+    self.records.to_json().stringify(indent=2),
+    create_mode=if number == 0 { CreateNew } else { TruncateExisting },
+  )
+  assert_eq(
+    code == 0,
+    ok,
+    msg=args.to_json().stringify() + "\n" + output.text() + "\n" + error.text(),
+  )
+  output.text()
+}
+
+///|
+async fn Run::probe(self : Run, path : String) -> Json {
+  @json.parse(
+    self.run([
+      "ffprobe", "-v", "error", "-show_streams", "-show_chapters", "-show_format",
+      "-of", "json", path,
+    ]),
+  )
+}
+
+///|
+async fn Run::packets(
+  self : Run,
+  path : String,
+  selector : String,
+) -> Array[Json] {
+  let probe = @json.parse(
+    self.run([
+      "ffprobe", "-v", "error", "-select_streams", selector, "-show_packets", "-show_data_hash",
+      "sha256", "-show_entries", "packet=data_hash,pts_time,dts_time,duration_time",
+      "-of", "json", path,
+    ]),
+  )
+  rows(probe, "packets")
+}
+
+///|
+fn tracks(probe : Json) -> Array[Json] raise {
+  rows(probe, "streams").filter(s => field(s, "codec_type") != "data")
+}
+
+///|
+fn chapters(probe : Json) -> Array[Json] raise {
+  rows(probe, "chapters").map(c => {
+    "start": field(c, "start_time"),
+    "end": field(c, "end_time"),
+    "title": field(field(c, "tags"), "title"),
+  })
+}
+
+///|
+async fn Run::fixture(self : Run, extension : String, silent : Bool) -> String {
+  let path = self.root +
+    "/episode " +
+    (if silent { "silent " } else { "" }) +
+    "中文." +
+    extension
+  let args = [
+    "ffmpeg",
+    "-v",
+    "error",
+    "-nostdin",
+    "-n",
+    "-f",
+    "lavfi",
+    "-i",
+    "testsrc2=size=160x90:rate=24:duration=6",
+    "-f",
+    "lavfi",
+    "-i",
+    "sine=frequency=440:sample_rate=48000:duration=6",
+    "-f",
+    "lavfi",
+    "-i",
+    "sine=frequency=880:sample_rate=48000:duration=6",
+    "-i",
+    self.root + "/captions.srt",
+    "-i",
+    self.root + "/chapters.ffmetadata",
+    "-map",
+    "0:v",
+  ]
+  if !silent {
+    args.append(["-map", "1:a", "-map", "2:a"])
+  }
+  args.append([
+    "-map",
+    "3:s",
+    "-map_chapters",
+    "4",
+    "-c:v",
+    "libx264",
+    "-threads",
+    "1",
+    "-preset",
+    "ultrafast",
+    "-c:a",
+    if extension == "mp4" {
+      "aac"
+    } else {
+      "flac"
+    },
+    "-c:s",
+    if extension == "mp4" {
+      "mov_text"
+    } else {
+      "srt"
+    },
+    "-metadata:s:v:0",
+    "title=Picture",
+    "-metadata:s:v:0",
+    "handler_name=Picture",
+    "-metadata:s:s:0",
+    "language=eng",
+    "-metadata:s:s:0",
+    "title=English CC",
+    "-metadata:s:s:0",
+    "handler_name=English CC",
+    "-disposition:s:0",
+    if extension == "mp4" {
+      "default+forced"
+    } else {
+      "default+forced+hearing_impaired"
+    },
+  ])
+  if !silent {
+    args.append([
+      "-metadata:s:a:0", "language=eng", "-metadata:s:a:0", "title=Original mix",
+      "-metadata:s:a:0", "handler_name=Original mix", "-metadata:s:a:1", "language=deu",
+      "-metadata:s:a:1", "title=German", "-metadata:s:a:1", "handler_name=German",
+      "-disposition:a:0", "default", "-disposition:a:1", "0",
+    ])
+  }
+  args.append(["-t", "6", path])
+  ignore(self.run(args))
+  path
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  assert_eq(
+    args.length(),
+    4,
+    msg="usage: verify_audio_media.mbtx ABSOLUTE_TARGET NEW_ABSOLUTE_OUTPUT NEW_ABSOLUTE_SAMPLES",
+  )
+  let target = args[1]
+  let root = args[2]
+  let samples = args[3]
+  assert_true(
+    target.has_prefix("/") && root.has_prefix("/") && samples.has_prefix("/"),
+  )
+  @fs.mkdir(root, recursive=false)
+  let run : Run = { root, records: [], }
+  let exe = target + "/native/debug/build/cmd/audio_media/audio_media.exe"
+  let hashes : Map[String, String] = Map([])
+  @fs.write_file(
+    root + "/captions.srt",
+    "1\n00:00:00,501 --> 00:00:02,111\nOpening 字幕\n\n2\n00:00:03,000 --> 00:00:05,500\nDetail\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/chapters.ffmetadata",
+    ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=2500\ntitle=Opening 开场\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=2500\nEND=6000\ntitle=Detail\n",
+    create_mode=CreateNew,
+  )
+  for extension in ["wav", "flac", "m4a", "mkv"] {
+    let audio = root + "/narration " + extension + "." + extension
+    let args = [
+      "ffmpeg", "-v", "error", "-nostdin", "-n", "-f", "lavfi", "-i", "sine=frequency=1320:sample_rate=44100:duration=6",
+    ]
+    if extension == "mkv" {
+      args.append([
+        "-f", "lavfi", "-i", "sine=frequency=1760:sample_rate=44100:duration=6",
+        "-map", "0:a", "-map", "1:a",
+      ])
+    }
+    args.append([
+      "-ac",
+      if extension == "flac" {
+        "2"
+      } else {
+        "1"
+      },
+      "-c:a",
+      if extension == "wav" {
+        "pcm_s16le"
+      } else if extension == "m4a" {
+        "aac"
+      } else {
+        "flac"
+      },
+      "-threads",
+      "1",
+      audio,
+    ])
+    ignore(run.run(args))
+    hashes[audio] = digest(audio)
+    let inspected = @json.parse(run.run([exe, "inspect", audio]))
+    assert_eq(field(inspected, "sha256"), hashes[audio].to_json())
+  }
+  let checks : Array[String] = []
+  for extension in ["mp4", "mkv"] {
+    let media = run.fixture(extension, false)
+    hashes[media] = digest(media)
+    let original = run.probe(media)
+    for audio_extension in ["wav", "flac", "m4a", "mkv"] {
+      let audio = root + "/narration " + audio_extension + "." + audio_extension
+      let index = if audio_extension == "mkv" { "1" } else { "0" }
+      let title = "Français " + audio_extension + " & 中文"
+      let preview = @json.parse(
+        run.run([exe, "preview", media, audio, index, "fra", title]),
+      )
+      assert_eq(field(field(preview, "plan"), "is_default"), false)
+      let dest = root + "/added " + extension + " " + audio_extension
+      let result = @json.parse(
+        run.run([exe, "attach", media, audio, index, "fra", title, dest]),
+      )
+      let output = dest + "/media." + extension
+      assert_eq(field(result, "sha256"), digest(output).to_json())
+      assert_eq(field(result, "publication_authority"), false)
+      assert_eq(field(result, "client_acceptance"), false)
+      let probe = run.probe(output)
+      assert_eq(tracks(probe).length(), tracks(original).length() + 1)
+      assert_eq(chapters(probe), chapters(original))
+      for selector in ["v:0", "a:0", "a:1", "s:0"] {
+        assert_eq(
+          run.packets(media, selector),
+          run.packets(output, selector),
+          msg=extension + " " + selector,
+        )
+      }
+      let rendition = dest +
+        "/soundtrack" +
+        (if extension == "mp4" { ".m4a" } else { ".flac" })
+      // Encoded audio packet bytes are identical after mux; container timebases
+      // differ for FLAC, so compare payloads rather than rounded timestamps here.
+      assert_eq(
+        run.packets(rendition, "a:0").map(p => field(p, "data_hash")),
+        run.packets(output, "a:2").map(p => field(p, "data_hash")),
+      )
+      ignore(
+        run.run([
+          "ffmpeg", "-v", "error", "-i", output, "-map", "0:v", "-map", "0:a", "-f",
+          "null", "-",
+        ]),
+      )
+      let reopened = @json.parse(run.run([exe, "inspect", output]))
+      assert_eq(rows(field(reopened, "audio"), "audio_tracks").length(), 3)
+      ignore(
+        run.run(
+          [exe, "attach", media, audio, index, "fra", title, dest],
+          ok=false,
+        ),
+      )
+      assert_eq(field(result, "sha256"), digest(output).to_json())
+    }
+    let audio = root + "/narration wav.wav"
+    let silent = run.fixture(extension, true)
+    hashes[silent] = digest(silent)
+    let silent_dest = root + "/silent added " + extension
+    let silent_result = @json.parse(
+      run.run([
+        exe, "attach", silent, audio, "0", "eng", "Commentary", silent_dest,
+      ]),
+    )
+    assert_eq(field(field(silent_result, "added_track"), "is_default"), true)
+    let first = root + "/added " + extension + " wav/media." + extension
+    let second = root + "/second language " + extension
+    ignore(
+      run.run([exe, "attach", first, audio, "0", "spa", "Español", second]),
+    )
+    assert_eq(
+      run.packets(first, "a:2"),
+      run.packets(second + "/media." + extension, "a:2"),
+    )
+    checks.push(
+      extension +
+      ": four source formats, explicit second-source stream, mono/stereo, repeated language addition, silent first soundtrack, unchanged original packet payloads/timestamps, captions and chapters, full A/V decode",
+    )
+  }
+  let media = root + "/episode 中文.mp4"
+  let audio = root + "/narration wav.wav"
+  for index in ["-1", "9"] {
+    let dest = root + "/wrong index " + index
+    ignore(
+      run.run(
+        [exe, "attach", media, audio, index, "fra", "French", dest],
+        ok=false,
+      ),
+    )
+    assert_false(@fs.exists(dest))
+  }
+  for language in ["en-US", "ENG"] {
+    let dest = root + "/wrong language " + language
+    ignore(
+      run.run(
+        [exe, "attach", media, audio, "0", language, "French", dest],
+        ok=false,
+      ),
+    )
+    assert_false(@fs.exists(dest))
+  }
+  for kind in ["short", "surround", "shifted", "hidden-short"] {
+    let path = root + "/invalid " + kind + ".mkv"
+    let duration = if kind == "short" || kind == "hidden-short" {
+      "2"
+    } else {
+      "6"
+    }
+    let argv = [
+      "ffmpeg",
+      "-v",
+      "error",
+      "-nostdin",
+      "-n",
+      "-f",
+      "lavfi",
+      "-i",
+      "sine=frequency=440:sample_rate=48000:duration=" + duration,
+    ]
+    if kind == "hidden-short" {
+      argv.append([
+        "-f", "lavfi", "-i", "testsrc2=size=160x90:rate=24:duration=6", "-map", "0:a",
+        "-map", "1:v", "-c:v", "libx264", "-preset", "ultrafast",
+      ])
+    }
+    if kind == "shifted" {
+      argv.append(["-af", "asetpts=PTS+0.25/TB"])
+    }
+    argv.append([
+      "-ac",
+      if kind == "surround" {
+        "6"
+      } else {
+        "1"
+      },
+      "-c:a",
+      "flac",
+      "-threads",
+      "1",
+      path,
+    ])
+    ignore(run.run(argv))
+    let dest = root + "/rejected " + kind
+    ignore(
+      run.run(
+        [exe, "attach", media, path, "0", "fra", "French", dest],
+        ok=false,
+      ),
+    )
+    assert_false(@fs.exists(dest + "/result.json"))
+    assert_false(@fs.exists(dest + "/media.mp4"))
+    if kind == "hidden-short" {
+      assert_true(@fs.exists(dest + "/soundtrack.m4a"))
+    } else {
+      assert_false(@fs.exists(dest))
+    }
+  }
+  let link = root + "/dangling"
+  @fs.symlink(target=root + "/missing", link)
+  ignore(
+    run.run([exe, "attach", media, audio, "0", "fra", "French", link], ok=false),
+  )
+  assert_true(@fs.kind(link, follow_symlink=false) is SymLink)
+  for path, hash in hashes {
+    assert_eq(digest(path), hash, msg="input changed: " + path)
+  }
+  checks.push(
+    "Wrong index/language, shifted, short, surround, hidden-short selected stream and occupied/dangling outputs fail without successful result; originals unchanged",
+  )
+  @fs.mkdir(samples, recursive=false)
+  @fs.write_file(
+    samples + "/captions.srt",
+    "1\n00:00:00,250 --> 00:00:01,750\nSynthetic video and tones. Select Commentary.\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    samples + "/chapters.ffmetadata",
+    ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=1000\ntitle=Opening\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=1000\nEND=2000\ntitle=Detail\n",
+    create_mode=CreateNew,
+  )
+  ignore(
+    run.run([
+      "ffmpeg",
+      "-v",
+      "error",
+      "-nostdin",
+      "-n",
+      "-f",
+      "lavfi",
+      "-i",
+      "testsrc2=size=160x90:rate=24:duration=2",
+      "-f",
+      "lavfi",
+      "-i",
+      "sine=frequency=440:sample_rate=48000:duration=2",
+      "-i",
+      samples + "/captions.srt",
+      "-i",
+      samples + "/chapters.ffmetadata",
+      "-map",
+      "0:v",
+      "-map",
+      "1:a",
+      "-map",
+      "2:s",
+      "-map_chapters",
+      "3",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "ultrafast",
+      "-threads",
+      "1",
+      "-c:a",
+      "aac",
+      "-c:s",
+      "mov_text",
+      "-t",
+      "2",
+      samples + "/original.mp4",
+    ]),
+  )
+  ignore(
+    run.run([
+      "ffmpeg",
+      "-v",
+      "error",
+      "-nostdin",
+      "-n",
+      "-f",
+      "lavfi",
+      "-i",
+      "sine=frequency=1320:sample_rate=44100:duration=2",
+      "-c:a",
+      "pcm_s16le",
+      samples + "/commentary.wav",
+    ]),
+  )
+  let sample_source_hash = digest(samples + "/original.mp4")
+  let sample_preview = run.run([
+    exe,
+    "preview",
+    samples + "/original.mp4",
+    samples + "/commentary.wav",
+    "0",
+    "und",
+    "Commentary (synthetic tone)",
+  ])
+  @fs.write_file(
+    samples + "/preview.json",
+    sample_preview,
+    create_mode=CreateNew,
+  )
+  let sample_result = @json.parse(
+    run.run([
+      exe,
+      "attach",
+      samples + "/original.mp4",
+      samples + "/commentary.wav",
+      "0",
+      "und",
+      "Commentary (synthetic tone)",
+      samples + "/added",
+    ]),
+  )
+  let sample_output = samples + "/added/media.mp4"
+  for selector in ["v:0", "a:0", "s:0"] {
+    assert_eq(
+      run.packets(samples + "/original.mp4", selector),
+      run.packets(sample_output, selector),
+    )
+  }
+  assert_eq(
+    chapters(run.probe(samples + "/original.mp4")),
+    chapters(run.probe(sample_output)),
+  )
+  ignore(
+    run.run([
+      "ffmpeg", "-v", "error", "-i", sample_output, "-map", "0:v", "-map", "0:a",
+      "-f", "null", "-",
+    ]),
+  )
+  assert_eq(sample_source_hash, digest(samples + "/original.mp4"))
+  let sample_evidence : Json = {
+    "original_sha256": sample_source_hash,
+    "output_sha256": field(sample_result, "sha256"),
+    "checks": [
+      "original video/audio/caption packet hashes and timestamps identical", "chapter times and titles identical",
+      "two-second output fully decoded", "source unchanged",
+    ],
+    "audio": "440 Hz original tone; independently imported 1320 Hz commentary tone; no speech, translation or human approval",
+  }
+  @fs.write_file(
+    samples + "/verification.json",
+    sample_evidence.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  checks.push(
+    "Portable two-second sample preserves original packets, captions, chapters and full decode",
+  )
+  let result : Json = {
+    "status": "passed",
+    "commands": run.records.length(),
+    "checks": checks,
+    "input_sha256": hashes,
+    "limits": [
+      "Synthetic local media only", "No perceptual alignment, translation quality, listening, browser or device playback certification",
+    ],
+  }
+  @fs.write_file(
+    root + "/RESULT.json",
+    result.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println(result.stringify(indent=2))
+}

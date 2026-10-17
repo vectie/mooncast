@@ -8,6 +8,7 @@ import {
   "moonbitlang/x/crypto",
   "vectie/mooncast/editor/captions",
   "vectie/mooncast/editor/caption_media" @media,
+  "vectie/mooncast/editor/render_exec" @render,
   "vectie/mooncast/native_host/process",
 }
 

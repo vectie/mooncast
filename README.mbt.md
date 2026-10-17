@@ -53,6 +53,17 @@ into editable plain captions, preserving the original styled source. See
 For selectable captions in an actual MP4/MKV, `caption_media` appends a labelled
 caption track and reopens a selected embedded track in the existing caption
 editor. See [caption media interchange](docs/caption-media.md).
+To correct one embedded language while retaining later caption additions, audio
+and chapters, use [caption replacement](docs/caption-replacement.md).
+
+For a separately recorded translation, commentary or audio-description mix,
+audio_media imports a synchronized WAV/FLAC/M4A/MP4/MKV soundtrack as another
+selectable audio track. The original mix, picture, captions and chapters remain
+in the new media file. See [alternate soundtrack import](docs/audio-media.md).
+
+audio_loudness measures an explicitly selected mix and exports a two-pass
+normalized WAV with actual output remeasurement. Compare it as a new selectable
+soundtrack without changing the original. See [measured loudness editions](docs/audio-loudness.md).
 
 ## Build and run the native production studio
 
@@ -138,6 +149,11 @@ To correct caption text and timing without rebuilding a reel, use the local
 split/merge, offset or two-point synchronization, and SRT/WebVTT export. See
 [caption editing](docs/caption-editing.md).
 
+For a locally saved JSON3 caption track, use the explicit offline
+[JSON3 caption intake companion](docs/json3-captions.md). Preview complete
+independent events, retain the original file, and continue correction and
+SRT/WebVTT export through the existing native caption editor.
+
 For cuts-only interchange with another editor, use `cmd/edit_decisions` to
 preview/import CMX3600 EDL into a native timeline draft and export it again.
 See [edit-decision interchange](docs/edit-decision-interchange.md).
@@ -220,3 +236,20 @@ editable track, preserving the exact active text at every input boundary.
 Preview coverage, export both originals with SRT/WebVTT and source mappings,
 then edit or embed the result using the existing caption tools. See
 [bilingual caption composition](docs/bilingual-captions.md).
+
+## Continue editing an OpenTimelineIO cut
+
+`cmd/otio_import` catalogs a local `.otio` timeline, maps its source references to
+existing media, and creates a separate editable native picture draft with an
+optional synchronized soundtrack. Keep independent cuts/gaps, trim or mix audio,
+and save/reopen through the existing native editor. EDL is a picture-only
+projection; the native project retains audio. See [OTIO timeline import](docs/otio-timeline-import.md) for the explicit
+mapping, supported profile and four-file local handoff.
+
+## Correct captions from a saved TTML track
+
+`cmd/ttml_captions/main.mjs` previews a bounded UTF-8 TTML plain-caption subset,
+selects an explicit language, and imports exact source bytes with paragraph/cue
+mappings into the existing editable caption draft. Continue with native
+show/set/export and SRT reopen. Unsupported timing/layout semantics reject;
+visual styling and whitespace losses are declared. See [TTML caption intake](docs/ttml-captions.md).

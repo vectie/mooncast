@@ -229,6 +229,9 @@ fn timeline_view(dispatch : @rabbita.Emit[Msg], model : Model) -> @rabbita.Html 
   let seconds = Int::max(1, duration_ticks(model) / ticks_per_second(model))
   @html.section(class="timeline-panel") <| [
     timeline_toolbar(dispatch, model),
+    rolling_edit_controls(dispatch, model),
+    slip_edit_controls(dispatch, model),
+    slide_edit_controls(dispatch, model),
     @html.div(class="ruler-row") <| [
       @html.span(class="ruler-spacer", "Time"),
       @html.input(

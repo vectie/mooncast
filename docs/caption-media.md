@@ -45,10 +45,11 @@ reports the actual flags. Viewers can choose a track in their player's subtitle
 control. Availability and presentation of that control depend on the player.
 
 Attachment always appends one track, retaining existing ones. To correct an
-added track without accumulating obsolete versions, attach the corrected draft
-to the original master as shown above. To supply a second language, deliberately
-attach its draft to the already-captioned media instead. There is no replacement
-or removal command. Translation and transcription are not performed.
+existing language without accumulating obsolete tracks or losing later additions,
+use the [caption replacement workflow](caption-replacement.md): inspect the
+explicit stream, preview the corrected draft, then replace it in a new media
+version. To supply a new language, deliberately attach its draft instead.
+There is no removal command. Translation and transcription are not performed.
 
 ## Outputs and actual verification
 

@@ -12,7 +12,15 @@ import {
 // Values
 pub fn compile(String, @render_plan.RenderPlan, Array[ResolvedMedia], String) -> RenderInvocation raise
 
+pub fn compile_audio_attachment(String, String, Array[Int], Array[Array[String]], String, String, Bool, String) -> @process.CommandSpec
+
 pub fn compile_audio_edition(String, Int, Int, String, String, String) -> @process.CommandSpec
+
+pub fn compile_audio_loudness(String, Int, Int, Int, Array[Double], String?) -> @process.CommandSpec raise
+
+pub fn compile_audio_rendition(String, Int, Int, String, String) -> @process.CommandSpec
+
+pub fn compile_caption_replacement(Array[Int], Int, String, Array[Array[String]], String, String, String) -> @process.CommandSpec
 
 pub fn compile_concat(String, Array[String], String, String, Int) -> ConcatInvocation raise
 

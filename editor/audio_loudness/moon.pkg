@@ -1,0 +1,7 @@
+import {
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "vectie/mooncast/editor/audio_edition" @audio,
+}
+
+supported_targets = "native"

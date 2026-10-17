@@ -196,10 +196,21 @@ states, including merges, replacements and selected revisions. Save or cancel
 editor drafts first, then download again to keep the restored notes. History is
 bounded and session-only; existing downloaded files never change.
 
-## Correct supplied caption wording
+## Correct supplied caption wording and timing
 
 Choose **Edit caption N** beside a transcript cue to correct its wording while
-watching the cut. Save to preview with unchanged timing, then download a corrected
-caption draft or WebVTT sidecar. The original folder and notebook binding remain
+watching the cut. For timing, enter whole start/end milliseconds or capture the
+current position, choose **Preview correction**, then **Apply correction** or
+**Cancel edit**. Read [screening caption timing](screening-caption-timing.md) for
+exact bounds, temporary previews and restoration. Download a corrected caption
+draft or WebVTT sidecar to keep applied changes. The original folder and notebook binding remain
 unchanged. Read [caption correction](screening-caption-correction.md) for draft
 protection, restoration, continuing with existing caption tools and limitations.
+
+## Author playback chapters
+
+The player can now [capture, label and edit chapter starts while watching](screening-chapter-authoring.md).
+Preview and explicitly apply a separate millisecond marker set, then download
+FFmetadata. Supplied native chapters, notebook identity and feedback context
+remain unchanged. The new sidecar is session-only work: download it before
+closing, and separately review any later native-draft import.

@@ -136,11 +136,8 @@ pub fn validate_attachment(
   language : String,
   title : String,
 ) -> Unit raise {
-  draft.validate()
+  validate_caption_timing(media, draft)
   guard media.tracks.length() < 17 else { fail("no room for another track") }
-  guard (media.duration_ms - draft.duration_ms).abs() <= 50 else {
-    fail("caption draft and media duration differ by more than 50 ms")
-  }
   guard language.length() == 3 && language.iter().all(c => c >= 'a' && c <= 'z') else {
     fail("language must be a three-letter lowercase code; use und for unknown")
   }
@@ -149,11 +146,22 @@ pub fn validate_attachment(
     title.iter().all(c => c >= ' ') else {
     fail("track title must contain 1–120 characters without controls")
   }
+}
+
+///|
+fn validate_caption_timing(
+  media : Media,
+  draft : @captions.CaptionDraft,
+) -> Unit raise {
+  draft.validate()
+  guard (media.duration_ms - draft.duration_ms).abs() <= 50 else {
+    fail("caption draft and media duration differ by more than 50 ms")
+  }
   let mut end_ms = 0
   for cue in draft.cues {
     guard cue.start_ms >= end_ms else {
       fail(
-        "attachment requires nonoverlapping cues; revise overlapping speakers first",
+        "caption output requires nonoverlapping cues; revise overlapping speakers first",
       )
     }
     end_ms = cue.end_ms

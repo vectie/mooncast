@@ -38,6 +38,8 @@ fn player_script() -> String {
     #|  let track = null;
     #|  const captionCues = data.cues.map(cue => ({...cue}));
     #|  const captionTrackCues = [];
+    #|  let captionPreview = null;
+    #|  function displayedCaption(index) { return captionPreview && captionPreview.index === index ? captionPreview.cue : captionCues[index]; }
     #|  const rangeStatus = document.getElementById('range-status');
     #|  const repeatButton = document.getElementById('range-repeat');
     #|  let rangeStart = null, rangeEnd = null, repeating = false, repeatRevision = 0;
@@ -98,7 +100,7 @@ fn player_script() -> String {
     #|    const ms = Math.floor(video.currentTime * 1000);
     #|    const active = [];
     #|    cueRows.forEach((row, index) => {
-    #|      const cue = captionCues[index];
+    #|      const cue = displayedCaption(index);
     #|      const current = cue.start_ms <= ms && ms < cue.end_ms;
     #|      row.classList.toggle('current', current);
     #|      if (current) { row.setAttribute('aria-current', 'true'); active.push(cue.text); }
@@ -485,7 +487,7 @@ fn player_script() -> String {
     #|    const query = search.value.trim().toLocaleLowerCase();
     #|    let visible = 0;
     #|    cueRows.forEach((row, index) => {
-    #|      row.hidden = !captionCues[index].text.toLocaleLowerCase().includes(query);
+    #|      row.hidden = !displayedCaption(index).text.toLocaleLowerCase().includes(query);
     #|      if (!row.hidden) visible += 1;
     #|    });
     #|    count.textContent = visible + ' of ' + cueRows.length + ' cues';
@@ -505,7 +507,161 @@ fn player_script() -> String {
     #|    if (track) track.mode = captionsOn ? 'showing' : 'disabled';
     #|    update();
     #|  });
-    #|  // Caption wording is a separate session draft. Never mutate the embedded
+    #|  // Authored playback chapters have their own millisecond session clock. Never
+    #|  // infer native timeline IDs/ticks or change the supplied plan/notebook context.
+    #|  const authoredList = document.getElementById('chapter-author-list');
+    #|  if (authoredList) {
+    #|    const chapterStatus = document.getElementById('chapter-author-status');
+    #|    const chapterPanel = document.getElementById('chapter-author-editor');
+    #|    const chapterTitle = document.getElementById('chapter-author-label');
+    #|    const chapterStart = document.getElementById('chapter-author-start');
+    #|    const chapterCapture = document.getElementById('chapter-author-capture');
+    #|    const chapterRecapture = document.getElementById('chapter-author-recapture');
+    #|    const chapterPreviewButton = document.getElementById('chapter-author-preview');
+    #|    const chapterApply = document.getElementById('chapter-author-apply');
+    #|    const chapterCancel = document.getElementById('chapter-author-cancel');
+    #|    const chapterDownload = document.getElementById('chapter-author-download');
+    #|    const chapterPreviewStatus = document.getElementById('chapter-author-preview-status');
+    #|    let authored = [], selectedMarker = null, chapterEditing = false, chapterPreview = null, chapterURL = null, chapterMediaError = false;
+    #|    let authoredRows = [];
+    #|    const supportedDuration = Number.isSafeInteger(data.duration_ms) && data.duration_ms > 0 && data.duration_ms <= 7200000;
+    #|    function chapterClock(ms) { return clock(ms) + '.' + String(ms % 1000).padStart(3, '0'); }
+    #|    function chapterKey() { return JSON.stringify([chapterStart.value, chapterTitle.value]); }
+    #|    function chapterPreviewMatches() { return chapterPreview !== null && chapterPreview.key === chapterKey(); }
+    #|    function chapterTitleError(title) {
+    #|      if (!title.trim() || title.length > 200 || /[\x00-\x1f\x7f\u2028\u2029]/.test(title)) return 'Use a nonblank single-line chapter label of at most 200 UTF-16 units.';
+    #|      if (Array.from(title).some(character => character.length === 1 && /[\ud800-\udfff]/.test(character))) return 'Use valid Unicode in the chapter label.';
+    #|      if (title.endsWith('\\')) return 'A chapter label cannot end in a backslash in this FFmetadata profile.';
+    #|      return '';
+    #|    }
+    #|    function validateChapters(markers) {
+    #|      if (!supportedDuration || markers.length < 1 || markers.length > 1000) throw Error('Use 1–1000 chapter markers within a supported screening of at most two hours.');
+    #|      let previous = -1;
+    #|      markers.forEach(marker => {
+    #|        if (!Number.isSafeInteger(marker.start_ms) || marker.start_ms <= previous || marker.start_ms >= data.duration_ms) throw Error('Chapter starts must be distinct whole milliseconds from 0 through ' + (data.duration_ms - 1) + '.');
+    #|        const error = chapterTitleError(marker.title); if (error) throw Error(error);
+    #|        previous = marker.start_ms;
+    #|      });
+    #|      return markers;
+    #|    }
+    #|    function chapterCandidate() {
+    #|      if (!chapterEditing || !/^[0-9]+$/.test(chapterStart.value)) throw Error('Enter the chapter start as whole nonnegative milliseconds.');
+    #|      const marker = {start_ms: Number(chapterStart.value), title: chapterTitle.value};
+    #|      const markers = authored.filter(item => item !== selectedMarker).concat([marker]).sort((a, b) => a.start_ms - b.start_ms);
+    #|      return validateChapters(markers);
+    #|    }
+    #|    function updateAuthoredCurrent() {
+    #|      // Compare in the same seconds clock used for seeks: converting an exact
+    #|      // 1.001 s back to floored milliseconds can incorrectly yield 1000.
+    #|      const seconds = video.currentTime;
+    #|      authoredRows.forEach(({row, start, end}) => {
+    #|        const current = start / 1000 <= seconds && seconds < end / 1000;
+    #|        row.classList.toggle('current', current);
+    #|        if (current) row.setAttribute('aria-current', 'true'); else row.removeAttribute('aria-current');
+    #|      });
+    #|    }
+    #|    function chapterPositionAvailable() {
+    #|      return supportedDuration && !chapterMediaError && !video.error && video.readyState > 0 && !video.seeking && pendingSeek === null && Number.isFinite(video.duration) && video.duration > 0;
+    #|    }
+    #|    function previewChapterStart(start) {
+    #|      if (!chapterPositionAvailable() || start >= mediaEnd()) { showChapterAuthor('Load a playable video and finish seeking before previewing this marker. Authored chapters and editor values are kept.'); return; }
+    #|      seek(start);
+    #|      updateAuthoredCurrent();
+    #|      if (Math.abs(video.currentTime * 1000 - start) > 0.51) { showChapterAuthor('Could not reach the marker. Authored chapters and editor values are kept.'); return; }
+    #|      showChapterAuthor('Preview position ' + chapterClock(start) + '. Seeking never starts playback.');
+    #|    }
+    #|    function renderAuthored() {
+    #|      authoredList.replaceChildren(); authoredRows = [];
+    #|      const markers = chapterPreviewMatches() ? chapterPreview.markers : authored;
+    #|      markers.forEach((marker, index) => {
+    #|        const end = index + 1 < markers.length ? markers[index + 1].start_ms : data.duration_ms;
+    #|        const row = document.createElement('li');
+    #|        const preview = document.createElement('button'); preview.type = 'button';
+    #|        preview.textContent = 'Preview ' + chapterClock(marker.start_ms) + '–' + chapterClock(end) + ' · ' + marker.title;
+    #|        preview.addEventListener('click', () => previewChapterStart(marker.start_ms)); row.appendChild(preview);
+    #|        const controls = document.createElement('div'); controls.setAttribute('class', 'controls');
+    #|        const edit = document.createElement('button'); edit.type = 'button'; edit.textContent = 'Edit marker ' + (index + 1); edit.disabled = chapterEditing;
+    #|        edit.addEventListener('click', () => {
+    #|          if (chapterEditing || !authored.includes(marker)) { showChapterAuthor('Apply or cancel the current marker before editing another.'); return; }
+    #|          chapterEditing = true; selectedMarker = marker; chapterStart.value = String(marker.start_ms); chapterTitle.value = marker.title;
+    #|          renderAuthored(); showChapterAuthor('Edit the label or start, then preview and apply. Cancel keeps the saved marker.'); chapterTitle.focus();
+    #|        });
+    #|        const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remove marker ' + (index + 1); remove.disabled = chapterEditing;
+    #|        remove.addEventListener('click', () => {
+    #|          if (chapterEditing) { showChapterAuthor('Apply or cancel the current marker before removing a marker.'); return; }
+    #|          authored = authored.filter(item => item !== marker); renderAuthored(); showChapterAuthor('Marker removed from this session. Remaining intervals now end at the next marker or screening duration. Download to keep your work.');
+    #|        });
+    #|        controls.appendChild(edit); controls.appendChild(remove); row.appendChild(controls); authoredList.appendChild(row);
+    #|        authoredRows.push({row, start: marker.start_ms, end});
+    #|      });
+    #|      updateAuthoredCurrent();
+    #|    }
+    #|    function showChapterAuthor(message = '') {
+    #|      chapterCapture.disabled = !supportedDuration || chapterEditing || authored.length >= 1000;
+    #|      chapterPanel.hidden = !chapterEditing;
+    #|      [chapterStart, chapterTitle, chapterRecapture, chapterPreviewButton, chapterCancel].forEach(control => { control.disabled = !chapterEditing; });
+    #|      chapterApply.disabled = !chapterEditing || !chapterPreviewMatches();
+    #|      chapterDownload.disabled = !supportedDuration || !authored.length || chapterEditing;
+    #|      chapterPreviewStatus.hidden = !chapterPreviewMatches();
+    #|      chapterPreviewStatus.textContent = chapterPreviewMatches() ? 'Unsaved preview: ' + chapterPreview.markers.length + ' marker(s), contiguous intervals, final end ' + data.duration_ms + ' ms. Apply marker to keep this version, or Cancel edit.' : '';
+    #|      chapterStatus.textContent = (message ? message + ' ' : '') + authored.length + ' session marker(s). Supplied chapters and notebook context remain unchanged. Download FFmetadata before closing; this page does not save automatically.';
+    #|    }
+    #|    function captureChapterPosition(recapture) {
+    #|      if ((!recapture && chapterEditing) || (recapture && !chapterEditing)) { showChapterAuthor('Apply or cancel the current marker before capturing another.'); return; }
+    #|      const position = Math.round(video.currentTime * 1000);
+    #|      if (!chapterPositionAvailable() || !Number.isFinite(video.currentTime) || video.currentTime < 0 || video.currentTime * 1000 >= mediaEnd() || !Number.isSafeInteger(position) || position < 0 || position >= Math.min(data.duration_ms, mediaEnd())) {
+    #|        showChapterAuthor('Load the video and choose a stable position before its end to capture a chapter start. Editor values are kept.'); return;
+    #|      }
+    #|      if (authored.some(marker => marker !== selectedMarker && marker.start_ms === position)) { showChapterAuthor('A marker already starts at ' + position + ' ms. Edit that marker or choose another position.'); return; }
+    #|      if (!recapture && authored.length >= 1000) { showChapterAuthor('The session already has 1000 markers. Remove one before adding another.'); return; }
+    #|      chapterPreview = null; chapterEditing = true; chapterStart.value = String(position);
+    #|      if (!recapture) { selectedMarker = null; chapterTitle.value = ''; }
+    #|      renderAuthored(); showChapterAuthor('Captured ' + position + ' ms. Label the marker, preview the resulting intervals, then apply.'); chapterTitle.focus();
+    #|    }
+    #|    chapterCapture.addEventListener('click', () => captureChapterPosition(false));
+    #|    chapterRecapture.addEventListener('click', () => captureChapterPosition(true));
+    #|    [chapterStart, chapterTitle].forEach(control => control.addEventListener('input', () => { chapterPreview = null; renderAuthored(); showChapterAuthor('Editor changed. Preview again before applying.'); }));
+    #|    chapterPreviewButton.addEventListener('click', () => {
+    #|      if (!chapterEditing) return;
+    #|      chapterPreview = null;
+    #|      try { chapterPreview = {markers: chapterCandidate(), key: chapterKey()}; renderAuthored(); showChapterAuthor('Previewing unsaved chapter intervals below. Use a Preview row to seek.'); }
+    #|      catch (error) { renderAuthored(); showChapterAuthor(error.message); }
+    #|    });
+    #|    chapterApply.addEventListener('click', () => {
+    #|      if (!chapterEditing) return;
+    #|      if (!chapterPreviewMatches()) { chapterPreview = null; renderAuthored(); showChapterAuthor('Preview the current marker before applying it.'); return; }
+    #|      try { authored = chapterCandidate(); }
+    #|      catch (error) { chapterPreview = null; renderAuthored(); showChapterAuthor(error.message); return; }
+    #|      chapterEditing = false; selectedMarker = null; chapterPreview = null; chapterStart.value = chapterTitle.value = '';
+    #|      renderAuthored(); showChapterAuthor('Marker applied for this session. Download to keep the authored chapters.'); chapterCapture.focus();
+    #|    });
+    #|    chapterCancel.addEventListener('click', () => {
+    #|      chapterEditing = false; selectedMarker = null; chapterPreview = null; chapterStart.value = chapterTitle.value = '';
+    #|      renderAuthored(); showChapterAuthor('Editor closed. Applied markers are unchanged.'); chapterCapture.focus();
+    #|    });
+    #|    chapterDownload.addEventListener('click', () => {
+    #|      if (chapterEditing) { showChapterAuthor('Download blocked; apply or cancel the current marker first.'); return; }
+    #|      let link = null;
+    #|      try {
+    #|        validateChapters(authored);
+    #|        const escapeTitle = title => title.replace(/[\\=;#]/g, character => '\\' + character);
+    #|        const text = ';FFMETADATA1\n' + authored.map((marker, index) => '[CHAPTER]\nTIMEBASE=1/1000\nSTART=' + marker.start_ms + '\nEND=' + (index + 1 < authored.length ? authored[index + 1].start_ms : data.duration_ms) + '\ntitle=' + escapeTitle(marker.title) + '\n').join('');
+    #|        const blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
+    #|        if (blob.size > 2097152) throw Error('Chapter sidecar exceeds 2 MiB.');
+    #|        if (chapterURL) URL.revokeObjectURL(chapterURL);
+    #|        chapterURL = URL.createObjectURL(blob); link = document.createElement('a'); link.href = chapterURL; link.download = 'screening-authored-chapters.ffmetadata';
+    #|        document.body.appendChild(link); link.click();
+    #|        showChapterAuthor('FFmetadata download requested. Check that your browser saved it. Import into a separately selected matching-cut draft only when every millisecond boundary lands exactly on its native tick clock.');
+    #|      } catch (error) { showChapterAuthor('Could not download chapters: ' + error.message + ' Session markers are kept.'); }
+    #|      finally { if (link) link.remove(); }
+    #|    });
+    #|    video.addEventListener('timeupdate', updateAuthoredCurrent);
+    #|    video.addEventListener('seeked', updateAuthoredCurrent);
+    #|    video.addEventListener('error', () => { chapterMediaError = true; showChapterAuthor('Video playback failed. Chapter markers and editor values are kept; saved markers can still be downloaded.'); });
+    #|    video.addEventListener('loadedmetadata', () => { chapterMediaError = Boolean(video.error); updateAuthoredCurrent(); });
+    #|    renderAuthored(); showChapterAuthor();
+    #|  }
+    #|  // Caption wording and timing are a separate session draft. Never mutate the embedded
     #|  // screening plan: notebook source identity and supplied context stay exact.
     #|  const captionEditor = document.getElementById('caption-edit-text');
     #|  if (captionEditor) {
@@ -514,22 +670,36 @@ fn player_script() -> String {
     #|    const captionSave = document.getElementById('caption-edit-save');
     #|    const captionCancel = document.getElementById('caption-edit-cancel');
     #|    const captionRestore = document.getElementById('caption-edit-restore');
+    #|    const captionStart = document.getElementById('caption-edit-start');
+    #|    const captionEnd = document.getElementById('caption-edit-end');
+    #|    const captionCaptureStart = document.getElementById('caption-capture-start');
+    #|    const captionCaptureEnd = document.getElementById('caption-capture-end');
+    #|    const captionRestoreTiming = document.getElementById('caption-restore-timing');
+    #|    const captionPreviewButton = document.getElementById('caption-preview');
+    #|    const captionPreviewStatus = document.getElementById('caption-preview-status');
     #|    const captionJson = document.getElementById('caption-download-json');
     #|    const captionVtt = document.getElementById('caption-download-vtt');
     #|    const editButtons = Array.from(document.querySelectorAll('[data-caption-edit-index]'));
     #|    let selectedCaption = null, captionURL = null;
-    #|    function captionDirty() { return selectedCaption !== null && captionEditor.value !== captionCues[selectedCaption].text; }
+    #|    function timingDirty() { return selectedCaption !== null && (captionStart.value !== String(captionCues[selectedCaption].start_ms) || captionEnd.value !== String(captionCues[selectedCaption].end_ms)); }
+    #|    function captionDirty() { return selectedCaption !== null && (timingDirty() || captionEditor.value !== captionCues[selectedCaption].text); }
+    #|    function editorKey() { return JSON.stringify([selectedCaption, captionStart.value, captionEnd.value, captionEditor.value]); }
+    #|    function previewMatches() { return captionPreview !== null && captionPreview.key === editorKey(); }
     #|    function captionClock(ms) { return clock(ms) + '.' + String(ms % 1000).padStart(3, '0'); }
+    #|    function cueChanged(cue, original) { return cue.text !== original.text || cue.start_ms !== original.start_ms || cue.end_ms !== original.end_ms; }
     #|    function showCaptionEditor(message = '') {
-    #|      const changed = captionCues.filter((cue, index) => cue.text !== data.cues[index].text).length;
+    #|      const changed = captionCues.filter((cue, index) => cueChanged(cue, data.cues[index])).length;
     #|      const dirty = captionDirty();
-    #|      captionEditor.disabled = selectedCaption === null;
-    #|      captionSave.disabled = !dirty;
+    #|      [captionEditor, captionStart, captionEnd, captionCaptureStart, captionCaptureEnd, captionRestoreTiming].forEach(control => { control.disabled = selectedCaption === null; });
+    #|      captionSave.disabled = !dirty || (timingDirty() && !previewMatches());
+    #|      captionPreviewButton.disabled = !dirty;
     #|      captionCancel.disabled = selectedCaption === null;
     #|      captionRestore.disabled = selectedCaption === null;
     #|      captionJson.disabled = captionVtt.disabled = !captionCues.length || dirty;
-    #|      captionAnchor.textContent = selectedCaption === null ? 'Choose Edit caption beside a transcript cue.' : 'Editing caption ' + (selectedCaption + 1) + ' of ' + captionCues.length + ': ' + captionClock(captionCues[selectedCaption].start_ms) + '–' + captionClock(captionCues[selectedCaption].end_ms) + '. Timing is fixed.';
-    #|      captionStatus.textContent = (message ? message + ' ' : '') + changed + ' of ' + captionCues.length + ' captions corrected in this session. ' + (dirty ? 'Unsaved wording: save or cancel before switching captions or downloading.' : 'Download corrected captions to keep saved wording before closing. Original files are unchanged.');
+    #|      captionAnchor.textContent = selectedCaption === null ? 'Choose Edit caption beside a transcript cue.' : 'Editing caption ' + (selectedCaption + 1) + ' of ' + captionCues.length + ': ' + captionClock(captionCues[selectedCaption].start_ms) + '–' + captionClock(captionCues[selectedCaption].end_ms) + '. Applied session timing. Enter whole milliseconds; preview timing before applying.';
+    #|      captionPreviewStatus.hidden = captionPreview === null;
+    #|      captionPreviewStatus.textContent = captionPreview === null ? '' : 'Preview only for caption ' + (captionPreview.index + 1) + ': ' + captionClock(captionCues[captionPreview.index].start_ms) + '–' + captionClock(captionCues[captionPreview.index].end_ms) + ' → ' + captionClock(captionPreview.cue.start_ms) + '–' + captionClock(captionPreview.cue.end_ms) + '. Transcript, seek buttons and captions show this unsaved preview. Apply correction to keep it for this session, or Cancel edit to restore the applied version.';
+    #|      captionStatus.textContent = (message ? message + ' ' : '') + changed + ' of ' + captionCues.length + ' captions corrected in this session. ' + (dirty ? 'Unsaved correction: preview timing, then apply or cancel before switching captions or downloading.' : 'Download corrected captions to keep applied corrections before closing. Original files are unchanged.');
     #|    }
     #|    function captionTextError(text) {
     #|      if (!text.trim() || text.length > 2000 || /[<>]/.test(text)) return 'Use 1–2000 characters of plain text without angle brackets.';
@@ -537,37 +707,123 @@ fn player_script() -> String {
     #|      if (/[\x00-\x09\x0b-\x1f]/.test(text)) return 'Control characters, including tabs and carriage returns, are not supported.';
     #|      return '';
     #|    }
+    #|    function editorCue() {
+    #|      if (!/^\d+$/.test(captionStart.value) || !/^\d+$/.test(captionEnd.value)) throw Error('Enter start and end as whole, nonnegative milliseconds.');
+    #|      const cue = {start_ms: Number(captionStart.value), end_ms: Number(captionEnd.value), text: captionEditor.value};
+    #|      if (!Number.isSafeInteger(cue.start_ms) || !Number.isSafeInteger(cue.end_ms) || cue.start_ms >= cue.end_ms || cue.end_ms > data.duration_ms) throw Error('Start must precede end, and both must be inside the screening duration of ' + data.duration_ms + ' ms.');
+    #|      if ((selectedCaption > 0 && cue.start_ms < captionCues[selectedCaption - 1].start_ms) || (selectedCaption + 1 < captionCues.length && cue.start_ms > captionCues[selectedCaption + 1].start_ms)) throw Error('Keep cue starts in their existing order. Equal starts and overlapping ends are allowed; cues are never silently sorted.');
+    #|      const error = captionTextError(cue.text); if (error) throw Error(error);
+    #|      return cue;
+    #|    }
+    #|    function syncCaptionPresentation(index) {
+    #|      const cue = displayedCaption(index), row = cueRows[index];
+    #|      const words = row && row.querySelector('.words'), time = row && row.querySelector('.time'), seekButton = row && row.querySelector('[data-seek-ms]');
+    #|      if (words) words.textContent = cue.text;
+    #|      if (time) time.textContent = captionClock(cue.start_ms) + '–' + captionClock(cue.end_ms);
+    #|      if (seekButton) { seekButton.dataset.seekMs = String(cue.start_ms); seekButton.setAttribute('data-seek-ms', String(cue.start_ms)); }
+    #|      const button = editButtons.find(item => Number(item.dataset.captionEditIndex) === index);
+    #|      if (button) button.textContent = 'Edit caption ' + (index + 1) + (captionPreview && captionPreview.index === index ? ' (preview)' : cueChanged(cue, data.cues[index]) ? ' (corrected)' : '');
+    #|      if (track) {
+    #|        try {
+    #|          const item = captionTrackCues[index];
+    #|          // Move the safe endpoint first, including edits completely past the old interval.
+    #|          if (cue.start_ms / 1000 >= item.endTime) { item.endTime = cue.end_ms / 1000; item.startTime = cue.start_ms / 1000; }
+    #|          else { item.startTime = cue.start_ms / 1000; item.endTime = cue.end_ms / 1000; }
+    #|          item.text = cue.text.replace(/&/g, '&amp;');
+    #|        } catch (_) { try { track.mode = 'disabled'; } catch (_) {} track = null; }
+    #|      }
+    #|      filterCues(); update();
+    #|    }
+    #|    function clearCaptionPreview() {
+    #|      if (!captionPreview) return;
+    #|      const index = captionPreview.index; captionPreview = null; syncCaptionPresentation(index);
+    #|    }
+    #|    function discardStalePreview() { if (captionPreview && !previewMatches()) clearCaptionPreview(); }
     #|    editButtons.forEach(button => button.addEventListener('click', () => {
     #|      const index = Number(button.dataset.captionEditIndex);
     #|      if (!Number.isInteger(index) || index < 0 || index >= captionCues.length) return;
-    #|      if (captionDirty()) { showCaptionEditor('Current wording was kept.'); return; }
-    #|      selectedCaption = index; captionEditor.value = captionCues[index].text;
+    #|      discardStalePreview();
+    #|      if (captionDirty()) { showCaptionEditor('Current correction was kept.'); return; }
+    #|      clearCaptionPreview(); selectedCaption = index;
+    #|      captionEditor.value = captionCues[index].text; captionStart.value = String(captionCues[index].start_ms); captionEnd.value = String(captionCues[index].end_ms);
     #|      showCaptionEditor(); captionEditor.focus();
     #|    }));
-    #|    captionEditor.addEventListener('input', () => showCaptionEditor());
+    #|    [captionEditor, captionStart, captionEnd].forEach(control => control.addEventListener('input', () => { clearCaptionPreview(); showCaptionEditor(); }));
     #|    captionCancel.addEventListener('click', () => {
-    #|      selectedCaption = null; captionEditor.value = ''; showCaptionEditor('Editor closed; previously saved corrections kept.');
+    #|      clearCaptionPreview(); selectedCaption = null; captionEditor.value = ''; captionStart.value = ''; captionEnd.value = '';
+    #|      showCaptionEditor('Editor closed; previously applied corrections kept.');
     #|    });
     #|    captionRestore.addEventListener('click', () => {
     #|      if (selectedCaption === null) return;
-    #|      captionEditor.value = data.cues[selectedCaption].text;
-    #|      showCaptionEditor('Supplied wording is in the editor. Save to apply it, or cancel to keep the saved correction.');
+    #|      clearCaptionPreview(); captionEditor.value = data.cues[selectedCaption].text;
+    #|      showCaptionEditor('Supplied wording is in the editor. Apply to keep it, or cancel to keep the applied correction.');
+    #|    });
+    #|    captionRestoreTiming.addEventListener('click', () => {
+    #|      if (selectedCaption === null) return;
+    #|      clearCaptionPreview(); captionStart.value = String(data.cues[selectedCaption].start_ms); captionEnd.value = String(data.cues[selectedCaption].end_ms);
+    #|      showCaptionEditor('Supplied timing is in the editor. Preview and apply it, or cancel to keep the applied correction. Neighboring applied starts still constrain this restoration.');
+    #|    });
+    #|    function captureCaptionPosition(control) {
+    #|      if (selectedCaption === null) return;
+    #|      const position = Math.round(video.currentTime * 1000);
+    #|      if (video.readyState === 0 || !Number.isFinite(video.currentTime) || video.currentTime < 0 || position > Math.floor(mediaEnd())) { showCaptionEditor('Load the video and choose a position inside its duration before capturing timing. Editor values are kept.'); return; }
+    #|      clearCaptionPreview(); control.value = String(position);
+    #|      showCaptionEditor('Captured ' + position + ' ms in the selected caption draft. Preview to validate the complete interval.');
+    #|    }
+    #|    captionCaptureStart.addEventListener('click', () => captureCaptionPosition(captionStart));
+    #|    captionCaptureEnd.addEventListener('click', () => captureCaptionPosition(captionEnd));
+    #|    captionPreviewButton.addEventListener('click', () => {
+    #|      if (selectedCaption === null || !captionDirty()) { clearCaptionPreview(); showCaptionEditor(); return; }
+    #|      clearCaptionPreview();
+    #|      try { captionPreview = {index: selectedCaption, cue: editorCue(), key: editorKey()}; syncCaptionPresentation(selectedCaption); showCaptionEditor('Unsaved correction is previewing. Playback position, speed and repeat are unchanged.'); }
+    #|      catch (error) { showCaptionEditor(error.message); }
     #|    });
     #|    captionSave.addEventListener('click', () => {
-    #|      if (selectedCaption === null || !captionDirty()) return;
-    #|      const error = captionTextError(captionEditor.value);
-    #|      if (error) { showCaptionEditor(error); return; }
+    #|      discardStalePreview();
+    #|      if (selectedCaption === null || !captionDirty()) { showCaptionEditor(); return; }
+    #|      let cue;
+    #|      try { cue = editorCue(); } catch (error) { showCaptionEditor(error.message); return; }
+    #|      if (timingDirty() && !previewMatches()) { showCaptionEditor('Preview the timing correction before applying it.'); return; }
     #|      const index = selectedCaption;
-    #|      captionCues[index].text = captionEditor.value;
-    #|      const words = cueRows[index] && cueRows[index].querySelector('.words');
-    #|      if (words) words.textContent = captionEditor.value;
-    #|      const button = editButtons.find(item => Number(item.dataset.captionEditIndex) === index);
-    #|      if (button) button.textContent = 'Edit caption ' + (index + 1) + (captionCues[index].text === data.cues[index].text ? '' : ' (corrected)');
-    #|      if (track) {
-    #|        try { captionTrackCues[index].text = captionEditor.value.replace(/&/g, '&amp;'); }
-    #|        catch (_) { try { track.mode = 'disabled'; } catch (_) {} track = null; }
+    #|      captionPreview = null; captionCues[index] = cue;
+    #|      captionStart.value = String(cue.start_ms); captionEnd.value = String(cue.end_ms);
+    #|      syncCaptionPresentation(index); showCaptionEditor('Correction applied for this session in the transcript and captions. Download to keep it.');
+    #|    });
+    #|    const bulkFind = document.getElementById('caption-replace-find');
+    #|    const bulkWith = document.getElementById('caption-replace-with');
+    #|    const bulkStatus = document.getElementById('caption-replace-status');
+    #|    const bulkList = document.getElementById('caption-replace-list');
+    #|    const bulkApply = document.getElementById('caption-replace-apply');
+    #|    let replacement = null;
+    #|    function resetReplacement() { replacement = null; bulkApply.disabled = true; bulkList.replaceChildren(); }
+    #|    [bulkFind, bulkWith].forEach(control => control.addEventListener('input', () => { resetReplacement(); bulkStatus.textContent = 'Replacement changed. Preview again before applying.'; }));
+    #|    document.getElementById('caption-replace-preview').addEventListener('click', () => {
+    #|      resetReplacement();
+    #|      if (captionDirty() || captionPreview) { bulkStatus.textContent = 'Apply or cancel the single-caption edit first.'; return; }
+    #|      const needle = bulkFind.value, value = bulkWith.value;
+    #|      if (!needle || needle.length > 2000 || value.length > 2000) { bulkStatus.textContent = 'Enter a nonempty literal search, up to 2000 characters per field.'; return; }
+    #|      const changes = [];
+    #|      for (let index = 0; index < captionCues.length; index++) {
+    #|        const before = captionCues[index].text, after = before.split(needle).join(value);
+    #|        if (after === before) continue;
+    #|        const error = captionTextError(after);
+    #|        if (error) { bulkStatus.textContent = 'Caption ' + (index + 1) + ': ' + error + ' Nothing changed.'; return; }
+    #|        changes.push({index, before, after});
     #|      }
-    #|      filterCues(); update(); showCaptionEditor('Wording saved for this session and previewed in the transcript and captions.');
+    #|      changes.forEach(change => { const row = document.createElement('li'); row.textContent = 'Caption ' + (change.index + 1) + ': ' + change.before + ' → ' + change.after; bulkList.appendChild(row); });
+    #|      replacement = {source: JSON.stringify(captionCues), needle, value, changes};
+    #|      bulkApply.disabled = !changes.length;
+    #|      bulkStatus.textContent = changes.length + ' captions would change. Case-sensitive literal replacement across all applied captions, including hidden search results. Timings stay unchanged. Review every change below.';
+    #|    });
+    #|    bulkApply.addEventListener('click', () => {
+    #|      if (!replacement) return;
+    #|      if (captionDirty() || captionPreview || replacement.source !== JSON.stringify(captionCues) || replacement.needle !== bulkFind.value || replacement.value !== bulkWith.value) { resetReplacement(); bulkStatus.textContent = 'Caption edits or replacement inputs changed. Preview again; nothing applied.'; return; }
+    #|      const changes = replacement.changes;
+    #|      changes.forEach(change => { captionCues[change.index] = {...captionCues[change.index], text: change.after}; });
+    #|      if (selectedCaption !== null) captionEditor.value = captionCues[selectedCaption].text;
+    #|      changes.forEach(change => syncCaptionPresentation(change.index));
+    #|      resetReplacement(); showCaptionEditor();
+    #|      bulkStatus.textContent = changes.length + ' caption corrections applied for this session. Download corrected captions to keep them. Original files are unchanged.';
     #|    });
     #|    function correctedCaptionDraft() {
     #|      if (!captionCues.length || captionCues.length > 5000 || !Number.isInteger(data.duration_ms) || data.duration_ms < 1 || data.duration_ms > 7200000) throw Error('The screening has no supported caption draft.');
@@ -581,8 +837,62 @@ fn player_script() -> String {
     #|      if (!/^[a-f0-9]{64}$/.test(digest)) throw Error('The recorded media identity is unavailable.');
     #|      return {contract: 'mooncast.caption-draft.v1', source_file: 'screening media.mp4; recorded SHA-256: ' + digest, duration_ms: data.duration_ms, cues: captionCues.map(cue => ({start_ms: cue.start_ms, end_ms: cue.end_ms, text: cue.text}))};
     #|    }
+    #|    const resumeFile = document.getElementById('caption-resume-file');
+    #|    const resumeApply = document.getElementById('caption-resume-apply');
+    #|    const resumeStatus = document.getElementById('caption-resume-status');
+    #|    const resumeList = document.getElementById('caption-resume-list');
+    #|    let resumeEpoch = 0, resumed = null;
+    #|    function resetResume() { resumeEpoch++; resumed = null; resumeApply.disabled = true; resumeList.replaceChildren(); }
+    #|    function importedCaptionDraft(text) {
+    #|      const expected = correctedCaptionDraft(), loaded = JSON.parse(text);
+    #|      if (!loaded || loaded.contract !== expected.contract || loaded.source_file !== expected.source_file || loaded.duration_ms !== expected.duration_ms) throw Error('Use a corrected-caption JSON downloaded from this recorded media SHA-256 and screening duration.');
+    #|      if (!Array.isArray(loaded.cues) || loaded.cues.length !== captionCues.length) throw Error('The saved draft must have the same cue count. This player resumes wording and timing; it cannot add or remove cues.');
+    #|      let previous = -1;
+    #|      return loaded.cues.map((cue, index) => {
+    #|        if (!cue || !Number.isSafeInteger(cue.start_ms) || !Number.isSafeInteger(cue.end_ms) || cue.start_ms < 0 || cue.start_ms < previous || cue.end_ms <= cue.start_ms || cue.end_ms > data.duration_ms) throw Error('Caption ' + (index + 1) + ' has invalid timing or out-of-order starts.');
+    #|        if (typeof cue.text !== 'string') throw Error('Caption ' + (index + 1) + ' needs plain-text wording.');
+    #|        const error = captionTextError(cue.text); if (error) throw Error('Caption ' + (index + 1) + ': ' + error);
+    #|        previous = cue.start_ms;
+    #|        return {start_ms: cue.start_ms, end_ms: cue.end_ms, text: cue.text};
+    #|      });
+    #|    }
+    #|    resumeFile.addEventListener('change', async () => {
+    #|      resetResume(); const epoch = resumeEpoch, file = resumeFile.files && resumeFile.files[0];
+    #|      if (!file) { resumeStatus.textContent = 'No saved draft selected. Applied captions are kept.'; return; }
+    #|      if (captionDirty() || captionPreview) { resumeStatus.textContent = 'Apply or cancel the single-caption edit, then select the saved file again.'; return; }
+    #|      const source = JSON.stringify(captionCues);
+    #|      resumeStatus.textContent = 'Reading saved caption draft…';
+    #|      try {
+    #|        if (!Number.isFinite(file.size) || file.size < 0 || file.size > 16777216) throw Error('Choose a corrected-caption JSON up to 16 MiB.');
+    #|        const text = await file.text();
+    #|        if (epoch !== resumeEpoch) return;
+    #|        if (new Blob([text]).size > 16777216) throw Error('Saved caption draft exceeds 16 MiB.');
+    #|        if (captionDirty() || captionPreview || source !== JSON.stringify(captionCues)) throw Error('Captions changed during file reading. Select the file again.');
+    #|        const cues = importedCaptionDraft(text), changed = [];
+    #|        cues.forEach((cue, index) => { if (cueChanged(cue, captionCues[index])) changed.push(index); });
+    #|        changed.forEach(index => {
+    #|          const before = captionCues[index], after = cues[index], row = document.createElement('li');
+    #|          row.textContent = 'Caption ' + (index + 1) + ': ' + captionClock(before.start_ms) + '–' + captionClock(before.end_ms) + ' ' + before.text + ' → ' + captionClock(after.start_ms) + '–' + captionClock(after.end_ms) + ' ' + after.text;
+    #|          resumeList.appendChild(row);
+    #|        });
+    #|        resumed = {source, cues, changed}; resumeApply.disabled = !changed.length;
+    #|        resumeStatus.textContent = changed.length + ' of ' + cues.length + ' captions differ. Review the complete before/after list, then replace the applied caption draft. Download current corrections first if you need a recovery copy. No captions changed yet.';
+    #|      } catch (error) { if (epoch === resumeEpoch) { resetResume(); resumeStatus.textContent = 'Could not reopen captions: ' + error.message + ' Applied captions are kept.'; } }
+    #|    });
+    #|    resumeApply.addEventListener('click', () => {
+    #|      if (!resumed || !resumed.changed.length) return;
+    #|      if (captionDirty() || captionPreview || resumed.source !== JSON.stringify(captionCues)) { resetResume(); resumeStatus.textContent = 'Caption edits changed after preview. Select the file again; nothing applied.'; return; }
+    #|      const loaded = resumed, count = loaded.changed.length;
+    #|      loaded.cues.forEach((cue, index) => { captionCues[index] = {...cue}; });
+    #|      if (selectedCaption !== null) { const cue = captionCues[selectedCaption]; captionEditor.value = cue.text; captionStart.value = String(cue.start_ms); captionEnd.value = String(cue.end_ms); }
+    #|      loaded.changed.forEach(index => syncCaptionPresentation(index));
+    #|      resetResume(); resetReplacement(); showCaptionEditor();
+    #|      resumeStatus.textContent = 'Reopened ' + count + ' changed captions for this session. Continue editing and download again before closing. Original screening and feedback context are unchanged.';
+    #|    });
+    #|    document.getElementById('caption-resume-cancel').addEventListener('click', () => { resetResume(); resumeFile.value = ''; resumeStatus.textContent = 'Saved draft preview dismissed. Applied captions are kept.'; });
     #|    function downloadCaptions(format) {
-    #|      if (captionDirty()) { showCaptionEditor('Download blocked; save or cancel current wording first.'); return; }
+    #|      discardStalePreview();
+    #|      if (captionDirty()) { showCaptionEditor('Download blocked; apply or cancel the current correction first.'); return; }
     #|      let link = null;
     #|      try {
     #|        const draft = correctedCaptionDraft();
@@ -594,7 +904,7 @@ fn player_script() -> String {
     #|        link = document.createElement('a'); link.href = captionURL; link.download = 'screening-corrected-captions.' + format;
     #|        document.body.appendChild(link); link.click();
     #|        showCaptionEditor('Corrected ' + format.toUpperCase() + ' download requested. Check that your browser saved it; downloading does not approve or import it.');
-    #|      } catch (error) { showCaptionEditor('Could not download corrected captions: ' + error.message + ' Saved wording and editor text are kept.'); }
+    #|      } catch (error) { showCaptionEditor('Could not download corrected captions: ' + error.message + ' Applied corrections and editor values are kept.'); }
     #|      finally { if (link) link.remove(); }
     #|    }
     #|    captionJson.addEventListener('click', () => downloadCaptions('json'));
@@ -653,7 +963,7 @@ pub fn Plan::html(
     out.write_string("</ol>")
   }
   out.write_string(
-    "</section><section aria-labelledby=\"transcript-title\"><h2 id=\"transcript-title\">Transcript</h2><div class=\"search\"><label for=\"search\">Find spoken text</label><br><input id=\"search\" type=\"search\" placeholder=\"Search supplied captions\"><p id=\"search-count\" role=\"status\">" +
+    "<section aria-labelledby=\"chapter-author-title\"><h3 id=\"chapter-author-title\">Author chapters while watching</h3><p>Start a new set of chapter markers from playback. Session markers use whole milliseconds; supplied native chapters keep their original clock and are unchanged. Capture, label, preview and apply each marker. Download FFmetadata before closing this page.</p><button id=\"chapter-author-capture\" type=\"button\" disabled>Capture chapter start here</button><div id=\"chapter-author-editor\" hidden><label for=\"chapter-author-label\">Chapter label</label><input id=\"chapter-author-label\" type=\"text\" maxlength=\"200\" disabled><label for=\"chapter-author-start\">Start (ms)</label><input id=\"chapter-author-start\" type=\"text\" inputmode=\"numeric\" maxlength=\"16\" disabled><div class=\"controls\"><button id=\"chapter-author-recapture\" type=\"button\" disabled>Use current position</button><button id=\"chapter-author-preview\" type=\"button\" disabled>Preview marker intervals</button><button id=\"chapter-author-apply\" type=\"button\" disabled>Apply marker</button><button id=\"chapter-author-cancel\" type=\"button\" disabled>Cancel edit</button></div></div><p id=\"chapter-author-preview-status\" role=\"status\" hidden></p><p id=\"chapter-author-status\" role=\"status\"></p><ol id=\"chapter-author-list\"></ol><button id=\"chapter-author-download\" type=\"button\" disabled>Download authored chapters (FFmetadata)</button><p class=\"muted\">The final chapter ends at the screening duration. Leading time before the first marker has no chapter. Downloads contain no native project identity and do not change the video, supplied chapter draft, captions or feedback notebook.</p></section></section><section aria-labelledby=\"transcript-title\"><h2 id=\"transcript-title\">Transcript</h2><div class=\"search\"><label for=\"search\">Find spoken text</label><br><input id=\"search\" type=\"search\" placeholder=\"Search supplied captions\"><p id=\"search-count\" role=\"status\">" +
     self.cues.length().to_string() +
     " of " +
     self.cues.length().to_string() +
@@ -685,7 +995,10 @@ pub fn Plan::html(
     )
   }
   out.write_string(
-    "</ol></section></div><section aria-labelledby=\"caption-edit-title\"><h2 id=\"caption-edit-title\">Correct caption wording</h2><p>Edit a supplied cue while screening. Saved corrections preview here with their original timing. Download an ordinary caption draft for the existing caption editor or a WebVTT sidecar. Original files and the supplied context in feedback briefs remain unchanged.</p><p id=\"caption-edit-anchor\" role=\"status\"></p><label for=\"caption-edit-text\">Caption wording</label><br><textarea id=\"caption-edit-text\" rows=\"3\" maxlength=\"2000\" disabled></textarea><div class=\"controls\"><button id=\"caption-edit-save\" type=\"button\" disabled>Save wording</button><button id=\"caption-edit-cancel\" type=\"button\" disabled>Cancel edit</button><button id=\"caption-edit-restore\" type=\"button\" disabled>Use supplied wording</button></div><p id=\"caption-edit-status\" role=\"status\"></p><div class=\"controls\"><button id=\"caption-download-json\" type=\"button\" disabled>Download corrected caption draft (JSON)</button><button id=\"caption-download-vtt\" type=\"button\" disabled>Download corrected captions (WebVTT)</button></div></section><section aria-labelledby=\"review-title\"><h2 id=\"review-title\">Editorial review notes</h2><p>Capture the moment before writing. Notes are local issues, never client acceptance. Download to keep your work before closing this page.</p><div class=\"controls\"><button id=\"review-point\" type=\"button\">Capture current position</button><button id=\"review-range\" type=\"button\">Use marked A–B range</button></div><p id=\"review-anchor\" role=\"status\"></p><label for=\"review-text\">Note text</label><br><textarea id=\"review-text\" rows=\"4\" maxlength=\"2000\"></textarea><div class=\"controls\"><button id=\"review-save\" type=\"button\">Add note</button><button id=\"review-cancel\" type=\"button\">Cancel edit</button></div><label for=\"review-filter\">Show issues </label><select id=\"review-filter\"><option value=\"all\">All</option><option value=\"open\">Open</option><option value=\"resolved\">Resolved</option></select><div class=\"controls\"><label for=\"review-search\">Find note text</label><input id=\"review-search\" type=\"search\" maxlength=\"2000\" placeholder=\"Search saved issues\"><label for=\"review-chapter\">Chapter scope</label><select id=\"review-chapter\"></select><label for=\"review-order\">List order</label><select id=\"review-order\"><option value=\"created\">Notebook order</option><option value=\"timeline\">Timeline order</option></select></div><div class=\"controls\"><button id=\"review-previous\" type=\"button\" disabled>Previous matching issue</button><button id=\"review-next\" type=\"button\" disabled>Next matching issue</button></div><p id=\"review-navigation\" role=\"status\"></p><p id=\"review-status\" role=\"status\"></p><div class=\"controls\"><button id=\"review-undo\" type=\"button\" disabled>Undo notebook change</button><button id=\"review-redo\" type=\"button\" disabled>Redo notebook change</button></div><p id=\"review-history-status\" role=\"status\"></p><ol id=\"review-notes\"></ol><div class=\"controls\"><button id=\"review-download\" type=\"button\">Download notebook</button><label for=\"review-file\">Load notebook JSON (up to 10 files) </label><input id=\"review-file\" type=\"file\" accept=\".json,application/json\" multiple><button id=\"review-apply\" type=\"button\" disabled>Replace current notebook</button><button id=\"review-merge\" type=\"button\" disabled>Merge into current notebook</button><button id=\"review-revision-open\" type=\"button\" disabled>Review selected notebook revisions</button><button id=\"review-discard-import\" type=\"button\" disabled>Cancel loaded notebooks</button></div><section id=\"review-revision-panel\" aria-labelledby=\"review-revision-title\" hidden><h3 id=\"review-revision-title\">Choose notebook revisions</h3><p>Use this only for a deliberately revised copy of your current notebook. Matching local IDs propose a correspondence, not reviewer identity or common history. Compare every current/incoming time, wording and status before selecting a replacement. For unrelated reviewer files, use Merge instead. Download your current notebook first to keep a recovery copy.</p><p id=\"review-revision-status\" role=\"status\"></p><ol id=\"review-revision-list\"></ol><div class=\"controls\"><button id=\"review-revision-apply\" type=\"button\" disabled>Apply selected revisions</button><button id=\"review-revision-cancel\" type=\"button\">Cancel revision review</button></div></section><h3>Readable feedback brief</h3><p>Save a standalone reading and printing copy with timecodes and supplied caption/chapter context. This does not save an editable notebook or send feedback.</p><div class=\"controls\"><label for=\"review-brief-scope\">Feedback brief scope</label><select id=\"review-brief-scope\"><option value=\"matching\" selected>Current triage matches</option><option value=\"all\">All saved notes</option></select><button id=\"review-brief-download\" type=\"button\" disabled>Download feedback brief (HTML)</button></div><p id=\"review-brief-status\" role=\"status\"></p><p id=\"review-import-status\" role=\"status\"></p><details><summary>Inspect selected files and proposed additions</summary><ol id=\"review-merge-preview\"></ol></details></section></main><footer><h2>Local files</h2><p><a href=\"media.mp4\" download>Download video</a> · <a href=\"result.json\">Bundle manifest</a>",
+    "<li style=\"list-style:none\"><section aria-labelledby=\"caption-resume-title\"><h3 id=\"caption-resume-title\">Resume saved caption corrections</h3><p>Reopen corrected JSON downloaded from this screening. The recorded media SHA-256, duration and cue count must match. Review wording and timing changes before replacing the applied session draft. Download current corrections first to keep a recovery copy. This does not verify the media file or approve captions.</p><label for=\"caption-resume-file\">Saved corrected-caption JSON (up to 16 MiB)</label><input id=\"caption-resume-file\" type=\"file\" accept=\".json,application/json\"><button id=\"caption-resume-apply\" type=\"button\" disabled>Apply previewed saved captions</button><button id=\"caption-resume-cancel\" type=\"button\">Cancel saved draft preview</button><p id=\"caption-resume-status\" role=\"status\" aria-live=\"polite\">Choose a saved draft to preview. Nothing is uploaded.</p><ol id=\"caption-resume-list\"></ol></section></li>",
+  )
+  out.write_string(
+    "</ol></section></div><section aria-labelledby=\"caption-edit-title\"><h2 id=\"caption-edit-title\">Correct caption wording and timing</h2><p>Edit a supplied cue while screening. Enter whole milliseconds or capture the current playback position. Preview timing corrections, then apply or cancel. Wording-only corrections can be applied directly. Download an ordinary caption draft for the existing caption editor or a WebVTT sidecar. Original files and the supplied context in feedback briefs remain unchanged.</p><p id=\"caption-edit-anchor\" role=\"status\"></p><label for=\"caption-edit-text\">Caption wording</label><br><textarea id=\"caption-edit-text\" rows=\"3\" maxlength=\"2000\" disabled></textarea><div class=\"controls\"><label for=\"caption-edit-start\">Start (ms)</label><input id=\"caption-edit-start\" type=\"text\" inputmode=\"numeric\" maxlength=\"16\" disabled><button id=\"caption-capture-start\" type=\"button\" disabled>Use current position as start</button><label for=\"caption-edit-end\">End (ms)</label><input id=\"caption-edit-end\" type=\"text\" inputmode=\"numeric\" maxlength=\"16\" disabled><button id=\"caption-capture-end\" type=\"button\" disabled>Use current position as end</button></div><div class=\"controls\"><button id=\"caption-preview\" type=\"button\" disabled>Preview correction</button><button id=\"caption-edit-save\" type=\"button\" disabled>Apply correction</button><button id=\"caption-edit-cancel\" type=\"button\" disabled>Cancel edit</button><button id=\"caption-edit-restore\" type=\"button\" disabled>Use supplied wording</button><button id=\"caption-restore-timing\" type=\"button\" disabled>Use supplied timing</button></div><p id=\"caption-preview-status\" role=\"status\" hidden></p><p id=\"caption-edit-status\" role=\"status\"></p><div class=\"controls\"><button id=\"caption-download-json\" type=\"button\" disabled>Download corrected caption draft (JSON)</button><button id=\"caption-download-vtt\" type=\"button\" disabled>Download corrected captions (WebVTT)</button></div><h3>Replace caption wording</h3><p>Case-sensitive literal text, across all captions. Preview before applying; original files remain unchanged.</p><label for=\"caption-replace-find\">Find text</label><input id=\"caption-replace-find\" maxlength=\"2000\"><label for=\"caption-replace-with\">Replace with</label><input id=\"caption-replace-with\" maxlength=\"2000\"><button id=\"caption-replace-preview\" type=\"button\">Preview replacements</button><button id=\"caption-replace-apply\" type=\"button\" disabled>Apply previewed replacements</button><p id=\"caption-replace-status\" role=\"status\"></p><ol id=\"caption-replace-list\"></ol></section><section aria-labelledby=\"review-title\"><h2 id=\"review-title\">Editorial review notes</h2><p>Capture the moment before writing. Notes are local issues, never client acceptance. Download to keep your work before closing this page.</p><div class=\"controls\"><button id=\"review-point\" type=\"button\">Capture current position</button><button id=\"review-range\" type=\"button\">Use marked A–B range</button></div><p id=\"review-anchor\" role=\"status\"></p><label for=\"review-text\">Note text</label><br><textarea id=\"review-text\" rows=\"4\" maxlength=\"2000\"></textarea><div class=\"controls\"><button id=\"review-save\" type=\"button\">Add note</button><button id=\"review-cancel\" type=\"button\">Cancel edit</button></div><label for=\"review-filter\">Show issues </label><select id=\"review-filter\"><option value=\"all\">All</option><option value=\"open\">Open</option><option value=\"resolved\">Resolved</option></select><div class=\"controls\"><label for=\"review-search\">Find note text</label><input id=\"review-search\" type=\"search\" maxlength=\"2000\" placeholder=\"Search saved issues\"><label for=\"review-chapter\">Chapter scope</label><select id=\"review-chapter\"></select><label for=\"review-order\">List order</label><select id=\"review-order\"><option value=\"created\">Notebook order</option><option value=\"timeline\">Timeline order</option></select></div><div class=\"controls\"><button id=\"review-previous\" type=\"button\" disabled>Previous matching issue</button><button id=\"review-next\" type=\"button\" disabled>Next matching issue</button></div><p id=\"review-navigation\" role=\"status\"></p><p id=\"review-status\" role=\"status\"></p><div class=\"controls\"><button id=\"review-undo\" type=\"button\" disabled>Undo notebook change</button><button id=\"review-redo\" type=\"button\" disabled>Redo notebook change</button></div><p id=\"review-history-status\" role=\"status\"></p><ol id=\"review-notes\"></ol><div class=\"controls\"><button id=\"review-download\" type=\"button\">Download notebook</button><label for=\"review-file\">Load notebook JSON (up to 10 files) </label><input id=\"review-file\" type=\"file\" accept=\".json,application/json\" multiple><button id=\"review-apply\" type=\"button\" disabled>Replace current notebook</button><button id=\"review-merge\" type=\"button\" disabled>Merge into current notebook</button><button id=\"review-revision-open\" type=\"button\" disabled>Review selected notebook revisions</button><button id=\"review-discard-import\" type=\"button\" disabled>Cancel loaded notebooks</button></div><section id=\"review-revision-panel\" aria-labelledby=\"review-revision-title\" hidden><h3 id=\"review-revision-title\">Choose notebook revisions</h3><p>Use this only for a deliberately revised copy of your current notebook. Matching local IDs propose a correspondence, not reviewer identity or common history. Compare every current/incoming time, wording and status before selecting a replacement. For unrelated reviewer files, use Merge instead. Download your current notebook first to keep a recovery copy.</p><p id=\"review-revision-status\" role=\"status\"></p><ol id=\"review-revision-list\"></ol><div class=\"controls\"><button id=\"review-revision-apply\" type=\"button\" disabled>Apply selected revisions</button><button id=\"review-revision-cancel\" type=\"button\">Cancel revision review</button></div></section><h3>Readable feedback brief</h3><p>Save a standalone reading and printing copy with timecodes and supplied caption/chapter context. This does not save an editable notebook or send feedback.</p><div class=\"controls\"><label for=\"review-brief-scope\">Feedback brief scope</label><select id=\"review-brief-scope\"><option value=\"matching\" selected>Current triage matches</option><option value=\"all\">All saved notes</option></select><button id=\"review-brief-download\" type=\"button\" disabled>Download feedback brief (HTML)</button></div><p id=\"review-brief-status\" role=\"status\"></p><p id=\"review-import-status\" role=\"status\"></p><details><summary>Inspect selected files and proposed additions</summary><ol id=\"review-merge-preview\"></ol></details></section></main><footer><h2>Local files</h2><p><a href=\"media.mp4\" download>Download video</a> · <a href=\"result.json\">Bundle manifest</a>",
   )
   if !self.cues.is_empty() {
     out.write_string(

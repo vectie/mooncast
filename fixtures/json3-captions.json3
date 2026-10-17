@@ -1,0 +1,11 @@
+{
+  "wireMagic": "pb3",
+  "pens": [{}],
+  "wsWinStyles": [],
+  "wpWinPositions": [],
+  "events": [
+    {"tStartMs": 200, "dDurationMs": 1800, "segs": [{"utf8": "Hello ", "tOffsetMs": 0}, {"utf8": "東京 & friends.", "tOffsetMs": 450, "acAsrConf": 0.92}]},
+    {"tStartMs": 2300, "dDurationMs": 1700, "segs": [{"utf8": "Two lines:\n"}, {"utf8": "Grow 🌱 together.", "pPenId": 0}]},
+    {"tStartMs": 4500, "dDurationMs": 1000, "segs": [{"utf8": "Keep the original."}]}
+  ]
+}

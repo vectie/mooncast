@@ -1,0 +1,462 @@
+///|
+import {
+  "moonbitlang/async@0.19.4",
+  "moonbitlang/async@0.19.4/fs",
+  "moonbitlang/async@0.19.4/process",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.4.50/crypto",
+}
+
+///|
+struct Run {
+  root : String
+  records : Array[Json]
+}
+
+///|
+fn field(j : Json, key : String) -> Json {
+  match j {
+    Object(fields) => fields.get(key).unwrap_or(Json::null())
+    _ => Json::null()
+  }
+}
+
+///|
+fn rows(j : Json, key : String) -> Array[Json] raise {
+  guard field(j, key) is Array(values) else { fail("missing array " + key) }
+  values
+}
+
+///|
+async fn digest(path : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(path).binary()))
+}
+
+///|
+async fn Run::run(
+  self : Run,
+  args : Array[String],
+  ok? : Bool = true,
+) -> String {
+  let n = self.records.length()
+  let completed = @async.with_timeout_opt(330000, () => {
+    @process.collect_output(args[0], args[1:])
+  })
+  guard completed is Some((code, out, err)) else { fail("command timeout") }
+  @fs.write_file(
+    self.root + "/" + n.to_string() + ".stdout",
+    out.text(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    self.root + "/" + n.to_string() + ".stderr",
+    err.text(),
+    create_mode=CreateNew,
+  )
+  self.records.push({ "argv": args, "exit_code": code, "expected_success": ok })
+  @fs.write_file(
+    self.root + "/commands.json",
+    self.records.to_json().stringify(indent=2),
+    create_mode=if n == 0 { CreateNew } else { TruncateExisting },
+  )
+  assert_eq(
+    code == 0,
+    ok,
+    msg=args.to_json().stringify() + "\n" + out.text() + "\n" + err.text(),
+  )
+  out.text()
+}
+
+///|
+async fn Run::probe(self : Run, path : String) -> Json {
+  @json.parse(
+    self.run([
+      "ffprobe", "-v", "error", "-show_streams", "-show_chapters", "-show_format",
+      "-of", "json", path,
+    ]),
+  )
+}
+
+///|
+async fn Run::packets(self : Run, path : String, stream : String) -> Json {
+  @json.parse(
+    self.run([
+      "ffprobe", "-v", "error", "-select_streams", stream, "-show_packets", "-show_data_hash",
+      "sha256", "-show_entries", "packet=data_hash,pts_time,dts_time,duration_time",
+      "-of", "json", path,
+    ]),
+  )
+}
+
+///|
+fn assert_measurement(
+  result : Json,
+  target : Double,
+  ceiling : Double,
+) -> Unit raise {
+  let actual = field(result, "actual")
+  guard actual
+    is { "integrated_lufs": Number(i), "true_peak_dbtp": Number(tp), .. } else {
+    fail("missing actual loudness")
+  }
+  assert_true(i >= target - 0.5 && i <= target + 0.5)
+  assert_true(tp <= ceiling + 0.1)
+  assert_eq(field(result, "rights_approval"), false)
+  assert_eq(field(result, "client_acceptance"), false)
+  assert_eq(field(result, "publication_authority"), false)
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  assert_eq(
+    args.length(),
+    4,
+    msg="usage: verify_audio_loudness.mbtx ABSOLUTE_BUILD NEW_ABSOLUTE_EVIDENCE NEW_ABSOLUTE_SAMPLES",
+  )
+  let build = args[1]
+  let root = args[2]
+  let samples = args[3]
+  assert_true(
+    build.has_prefix("/") && root.has_prefix("/") && samples.has_prefix("/"),
+  )
+  @fs.mkdir(root, recursive=false)
+  @fs.mkdir(samples, recursive=false)
+  let run : Run = { root, records: [], }
+  let exe = build + "/native/debug/build/cmd/audio_loudness/audio_loudness.exe"
+  let attach = build + "/native/debug/build/cmd/audio_media/audio_media.exe"
+  let hashes : Map[String, String] = Map([])
+  let successes : Array[Json] = []
+  let ffprefix = ["ffmpeg", "-hide_banner", "-v", "error", "-nostdin", "-n"]
+  for extension in ["wav", "flac", "m4a", "mkv"] {
+    let source = (if extension == "wav" { samples } else { root }) +
+      "/quiet 中文." +
+      extension
+    let channels = if extension == "flac" { "2" } else { "1" }
+    let codec = match extension {
+      "wav" => "pcm_s16le"
+      "m4a" => "aac"
+      _ => "flac"
+    }
+    ignore(
+      run.run(
+        ffprefix +
+        [
+          "-f", "lavfi", "-i", "sine=frequency=880:sample_rate=44100:duration=8",
+          "-af", "volume=0.1", "-ac", channels, "-c:a", codec, "-threads", "1", source,
+        ],
+      ),
+    )
+    hashes[source] = digest(source)
+    let inspected = @json.parse(run.run([exe, "inspect", source]))
+    assert_eq(field(inspected, "sha256"), hashes[source].to_json())
+    let target = if channels == "1" { "-19" } else { "-16" }
+    let before = @json.parse(
+      run.run([exe, "measure", source, "0", target, "-2"]),
+    )
+    guard field(before, "measured") is { "integrated_lufs": Number(i), .. } else {
+      fail("missing before")
+    }
+    assert_true(i < -35.0)
+    let folder = root + "/balanced " + extension
+    let result = @json.parse(
+      run.run([exe, "export", source, "0", target, "-2", folder]),
+    )
+    assert_measurement(
+      result,
+      if channels == "1" {
+        -19.0
+      } else {
+        -16.0
+      },
+      -2.0,
+    )
+    assert_eq(
+      field(result, "sha256"),
+      digest(folder + "/normalized.wav").to_json(),
+    )
+    let reopened = @json.parse(
+      run.run([exe, "measure", folder + "/normalized.wav", "0", target, "-2"]),
+    )
+    assert_eq(field(reopened, "measured"), field(result, "actual"))
+    ignore(
+      run.run([
+        "ffmpeg",
+        "-v",
+        "error",
+        "-i",
+        folder + "/normalized.wav",
+        "-f",
+        "null",
+        "-",
+      ]),
+    )
+    ignore(
+      run.run([exe, "export", source, "0", target, "-2", folder], ok=false),
+    )
+    successes.push({
+      "container": extension,
+      "channels": channels,
+      "before": field(before, "measured"),
+      "after": field(result, "actual"),
+      "normalization_type": field(result, "normalization_type"),
+    })
+  }
+  @fs.write_file(
+    samples + "/captions.srt",
+    "1\n00:00:00,250 --> 00:00:07,750\nSynthetic tones: compare Quiet mix with Balanced mix.\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    samples + "/chapters.ffmetadata",
+    ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=4000\ntitle=Opening\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=4000\nEND=8000\ntitle=Second half\n",
+    create_mode=CreateNew,
+  )
+  let media = samples + "/original.mp4"
+  ignore(
+    run.run(
+      ffprefix +
+      [
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=160x90:rate=24:duration=8",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=440:sample_rate=48000:duration=8",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=880:sample_rate=48000:duration=8",
+        "-i",
+        samples + "/captions.srt",
+        "-i",
+        samples + "/chapters.ffmetadata",
+        "-map",
+        "0:v",
+        "-map",
+        "1:a",
+        "-map",
+        "2:a",
+        "-map",
+        "3:s",
+        "-map_chapters",
+        "4",
+        "-filter:a:1",
+        "volume=0.1",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-threads",
+        "1",
+        "-c:a",
+        "aac",
+        "-c:s",
+        "mov_text",
+        "-metadata:s:a:0",
+        "language=eng",
+        "-metadata:s:a:0",
+        "handler_name=Original mix",
+        "-metadata:s:a:1",
+        "language=fra",
+        "-metadata:s:a:1",
+        "handler_name=Quiet mix",
+        "-disposition:a:1",
+        "0",
+        media,
+      ],
+    ),
+  )
+  hashes[media] = digest(media)
+  let before = @json.parse(run.run([exe, "measure", media, "2", "-19", "-2"]))
+  assert_eq(field(field(field(before, "plan"), "track"), "language"), "fra")
+  @fs.write_file(
+    samples + "/preview.json",
+    before.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let normalized = root + "/sample-balanced"
+  let balanced = @json.parse(
+    run.run([exe, "export", media, "2", "-19", "-2", normalized]),
+  )
+  assert_measurement(balanced, -19.0, -2.0)
+  let decoded = root + "/selected-tone.s16le"
+  ignore(
+    run.run([
+      "ffmpeg",
+      "-v",
+      "error",
+      "-nostdin",
+      "-n",
+      "-i",
+      normalized + "/normalized.wav",
+      "-c:a",
+      "pcm_s16le",
+      "-f",
+      "s16le",
+      decoded,
+    ]),
+  )
+  let pcm = @fs.read_file(decoded).binary()
+  let mut crossings = 0
+  for i in 1..<(pcm.length() / 2) {
+    if (pcm[i * 2 + 1] < 0x80) != (pcm[(i - 1) * 2 + 1] < 0x80) {
+      crossings += 1
+    }
+  }
+  let tone_hz = crossings.to_double() /
+    (pcm.length().to_double() / 96000.0) /
+    2.0
+  assert_true(
+    tone_hz > 850.0 && tone_hz < 910.0,
+    msg="must retain the selected 880 Hz mix, not the original 440 Hz mix",
+  )
+  let attached = @json.parse(
+    run.run([
+      attach,
+      "attach",
+      media,
+      normalized + "/normalized.wav",
+      "0",
+      "fra",
+      "Balanced mix (synthetic tone)",
+      root + "/sample-comparison",
+    ]),
+  )
+  let output = root + "/sample-comparison/media.mp4"
+  for selector in ["v:0", "a:0", "a:1", "s:0"] {
+    assert_eq(
+      run.packets(media, selector),
+      run.packets(output, selector),
+      msg="preserved " + selector,
+    )
+  }
+  let original_probe = run.probe(media)
+  let output_probe = run.probe(output)
+  assert_eq(rows(original_probe, "chapters"), rows(output_probe, "chapters"))
+  assert_eq(
+    rows(output_probe, "streams")
+    .filter(s => field(s, "codec_type") == "audio")
+    .length(),
+    3,
+  )
+  ignore(
+    run.run([
+      "ffmpeg", "-v", "error", "-i", output, "-map", "0:v", "-map", "0:a", "-f",
+      "null", "-",
+    ]),
+  )
+  // Attached AAC is another lossy encoding. Measure it rather than inheriting the WAV's reading.
+  let attached_measure = @json.parse(
+    run.run([exe, "measure", output, "4", "-19", "-2"]),
+  )
+  @fs.write_file(
+    samples + "/attached-measurement.json",
+    attached_measure.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let sample_evidence : Json = {
+    "source_sha256": hashes[media],
+    "normalized_sha256": field(balanced, "sha256"),
+    "comparison_sha256": field(attached, "sha256"),
+    "before": field(before, "measured"),
+    "after_wav": field(balanced, "actual"),
+    "attached_aac": field(attached_measure, "measured"),
+    "decoded_tone_hz": tone_hz,
+    "checks": [
+      "original picture, both soundtracks and captions retain identical packet bytes and times",
+      "chapters identical", "full A/V decode", "explicit second audio selected",
+      "original source unchanged",
+    ],
+    "limits": "synthetic tones; no listening review, speech, rights approval or client acceptance",
+  }
+  @fs.write_file(
+    samples + "/verification.json",
+    sample_evidence.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  for kind in ["silence", "short", "surround", "hidden-short"] {
+    let path = root + "/invalid " + kind + ".mkv"
+    let signal = if kind == "silence" {
+      "anullsrc=r=48000:cl=mono:d=8"
+    } else {
+      "sine=frequency=440:sample_rate=48000:duration=" +
+      (if kind == "short" || kind == "hidden-short" { "2" } else { "8" })
+    }
+    let cmd = ffprefix + ["-f", "lavfi", "-i", signal]
+    if kind == "hidden-short" {
+      cmd.append([
+        "-f", "lavfi", "-i", "testsrc2=size=160x90:rate=24:duration=8", "-map", "0:a",
+        "-map", "1:v", "-c:v", "libx264", "-preset", "ultrafast",
+      ])
+    }
+    cmd.append([
+      "-ac",
+      if kind == "surround" {
+        "6"
+      } else {
+        "1"
+      },
+      "-c:a",
+      "flac",
+      "-threads",
+      "1",
+      path,
+    ])
+    ignore(run.run(cmd))
+    hashes[path] = digest(path)
+    let folder = root + "/rejected " + kind
+    ignore(run.run([exe, "export", path, "0", "-19", "-2", folder], ok=false))
+    assert_false(@fs.exists(folder + "/result.json"))
+    if kind == "hidden-short" {
+      assert_true(@fs.exists(folder + "/normalized.wav"))
+    } else {
+      assert_false(@fs.exists(folder))
+    }
+  }
+  @fs.write_file(root + "/broken.wav", "not audio", create_mode=CreateNew)
+  ignore(run.run([exe, "inspect", root + "/broken.wav"], ok=false))
+  for
+    pair in [
+      ("0", "-19", "-2"),
+      ("9", "-19", "-2"),
+      ("2", "-24", "-2"),
+      ("2", "-19", "0"),
+      ("2", "-19.5", "-2"),
+    ] {
+    let dest = root + "/invalid-choice-" + run.records.length().to_string()
+    ignore(
+      run.run([exe, "export", media, pair.0, pair.1, pair.2, dest], ok=false),
+    )
+    assert_false(@fs.exists(dest))
+  }
+  let dangling = root + "/dangling"
+  @fs.symlink(target=root + "/missing", dangling)
+  ignore(run.run([exe, "export", media, "2", "-19", "-2", dangling], ok=false))
+  assert_true(@fs.kind(dangling, follow_symlink=false) is SymLink)
+  for path, hash in hashes {
+    assert_eq(digest(path), hash, msg="source changed " + path)
+  }
+  let evidence : Json = {
+    "status": "passed",
+    "commands": run.records.length(),
+    "exports": successes,
+    "sample": sample_evidence,
+    "failures_exercised": [
+      "silence", "short", "surround", "selected audio shorter than hidden container duration",
+      "damaged source", "non-audio or missing stream", "target bounds", "fractional target",
+      "occupied/dangling output",
+    ],
+    "source_hashes_unchanged": hashes,
+    "qualification": "bounded local synthetic development evidence; no release or provider/client qualification",
+  }
+  @fs.write_file(
+    root + "/RESULT.json",
+    evidence.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  println(evidence.stringify(indent=2))
+}

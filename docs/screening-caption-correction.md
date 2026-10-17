@@ -1,10 +1,9 @@
-# Correct caption wording while screening
+# Correct captions while screening
 
-The offline screening player now lets an editor correct supplied caption text
+The offline screening player now lets an editor correct supplied caption text and timing
 while watching the cut, then download an ordinary MoonCast caption draft or
-WebVTT sidecar. This closes a local editing gap: the existing caption CLI can
-correct text, but the player previously offered only read-only captions and
-feedback notes. No transcription, provider or network is used.
+WebVTT sidecar. The existing caption CLI remains available for bulk synchronization and
+split/merge; this player workflow corrects individual supplied cues in place. No transcription, provider or network is used.
 
 ## Watch, correct, preview, download
 
@@ -14,20 +13,22 @@ draft, and open its `index.html`. Previously exported folders retain their
 older player and need a fresh export to receive these controls.
 
 1. Search the transcript or select a timestamp to hear the relevant passage.
-   Choose **Edit caption N** beside that cue. The editor identifies its fixed
-   one-based number and exact millisecond range.
-2. Correct **Caption wording**, then choose **Save wording**. The transcript,
+   Choose **Edit caption N** beside that cue. The editor identifies its stable
+   one-based number and currently applied millisecond range.
+2. Correct **Caption wording**, then choose **Apply correction**. For timing
+   changes, use the [timing preview workflow](screening-caption-timing.md): enter
+   start/end milliseconds or capture player positions, preview, then apply. The transcript,
    active caption overlay (or plain-text fallback) and transcript search use the
-   saved correction immediately. Only wording changes. Cue order, overlaps,
-   starts and ends stay exact. Playback, pause, speed and A–B repeat are not
-   changed by editing, saving or downloading. Playback can move to another cue
+   saved correction immediately. Wording-only edits retain their timing. Timing edits keep cue order and allow
+   overlaps; the player never sorts or clips an invalid edit. Playback, pause, speed and A–B repeat are not
+   changed by editing, previewing, applying or downloading. Playback can move to another cue
    while the editor remains on the cue you deliberately selected.
-3. Unfinished wording blocks switching to another caption and both downloads.
-   Save it, or choose **Cancel edit** to discard that editor draft and close the
+3. Unfinished wording or timing blocks switching to another caption and both downloads.
+   Apply it, or choose **Cancel edit** to discard that editor draft and close the
    editor. Cancel preserves all previously saved corrections.
 4. To undo a saved correction to the originally supplied text, select that cue
    and choose **Use supplied wording**. This replaces the editor text only.
-   **Save wording** applies the restoration; **Cancel edit** keeps the earlier
+   **Apply correction** applies the restoration; **Cancel edit** keeps the earlier
    saved correction. There is no multi-step caption history.
 5. Choose **Download corrected caption draft (JSON)** to keep an editable
    `mooncast.caption-draft.v1` file, or **Download corrected captions (WebVTT)**
@@ -56,13 +57,12 @@ caption_edit export screening-corrected-captions.json corrected-sidecars
 
 Here `caption_edit` denotes your already-built `cmd/caption_edit` executable;
 use its actual path. The export prefix must be fresh. These native consumer
-commands were not executed in this round because the native toolchain and
-required dependencies remain unqualified; the focused evidence checks the
+commands were not executed in this bounded Node-only round; the focused evidence checks the
 existing source contract and output bytes independently.
 
 The exported duration is the screening media's millisecond duration. It may
 therefore differ by up to 50 ms from an original accepted caption draft's total
-duration, but individual cue boundaries never change. `source_file` is an
+duration, and applied timing edits are exported exactly in milliseconds. `source_file` is an
 informational label naming `media.mp4` and its recorded SHA-256. It is not a
 filesystem path, a new media hash, a signature, a rights receipt or a proof of
 matching speech. The player does not rehash the copied media.
@@ -79,7 +79,7 @@ matching speech. The player does not rehash the copied media.
   escapes ampersands so literal entity-like text stays literal. A too-large VTT
   cannot be silently truncated; a supported JSON can still be downloaded.
 - A browser download request is not proof of a completed save. Failed downloads
-  leave session wording intact. Browser download naming/overwrite prompts belong
+  leave session wording and timing intact. Browser download naming/overwrite prompts belong
   to the browser; the player never writes a local path or overwrites source files.
 - If a browser cannot update its native text-track cue, the player disables that
   track and displays corrected plain text below the video instead. Actual device
@@ -89,9 +89,9 @@ matching speech. The player does not rehash the copied media.
   Feedback briefs continue to quote originally supplied caption context, as the
   UI explicitly says. Regenerating a screening with corrected captions produces
   a new plan; old exact-plan notebooks are not silently rebound.
-- No caption creation, deletion, timing edit, split/merge, translation, burn-in,
+- No caption creation, deletion, split/merge, translation, burn-in,
   master approval, recipient access check, publication or client acceptance is
-  performed. Timing edits and other operations remain in the existing tools.
+  performed. Whole-draft synchronization, splitting and merging remain in the existing tools.
 
 This supports the editorial part of PRD MC-W04 and caption preparation within
 MC-W07/MOONCAST-R02. It does not complete the roadmap delivery package or qualify
@@ -102,11 +102,11 @@ the full graph/cut workflow in MOONCAST-B08.
 From the repository root with existing Node:
 
 ```sh
-node --test scripts/test-screening-caption-edit.cjs scripts/test-screening-notebook.cjs scripts/test-screening-merge.cjs scripts/test-screening-triage.cjs scripts/test-screening-brief.cjs scripts/test-screening-revisions.cjs scripts/test-screening-history.cjs
+node --test scripts/test-screening-caption-timing.cjs scripts/test-screening-caption-edit.cjs scripts/test-screening-notebook.cjs scripts/test-screening-merge.cjs scripts/test-screening-triage.cjs scripts/test-screening-brief.cjs scripts/test-screening-revisions.cjs scripts/test-screening-history.cjs
 node scripts/test-screening-repeat.cjs
 ```
 
-Twelve new tests execute every literal line of the real production player
+The twelve wording tests and seventeen timing tests execute every literal line of the real production player
 JavaScript and check actual HTML control declarations. They exercise selection
 through playback changes, overlapping cues, both caption display paths,
 searching corrected text, draft protection, cancel/restoration, plain-text

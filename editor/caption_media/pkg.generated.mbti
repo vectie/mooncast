@@ -14,11 +14,15 @@ pub fn extract_arguments(String, Int) -> Array[String]
 
 pub fn inspect_media(Json) -> Media raise
 
+pub fn prepare_replacement(Json, @captions.CaptionDraft, Int) -> ReplacementPlan raise
+
 pub fn select_track(Media, Int) -> Track raise
 
 pub fn validate_attachment(Media, @captions.CaptionDraft, String, String) -> Unit raise
 
 pub fn verify_attachment(Media, Media, String, String) -> Track raise
+
+pub fn verify_replacement(ReplacementPlan, Json) -> Track raise
 
 // Errors
 
@@ -29,6 +33,14 @@ pub(all) struct Media {
   tracks : Array[Track]
   chapters : Array[Json]
 } derive(ToJson)
+
+pub(all) struct ReplacementPlan {
+  media : Media
+  selected : Track
+  output_position : Int
+  stream_dispositions : Array[Array[String]]
+} derive(ToJson)
+pub fn ReplacementPlan::to_json(Self) -> Json
 
 pub(all) struct Track {
   index : Int

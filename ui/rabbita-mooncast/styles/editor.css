@@ -325,3 +325,7 @@ a { color: var(--accent); }
   .provider-run-panel { grid-template-columns: 1fr auto; }
   .provider-boundary-note { grid-column: 1 / -1; }
 }
+
+.audio-audition { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; padding: .6rem; }
+.audio-audition small { flex-basis: 100%; }
+.audio-audition button.is-active { outline: 2px solid #73e7c5; }
