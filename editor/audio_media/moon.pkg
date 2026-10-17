@@ -1,0 +1,7 @@
+import {
+  "moonbitlang/core/string",
+  "vectie/mooncast/editor/caption_media" @media,
+  "vectie/mooncast/editor/audio_edition" @audio,
+}
+
+supported_targets = "native"

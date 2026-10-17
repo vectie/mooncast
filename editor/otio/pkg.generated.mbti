@@ -1,0 +1,96 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/otio"
+
+import {
+  "moonbitlang/core/json",
+  "vectie/mooncast/editor/domain",
+  "vectie/mooncast/editor/edl",
+}
+
+// Values
+pub fn catalog_timeline(String, Int) -> TimelineCatalog raise
+
+pub fn import_timeline(@domain.EditorProject, String, MediaMap) -> ImportedTimeline raise
+
+pub fn read_media_map(String) -> MediaMap raise
+
+// Errors
+
+// Types and methods
+pub(all) struct AudioCutPreview {
+  clip_id : String
+  media_ref_id : String
+  source_in_frame : Int
+  source_out_frame : Int
+  start_frame : Int
+  end_frame : Int
+  gap_before_frames : Int
+} derive(Eq, ToJson)
+pub fn AudioCutPreview::equal(Self, Self) -> Bool
+pub fn AudioCutPreview::not_equal(Self, Self) -> Bool
+pub fn AudioCutPreview::to_json(Self) -> Json
+
+pub(all) struct ImportedTimeline {
+  project : @domain.EditorProject
+  catalog : TimelineCatalog
+  preview : @edl.DraftPreview
+  audio_preview : Array[AudioCutPreview]
+  edl_mapping : @edl.ReelMap
+  normalized_edl : String
+} derive(ToJson)
+pub fn ImportedTimeline::to_json(Self) -> Json
+
+pub(all) struct MediaBinding {
+  target_url : String
+  media_ref_id : String
+  template_clip_id : String
+  source_start_frame : Int
+} derive(Eq, ToJson, @json.FromJson)
+pub fn MediaBinding::equal(Self, Self) -> Bool
+pub fn MediaBinding::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MediaBinding::not_equal(Self, Self) -> Bool
+pub fn MediaBinding::to_json(Self) -> Json
+
+pub(all) struct MediaMap {
+  contract : String
+  fps : Int
+  draft_timeline_id : String
+  bindings : Array[MediaBinding]
+} derive(Eq, ToJson, @json.FromJson)
+pub fn MediaMap::equal(Self, Self) -> Bool
+pub fn MediaMap::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MediaMap::not_equal(Self, Self) -> Bool
+pub fn MediaMap::to_json(Self) -> Json
+
+pub(all) struct TimelineCatalog {
+  contract : String
+  name : String
+  fps : Int
+  global_start_frame : Int?
+  duration_frames : Int
+  video_duration_frames : Int
+  audio_duration_frames : Int?
+  items : Array[TimelineItem]
+} derive(Eq, ToJson)
+pub fn TimelineCatalog::equal(Self, Self) -> Bool
+pub fn TimelineCatalog::not_equal(Self, Self) -> Bool
+pub fn TimelineCatalog::to_json(Self) -> Json
+
+pub(all) struct TimelineItem {
+  track_kind : String
+  kind : String
+  name : String
+  target_url : String
+  source_start_frame : Int
+  duration_frames : Int
+  start_frame : Int
+  available_start_frame : Int?
+  available_duration_frames : Int?
+} derive(Eq, ToJson)
+pub fn TimelineItem::equal(Self, Self) -> Bool
+pub fn TimelineItem::not_equal(Self, Self) -> Bool
+pub fn TimelineItem::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

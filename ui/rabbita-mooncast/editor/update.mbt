@@ -2745,6 +2745,7 @@ fn update_project(
       let next = {
         ..model,
         program_surface: surface,
+        solo_track_id: "",
         playing: false,
         last_animation_ms: None,
       }
@@ -2760,6 +2761,16 @@ fn update_project(
       }
       sync_program_media(next, false)
       sync_authoritative_media(next)
+      (@rabbita.none, next)
+    }
+    ToggleTrackSolo(track_id) => {
+      let next = toggle_track_solo(model, track_id)
+      sync_program_media(next, false)
+      (@rabbita.none, next)
+    }
+    ClearTrackSolo => {
+      let next = { ..model, solo_track_id: "", }
+      sync_program_media(next, false)
       (@rabbita.none, next)
     }
     ToggleMute => {
@@ -3039,6 +3050,18 @@ fn update_project(
         },
       )
     }
+    RollSelection(direction) => roll_selection(dispatch, model, direction)
+    SlipSelection(frames) => slip_selection(dispatch, model, frames)
+    SetSlideOffset(value) =>
+      (
+        @rabbita.none,
+        if model.busy || model.loading {
+          model
+        } else {
+          { ..model, slide_offset_frames: value, }
+        },
+      )
+    SlideSelection => slide_selection(dispatch, model)
     TrimSelection(edge, delta) => {
       let chosen = clips(model).filter(clip => {
         model.selected_clip_ids.contains(clip.clip_id)

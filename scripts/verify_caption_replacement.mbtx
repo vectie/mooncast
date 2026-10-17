@@ -1,0 +1,451 @@
+///|
+// Actual native caption revision acceptance. No product build, network or deletion.
+import {
+  "moonbitlang/async@0.19.4",
+  "moonbitlang/async@0.19.4/fs",
+  "moonbitlang/async@0.19.4/process",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.4.50/crypto",
+}
+
+///|
+struct Run {
+  root : String
+  records : Array[Json]
+}
+
+///|
+fn field(value : Json, key : String) -> Json {
+  match value {
+    Object(fields) => fields.get(key).unwrap_or(Json::null())
+    _ => Json::null()
+  }
+}
+
+///|
+fn rows(value : Json, key : String) -> Array[Json] raise {
+  guard field(value, key) is Array(values) else {
+    fail("missing array: " + key)
+  }
+  values
+}
+
+///|
+async fn read_json(path : String) -> Json {
+  @json.parse(@fs.read_file(path).text())
+}
+
+///|
+async fn digest(path : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(path).binary()))
+}
+
+///|
+async fn Run::run(
+  self : Run,
+  args : Array[String],
+  ok? : Bool = true,
+) -> String {
+  let number = self.records.length()
+  let label = if number < 10 {
+    "00" + number.to_string()
+  } else if number < 100 {
+    "0" + number.to_string()
+  } else {
+    number.to_string()
+  }
+  let completed = @async.with_timeout_opt(330000, () => {
+    @process.collect_output(args[0], args[1:])
+  })
+  guard completed is Some((code, output, error)) else {
+    fail("command timed out: " + args.to_json().stringify())
+  }
+  let stdout = output.text()
+  let stderr = error.text()
+  @fs.write_file(
+    self.root + "/" + label + ".stdout",
+    stdout,
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    self.root + "/" + label + ".stderr",
+    stderr,
+    create_mode=CreateNew,
+  )
+  self.records.push({
+    "argv": args.to_json(),
+    "exit_code": code,
+    "expected_success": ok,
+  })
+  @fs.write_file(
+    self.root + "/commands.json",
+    self.records.to_json().stringify(indent=2) + "\n",
+    create_mode=if number == 0 { CreateNew } else { TruncateExisting },
+  )
+  assert_eq(
+    code == 0,
+    ok,
+    msg=args.to_json().stringify() + "\n" + stdout + "\n" + stderr,
+  )
+  stdout
+}
+
+///|
+async fn Run::probe(self : Run, path : String) -> Json {
+  @json.parse(
+    self.run([
+      "ffprobe", "-v", "error", "-show_streams", "-show_chapters", "-show_format",
+      "-of", "json", path,
+    ]),
+  )
+}
+
+///|
+async fn Run::packets(
+  self : Run,
+  path : String,
+  selector : String,
+) -> Array[Json] {
+  let result = @json.parse(
+    self.run([
+      "ffprobe", "-v", "error", "-select_streams", selector, "-show_packets", "-show_data_hash",
+      "sha256", "-show_entries", "packet=data_hash", "-of", "json", path,
+    ]),
+  )
+  rows(result, "packets").map(packet => field(packet, "data_hash"))
+}
+
+///|
+fn tracks(probe : Json) -> Array[Json] raise {
+  rows(probe, "streams").filter(stream => field(stream, "codec_type") != "data")
+}
+
+///|
+fn chapter_values(probe : Json) -> Array[Json] raise {
+  rows(probe, "chapters").map(chapter => {
+    "start_time": field(chapter, "start_time"),
+    "end_time": field(chapter, "end_time"),
+    "title": field(field(chapter, "tags"), "title"),
+  })
+}
+
+///|
+async fn source_captions(root : String, name : String, text : String) -> String {
+  let path = root + "/" + name
+  @fs.write_file(
+    path,
+    "1\n00:00:00,501 --> 00:00:01,777\n" +
+    text +
+    "\n\n2\n00:00:03,001 --> 00:00:05,551\nSecond line.\n",
+    create_mode=CreateNew,
+  )
+  path
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  assert_eq(
+    args.length(),
+    3,
+    msg="usage: verify_caption_replacement.mbtx ABSOLUTE_TARGET NEW_ABSOLUTE_OUTPUT",
+  )
+  let target = args[1]
+  let root = args[2]
+  assert_true(
+    target.has_prefix("/") && root.has_prefix("/"),
+    msg="absolute paths are required",
+  )
+  @fs.mkdir(root, recursive=false)
+  let run : Run = { root, records: [], }
+  let exe = target + "/native/debug/build/cmd/caption_media/caption_media.exe"
+  let edit = target + "/native/debug/build/cmd/caption_edit/caption_edit.exe"
+  let english = source_captions(root, "English.srt", "Original English")
+  let chinese = source_captions(root, "中文.srt", "另一种语言")
+  let metadata = root + "/chapters.ffmetadata"
+  @fs.write_file(
+    metadata,
+    ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=2500\ntitle=Opening 开场\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=2500\nEND=6000\ntitle=Detail\n",
+    create_mode=CreateNew,
+  )
+  let original_hashes : Map[String, String] = Map([])
+  for path in [english, chinese, metadata] {
+    original_hashes[path] = digest(path)
+  }
+  let checks : Array[String] = []
+  for extension in ["mp4", "mkv"] {
+    let media = root + "/episode 中文." + extension
+    let subtitle_codec = if extension == "mp4" { "mov_text" } else { "srt" }
+    let selected_flags = if extension == "mp4" {
+      "default+forced"
+    } else {
+      "default+forced+hearing_impaired"
+    }
+    ignore(
+      run.run([
+        "ffmpeg",
+        "-v",
+        "error",
+        "-nostdin",
+        "-n",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=160x90:rate=24:duration=6",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=440:sample_rate=48000:duration=6",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=880:sample_rate=48000:duration=6",
+        "-i",
+        english,
+        "-i",
+        chinese,
+        "-i",
+        metadata,
+        "-map",
+        "0:v",
+        "-map",
+        "1:a",
+        "-map",
+        "2:a",
+        "-map",
+        "3:s",
+        "-map",
+        "4:s",
+        "-map_chapters",
+        "5",
+        "-c:v",
+        "libx264",
+        "-threads",
+        "1",
+        "-preset",
+        "ultrafast",
+        "-c:a",
+        if extension == "mp4" {
+          "aac"
+        } else {
+          "flac"
+        },
+        "-c:s",
+        subtitle_codec,
+        "-metadata:s:a:0",
+        "language=eng",
+        "-metadata:s:a:1",
+        "language=fra",
+        "-metadata:s:s:0",
+        "language=eng",
+        "-metadata:s:s:0",
+        "title=English CC",
+        "-metadata:s:s:0",
+        "handler_name=English CC",
+        "-metadata:s:s:1",
+        "language=zho",
+        "-metadata:s:s:1",
+        "title=中文",
+        "-metadata:s:s:1",
+        "handler_name=中文",
+        "-disposition:s:0",
+        selected_flags,
+        "-disposition:s:1",
+        "0",
+        "-t",
+        "6",
+        media,
+      ]),
+    )
+    let before = digest(media)
+    original_hashes[media] = before
+    let original = root + "/original " + extension
+    ignore(run.run([exe, "extract", media, "3", original]))
+    let draft = root + "/corrected " + extension + ".json"
+    ignore(
+      run.run([
+        edit,
+        "set",
+        original + "/captions.json",
+        "1",
+        "711",
+        "2117",
+        "Café & 🌱\nCorrected wording.",
+        draft,
+      ]),
+    )
+    let desired = read_json(draft)
+    original_hashes[draft] = digest(draft)
+    let files_before = @fs.readdir(root, include_hidden=true)
+    let preview = @json.parse(
+      run.run([exe, "preview-replace", draft, media, "3"]),
+    )
+    for name in @fs.readdir(root, include_hidden=true) {
+      if !files_before.contains(name) {
+        assert_true(
+          name.has_suffix(".stdout") || name.has_suffix(".stderr"),
+          msg="Preview wrote an unexpected file",
+        )
+      }
+    }
+    assert_eq(field(field(field(preview, "plan"), "selected"), "index"), 3)
+    assert_eq(
+      field(field(field(preview, "plan"), "selected"), "language"),
+      "eng",
+    )
+    assert_eq(
+      field(rows(field(preview, "previous_captions"), "cues")[0], "text"),
+      "Original English",
+    )
+    let revised = root + "/revised " + extension
+    let receipt = @json.parse(
+      run.run([exe, "replace", draft, media, "3", revised]),
+    )
+    let output = revised + "/media." + extension
+    assert_eq(field(field(receipt, "replaced_track"), "index"), 3)
+    assert_eq(field(field(receipt, "replacement_track"), "index"), 3)
+    assert_eq(field(receipt, "verified_cues"), 2)
+    assert_eq(field(receipt, "output_sha256"), digest(output).to_json())
+    assert_eq(field(receipt, "publication_authority"), false)
+    assert_eq(field(receipt, "client_acceptance"), false)
+    let original_probe = run.probe(media)
+    let output_probe = run.probe(output)
+    let before_tracks = tracks(original_probe)
+    let after_tracks = tracks(output_probe)
+    assert_eq(before_tracks.length(), 5)
+    assert_eq(after_tracks.length(), 5)
+    for index, old in before_tracks {
+      let new = after_tracks[index]
+      for key in ["codec_type", "codec_name", "disposition"] {
+        assert_eq(field(old, key), field(new, key), msg=key)
+      }
+      assert_eq(
+        field(field(old, "tags"), "language"),
+        field(field(new, "tags"), "language"),
+      )
+    }
+    assert_eq(chapter_values(original_probe), chapter_values(output_probe))
+    for selector in ["v:0", "a:0", "a:1", "s:1"] {
+      assert_eq(
+        run.packets(media, selector),
+        run.packets(output, selector),
+        msg=selector,
+      )
+    }
+    assert_true(run.packets(media, "s:0") != run.packets(output, "s:0"))
+    ignore(
+      run.run([
+        "ffmpeg", "-v", "error", "-i", output, "-map", "0:v", "-map", "0:a", "-f",
+        "null", "-",
+      ]),
+    )
+    let reopened = root + "/reopened " + extension
+    ignore(run.run([exe, "extract", output, "3", reopened]))
+    assert_eq(
+      field(read_json(reopened + "/captions.json"), "cues"),
+      field(desired, "cues"),
+    )
+    let original_cues = field(read_json(original + "/captions.json"), "cues")
+    assert_eq(
+      field(read_json(revised + "/previous-captions.json"), "cues"),
+      original_cues,
+    )
+    // Revise another language while retaining the first corrected track.
+    let second = root + "/second correction " + extension
+    ignore(run.run([exe, "replace", draft, output, "4", second]))
+    let second_output = second + "/media." + extension
+    assert_eq(tracks(run.probe(second_output)).length(), 5)
+    assert_eq(run.packets(output, "s:0"), run.packets(second_output, "s:0"))
+    for selector in ["v:0", "a:0", "a:1"] {
+      assert_eq(
+        run.packets(output, selector),
+        run.packets(second_output, selector),
+      )
+    }
+    // Restore the old editable captions to another new version.
+    let restored = root + "/restored " + extension
+    ignore(
+      run.run([
+        exe,
+        "replace",
+        revised + "/previous-captions.json",
+        output,
+        "3",
+        restored,
+      ]),
+    )
+    let restored_draft = root + "/restored draft " + extension
+    ignore(
+      run.run([
+        exe,
+        "extract",
+        restored + "/media." + extension,
+        "3",
+        restored_draft,
+      ]),
+    )
+    assert_eq(
+      field(read_json(restored_draft + "/captions.json"), "cues"),
+      original_cues,
+    )
+    assert_eq(digest(media), before)
+    assert_eq(field(receipt, "output_sha256"), digest(output).to_json())
+    for index in ["0", "1", "99"] {
+      let dest = root + "/wrong index " + extension + " " + index
+      ignore(run.run([exe, "replace", draft, media, index, dest], ok=false))
+      assert_false(@fs.exists(dest))
+    }
+    ignore(run.run([exe, "replace", draft, media, "3", revised], ok=false))
+    assert_eq(field(receipt, "output_sha256"), digest(output).to_json())
+    checks.push(
+      extension +
+      ": exact correction and restore; two languages/two audio tracks/chapters retained; unchanged other-stream SHA256 packets; full A/V decode",
+    )
+  }
+  let draft = root + "/corrected mkv.json"
+  let media = root + "/episode 中文.mkv"
+  for label in ["wrong-duration", "overlap"] {
+    let base = read_json(draft)
+    guard base is Object(fields) else { fail("Expected draft object") }
+    if label == "wrong-duration" {
+      fields["duration_ms"] = 7000
+    } else {
+      fields["cues"] = [
+        { "start_ms": 0, "end_ms": 2000, "text": "One" },
+        { "start_ms": 1000, "end_ms": 3000, "text": "Two" },
+      ]
+    }
+    let invalid = root + "/" + label + ".json"
+    @fs.write_file(invalid, base.stringify(), create_mode=CreateNew)
+    let dest = root + "/" + label
+    ignore(run.run([exe, "replace", invalid, media, "3", dest], ok=false))
+    assert_false(@fs.exists(dest))
+  }
+  let link = root + "/dangling"
+  @fs.symlink(target=root + "/missing", link)
+  ignore(run.run([exe, "replace", draft, media, "3", link], ok=false))
+  assert_true(@fs.kind(link, follow_symlink=false) is SymLink)
+  checks.push(
+    "Read-only preview, exact stream selection, wrong indices/duration/overlap/existing and dangling destinations refused",
+  )
+  for path, original_hash in original_hashes {
+    assert_eq(digest(path), original_hash, msg="Input changed: " + path)
+  }
+  assert_eq(run.records.length(), 73)
+  let result : Json = {
+    "status": "passed",
+    "checks": checks.to_json(),
+    "commands": run.records.length(),
+    "input_sha256": original_hashes.to_json(),
+    "limits": [
+      "Synthetic local fixtures only", "No browser, device, provider, client access or commercial qualification",
+    ],
+  }
+  @fs.write_file(
+    root + "/RESULT.json",
+    result.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println(result.stringify(indent=2))
+}

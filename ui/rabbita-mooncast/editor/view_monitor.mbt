@@ -128,7 +128,7 @@ fn program_media_node(
           class="program-proxy-media",
           src=source,
           autoplay=model.playing && active,
-          muted=model.muted || track_muted,
+          muted=program_track_muted(model, track),
           preload="auto",
           "",
         )
@@ -218,6 +218,7 @@ fn program_monitor(
         "",
       )
     },
+    audio_audition_view(dispatch, model),
     @html.div(class="proxy-status") <| [
       status_tag("neutral", "Canvas + media compositor"),
       status_tag(

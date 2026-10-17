@@ -45,7 +45,7 @@ function setup(options = {}) {
       appendChild(child){this.children.push(child);child.parent=this;return child;},
       replaceChildren(...children){this.children=children;},
       focus(){this.focused=true;},
-      querySelector(selector){const key=selector.startsWith('.')?'class':null;const value=selector.slice(1);for(const child of this.children){if(key&&child.attrs[key]===value)return child;const found=child.querySelector(selector);if(found)return found;}return null;},
+      querySelector(selector){const key=selector.startsWith('.')?'class':null;const value=selector.slice(1);for(const child of this.children){if((key&&child.attrs[key]===value)||(selector.startsWith('[')&&selector.slice(1,-1) in child.attrs))return child;const found=child.querySelector(selector);if(found)return found;}return null;},
       remove(){if(this.parent)this.parent.children=this.parent.children.filter(child=>child!==this);},
       click(){if(tag==='a') {if(options.downloadError)throw Error('download blocked');downloads.push({href:this.href,download:this.download,blob:blobs.get(this.href)});}else return this.emit('click');}
     };
@@ -61,6 +61,7 @@ function setup(options = {}) {
   const cueRows=data.cues.map((cue,index)=>{
     const row=node('li',{'data-cue-index':String(index)});
     const seek=node('button',{'data-seek-ms':String(cue.start_ms)});seek.dataset.seekMs=String(cue.start_ms);
+    const time=node('span',{class:'time'});time.textContent=cue.start_ms+'–'+cue.end_ms;seek.appendChild(time);
     const words=node('span',{class:'words'});words.textContent=cue.text;seek.appendChild(words);row.appendChild(seek);
     const edit=node('button',{'data-caption-edit-index':String(index)});edit.dataset.captionEditIndex=String(index);edit.textContent='Edit caption '+(index+1);row.appendChild(edit);
     return row;
@@ -70,7 +71,7 @@ function setup(options = {}) {
   const query=selector=>created.filter(item=>selector.slice(1,-1) in item.attrs);
   video.tracks=[];
   if(options.nativeCaptions)video.addTextTrack=function(){const track={cues:[],addCue(cue){this.cues.push(cue);}};this.tracks.push(track);return track;};
-  class Cue {constructor(start,end,text){this.startTime=start;this.endTime=end;this._text=text;}get text(){return this._text;}set text(value){if(video.rejectTextUpdate)throw Error('caption update unavailable');this._text=value;}}
+  class Cue {constructor(start,end,text){this._start=start;this._end=end;this._text=text;}get startTime(){return this._start;}set startTime(value){if(video.rejectStartUpdate)throw Error('caption start update unavailable');this._start=value;}get endTime(){return this._end;}set endTime(value){if(video.rejectEndUpdate)throw Error('caption end update unavailable');this._end=value;}get text(){return this._text;}set text(value){if(video.rejectTextUpdate)throw Error('caption update unavailable');this._text=value;}}
   const body=node('body');
   vm.runInNewContext(script,{document:{getElementById:get,querySelectorAll:query,createElement:tag=>node(tag),body},VTTCue:options.nativeCaptions?Cue:undefined,Blob,URL:{createObjectURL(blob){const url='blob:'+blobs.size;blobs.set(url,blob);return url;},revokeObjectURL(url){revoked.push(url);}}},{timeout:1000});
   const click=id=>get(id).emit('click');

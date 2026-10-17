@@ -1,0 +1,19 @@
+{
+  "contract": "mooncast.otio-media-map.v1",
+  "fps": 24,
+  "draft_timeline_id": "timeline.imported",
+  "bindings": [
+    {
+      "target_url": "https://unfetched.invalid/a.mov",
+      "media_ref_id": "media.a",
+      "template_clip_id": "template.a",
+      "source_start_frame": 2400
+    },
+    {
+      "target_url": "https://unfetched.invalid/music.wav",
+      "media_ref_id": "media.soundtrack",
+      "template_clip_id": "template.soundtrack",
+      "source_start_frame": 480
+    }
+  ]
+}

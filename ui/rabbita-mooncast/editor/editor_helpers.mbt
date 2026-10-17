@@ -538,6 +538,9 @@ fn normalized_after_snapshot(
   {
     ..model,
     workspace: Some(merged),
+    solo_track_id: active_solo_track({ ..model, workspace: Some(merged), })
+    .map(track => track.track_id)
+    .unwrap_or(""),
     selected_take_id: take_id,
     selected_clip_ids: selected,
     export_state,
@@ -1231,11 +1234,7 @@ fn sync_program_media(model : Model, force_seek : Bool) -> Unit {
                 ),
               )
               media.set_autoplay(active && model.playing)
-              media.set_muted(
-                model.muted ||
-                mix.map(value => value.muted).unwrap_or(false) ||
-                track.kind == "video",
-              )
+              media.set_muted(program_track_muted(model, track))
               media.set_volume(master_volume * level)
               if active && force_seek {
                 let local_tick = clip.source_in_tick +

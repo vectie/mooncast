@@ -1,0 +1,153 @@
+///|
+import {
+  "moonbitlang/async@0.19.4",
+  "moonbitlang/async@0.19.4/fs",
+  "moonbitlang/async@0.19.4/process",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.4.50/crypto",
+}
+
+///|
+fn field(value : Json, key : String) -> Json raise {
+  guard value is Object(fields) && fields.get(key) is Some(value) else {
+    fail("Missing " + key)
+  }
+  value
+}
+
+///|
+fn at(value : Json, index : Int) -> Json raise {
+  guard value is Array(values) && values.get(index) is Some(value) else {
+    fail("Missing array item")
+  }
+  value
+}
+
+///|
+async fn digest(path : String) -> String {
+  "sha256:" +
+  @crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(path).binary()))
+}
+
+///|
+async fn run(
+  root : String,
+  records : Array[Json],
+  argv : Array[String],
+  ok? : Bool = true,
+) -> String {
+  let (code, out, err) = @process.collect_output(argv[0], argv[1:])
+  let id = records.length().to_string()
+  @fs.write_file(root + "/" + id + ".stdout", out.text(), create_mode=CreateNew)
+  @fs.write_file(root + "/" + id + ".stderr", err.text(), create_mode=CreateNew)
+  records.push({ "argv": argv, "exit_code": code, "expected_success": ok })
+  assert_eq(code == 0, ok, msg=err.text())
+  out.text()
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  guard args.length() == 5 else {
+    fail("SOURCE_ROOT OTIO_BINARY EDL_BINARY NEW_EVIDENCE_DIRECTORY")
+  }
+  let source = args[1]
+  let binary = args[2]
+  let edl = args[3]
+  let root = args[4]
+  assert_false(@fs.exists(root), msg="Use a fresh evidence directory")
+  @fs.mkdir(root)
+  let records : Array[Json] = []
+  let project = source + "/fixtures/otio-audio.project.json"
+  let cut = source + "/fixtures/otio-audio.otio"
+  let mapping = source + "/fixtures/otio-audio-map.json"
+  let inputs = [project, cut, mapping]
+  let hashes : Array[String] = []
+  for path in inputs {
+    hashes.push(digest(path))
+  }
+  let catalog = @json.parse(run(root, records, [binary, "catalog", cut, "24"]))
+  assert_eq(field(catalog, "video_duration_frames"), (120).to_json())
+  assert_eq(field(catalog, "audio_duration_frames"), (180).to_json())
+  assert_eq(field(catalog, "duration_frames"), (180).to_json())
+  let preview = @json.parse(
+    run(root, records, [binary, "preview", project, cut, mapping]),
+  )
+  assert_eq(field(preview, "source_otio_digest"), hashes[1].to_json())
+  assert_eq(
+    field(preview, "original_otio_text"),
+    @fs.read_file(cut).text().to_json(),
+  )
+  assert_eq(
+    field(at(field(preview, "audio_preview"), 0), "start_frame"),
+    (12).to_json(),
+  )
+  let prefix = root + "/imported"
+  run(root, records, [binary, "import", project, cut, mapping, prefix])
+  |> ignore
+  let imported = @json.parse(@fs.read_file(prefix + ".project.json").text())
+  let timeline = field(imported, "timeline")
+  assert_eq(field(timeline, "timebase"), { "ticks_per_second": 3000 })
+  let tracks = field(timeline, "tracks")
+  assert_eq(field(at(tracks, 0), "kind"), "video".to_json())
+  assert_eq(field(at(tracks, 1), "kind"), "audio".to_json())
+  let audio = field(at(tracks, 1), "clips")
+  assert_eq(field(at(audio, 0), "source_in_tick"), (125).to_json())
+  assert_eq(field(at(audio, 0), "start_tick"), (1500).to_json())
+  assert_eq(field(at(audio, 1), "start_tick"), (13500).to_json())
+  assert_eq(@json.parse(@fs.read_file(prefix + ".import.json").text()), preview)
+  let project_hash = digest(prefix + ".project.json")
+  run(
+    root,
+    records,
+    [binary, "import", project, cut, mapping, prefix],
+    ok=false,
+  )
+  |> ignore
+  assert_eq(digest(prefix + ".project.json"), project_hash)
+  run(
+    root,
+    records,
+    [
+      edl,
+      "export",
+      prefix + ".project.json",
+      prefix + ".edl-map.json",
+      root + "/must-not-drop-audio.edl",
+      "Preserve soundtrack",
+    ],
+    ok=false,
+  )
+  |> ignore
+  assert_false(@fs.exists(root + "/must-not-drop-audio.edl"))
+  assert_true(@fs.read_file(prefix + ".edl").text().contains("picture-only"))
+  for index, path in inputs {
+    assert_eq(digest(path), hashes[index])
+  }
+  @fs.write_file(
+    root + "/commands.json",
+    records.to_json().stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/RESULT.json",
+    (
+      {
+        "status": "passed",
+        "synthetic_metadata_only": true,
+        "source_hashes": hashes,
+        "imported_project_sha256": project_hash,
+        "commands": records.length(),
+        "video_frames": 120,
+        "audio_frames": 180,
+        "ticks_per_frame": 125,
+        "workflow": "Actual CLI catalog, preview and audiovisual import; exact synchronized coordinates; overwrite refusal; existing EDL exporter refuses to drop soundtrack; source bytes unchanged",
+        "native_edit_reopen_evidence": "Separate native package test exercises ordinary trim/gain/session undo and disk save/reopen",
+        "playback_or_rendering_exercised": false,
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println("Synchronized picture and soundtrack CLI workflow passed")
+}

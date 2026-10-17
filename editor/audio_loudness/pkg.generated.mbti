@@ -1,0 +1,41 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/audio_loudness"
+
+import {
+  "vectie/mooncast/editor/audio_edition",
+}
+
+// Values
+pub fn parse_measurement(String) -> Measurement raise
+
+pub fn prepare(@audio_edition.Source, Int, Int, Int) -> Plan raise
+
+pub fn verify_loudness(Plan, Measurement) -> Unit raise
+
+pub fn verify_output(Plan, Json) -> Unit raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Measurement {
+  integrated_lufs : Double
+  true_peak_dbtp : Double
+  range_lu : Double
+  threshold_lufs : Double
+  offset_db : Double
+  normalization_type : String
+} derive(ToJson)
+pub fn Measurement::to_json(Self) -> Json
+
+pub(all) struct Plan {
+  track : @audio_edition.AudioTrack
+  duration_ms : Double
+  target_lufs : Int
+  ceiling_dbtp : Int
+  omitted_stream_indices : Array[Int]
+} derive(ToJson)
+pub fn Plan::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

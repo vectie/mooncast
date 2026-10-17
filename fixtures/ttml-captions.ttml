@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling" xml:lang="en">
+  <body><div>
+    <p xml:id="opening" begin="00:00:00.200" end="2s">Hello <span tts:fontWeight="bold">東京 &amp; friends.</span></p>
+    <p xml:id="middle" begin="2.2s" dur="1800ms">Two lines:<br/>Grow &#x1F331; together.</p>
+    <p xml:id="translation" xml:lang="fr" begin="2.2s" end="4s">Grandissons ensemble.</p>
+    <p xml:id="close" begin="3900ms" end="00:00:05.500">A preserved overlap.</p>
+  </div></body>
+</tt>

@@ -123,6 +123,8 @@ enum Msg {
   SwitchProgramSurface(ProgramSurface)
   VolumeChanged(String)
   ToggleMute
+  ToggleTrackSolo(String)
+  ClearTrackSolo
   SetLoopIn
   SetLoopOut
   ToggleLoop
@@ -142,6 +144,10 @@ enum Msg {
   AddSelectedTake
   MoveSelection(Int)
   TrimSelection(String, Int)
+  RollSelection(Int)
+  SlipSelection(Int)
+  SetSlideOffset(String)
+  SlideSelection
   SplitSelection
   DeleteSelection
   Undo

@@ -860,6 +860,7 @@ struct Model {
   monitor_mode : MonitorMode
   program_surface : ProgramSurface
   playing : Bool
+  solo_track_id : String
   muted : Bool
   volume : String
   loop_enabled : Bool
@@ -867,6 +868,7 @@ struct Model {
   loop_out : Int?
   zoom : Double
   ripple : Bool
+  slide_offset_frames : String
   snap : Bool
   blade : Bool
   multi_select : Bool
@@ -1027,6 +1029,7 @@ fn initial_model() -> Model {
     monitor_mode: ProgramMonitor,
     program_surface: InteractiveProxy,
     playing: false,
+    solo_track_id: "",
     muted: false,
     volume: "1",
     loop_enabled: false,
@@ -1034,6 +1037,7 @@ fn initial_model() -> Model {
     loop_out: None,
     zoom: 1.0,
     ripple: true,
+    slide_offset_frames: "1",
     snap: true,
     blade: false,
     multi_select: false,

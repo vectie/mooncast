@@ -1,0 +1,33 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast/editor/audio_media"
+
+import {
+  "vectie/mooncast/editor/audio_edition",
+  "vectie/mooncast/editor/caption_media",
+}
+
+// Values
+pub fn prepare(Json, Json, Int, String, String) -> Plan raise
+
+pub fn verify_output(Plan, Json) -> @caption_media.Track raise
+
+pub fn verify_rendition(Plan, Json) -> Unit raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Plan {
+  media : @caption_media.Media
+  audio : @audio_edition.AudioTrack
+  dispositions : Array[Array[String]]
+  language : String
+  title : String
+  codec : String
+  rendition_suffix : String
+  is_default : Bool
+} derive(ToJson)
+pub fn Plan::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

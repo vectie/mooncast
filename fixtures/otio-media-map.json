@@ -1,0 +1,9 @@
+{
+  "contract": "mooncast.otio-media-map.v1",
+  "fps": 24,
+  "draft_timeline_id": "timeline.otio-draft",
+  "bindings": [
+    {"target_url":"file:///recorded/camera-a.mp4","media_ref_id":"media.a","template_clip_id":"template.a","source_start_frame":864000},
+    {"target_url":"https://unfetched.invalid/camera-b.mp4","media_ref_id":"media.b","template_clip_id":"template.b","source_start_frame":0}
+  ]
+}
