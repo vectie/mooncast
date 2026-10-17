@@ -53,11 +53,12 @@ async fn verify_file(root : String, media : @domain.MediaRef) -> VerifiedFile {
   for i, part in parts {
     path = path + "/" + part.to_string()
     let kind = @fs.kind(path, follow_symlink=false)
-    guard (if i == parts.length() - 1 {
-      kind is Regular
+    let expected_kind = if i == parts.length() - 1 {
+      @fs.Regular
     } else {
-      kind is Directory
-    }) else {
+      @fs.Directory
+    }
+    guard kind == expected_kind else {
       fail(
         "missing, nonregular or symlinked media path: " +
         media.media_ref_id +
