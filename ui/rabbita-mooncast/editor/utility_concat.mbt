@@ -1,8 +1,12 @@
 ///|
-extern "js" fn selected_video_blobs(input_id : String) -> Array[@dom.Blob] =
+extern "js" fn selected_video_blobs_ffi(input_id : String) -> FixedArray[@dom.Blob] =
   #|(inputId) => Array.from(document.getElementById(inputId)?.files || []).sort((left, right) =>
   #|  String(left.name || "").localeCompare(String(right.name || ""), "en")
   #|)
+
+fn selected_video_blobs(input_id : String) -> Array[@dom.Blob] {
+  Array::from_fixed_array(selected_video_blobs_ffi(input_id))
+}
 
 ///|
 extern "js" fn selected_blob_name(blob : @dom.Blob) -> String =
