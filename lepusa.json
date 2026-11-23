@@ -19,7 +19,7 @@
     "source": {
       "localhost": {
         "host": "127.0.0.1",
-        "port": 4302,
+        "port": 4312,
         "path": "/apps/mooncast/studio",
         "readinessPath": "/health",
         "command": [
@@ -67,6 +67,19 @@
       "source": ".tools/ffmpeg/darwin_arm64/ffprobe",
       "path": "tools/ffmpeg/darwin_arm64/ffprobe",
       "executable": true
+    },
+    {
+      "source": ".tools/whisper-runtime/bin/whisper-cli",
+      "path": "tools/whisper/bin/whisper-cli",
+      "executable": true
+    },
+    {
+      "source": ".tools/whisper-runtime/lib",
+      "path": "tools/whisper/lib"
+    },
+    {
+      "source": ".tools/whisper/ggml-base.bin",
+      "path": "models/ggml-base.bin"
     }
   ]
 }

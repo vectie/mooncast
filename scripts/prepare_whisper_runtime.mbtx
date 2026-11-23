@@ -1,0 +1,77 @@
+///|
+import {
+  "moonbitlang/async@0.19.4",
+  "moonbitlang/async@0.19.4/process",
+}
+
+///|
+async fn run(program : String, args : Array[String]) -> String {
+  let (code, out, err) = @process.collect_output(program, args)
+  guard code == 0 else { fail(program + ": " + err.text()) }
+  out.text()
+}
+
+///|
+fn basename(path : String) -> String {
+  path.split("/").last().unwrap_or(path[:]).to_owned()
+}
+
+///|
+async fn main {
+  let root = ".tools/whisper-runtime"
+  ignore(run("/bin/mkdir", ["-p", root + "/bin", root + "/lib"]))
+  let sources : Array[String] = [
+    "/opt/homebrew/bin/whisper-cli", "/opt/homebrew/opt/whisper.cpp/lib/libwhisper.1.dylib",
+    "/opt/homebrew/opt/ggml/lib/libggml.0.dylib", "/opt/homebrew/opt/ggml/lib/libggml-base.0.dylib",
+    "/opt/homebrew/opt/libomp/lib/libomp.dylib",
+  ]
+  for
+    name in [
+      "libggml-cpu-apple_m1.so", "libggml-cpu-apple_m2_m3.so", "libggml-cpu-apple_m4.so",
+      "libggml-metal.so", "libggml-blas.so",
+    ] {
+    sources.push("/opt/homebrew/opt/ggml/libexec/" + name)
+  }
+  for source in sources {
+    let is_cli = source == sources[0]
+    let destination = root +
+      (if is_cli { "/bin/" } else { "/lib/" }) +
+      basename(source)
+    ignore(run("/bin/cp", ["-L", source, destination]))
+    ignore(run("/bin/chmod", ["755", destination]))
+    let dependencies = run("/usr/bin/otool", ["-L", source])
+    for line in dependencies.split("\n").drop(1) {
+      let dep = line.trim().split(" ").next().unwrap_or("").to_owned()
+      if dep.has_prefix("/opt/homebrew/") || dep.has_prefix("@rpath/") {
+        let name = basename(dep)
+        guard sources.any(item => basename(item) == name) else {
+          fail("Unbundled Whisper dependency: " + dep)
+        }
+        let replacement = if is_cli {
+          "@loader_path/../../../../Resources/tools/whisper/lib/" + name
+        } else {
+          "@loader_path/" + name
+        }
+        ignore(
+          run("/usr/bin/install_name_tool", [
+            "-change", dep, replacement, destination,
+          ]),
+        )
+      }
+    }
+    ignore(run("/usr/bin/codesign", ["--force", "--sign", "-", destination]))
+  }
+  ignore(
+    run("/bin/cp", [
+      "/opt/homebrew/opt/whisper.cpp/LICENSE",
+      root + "/lib/WHISPER-LICENSE.txt",
+    ]),
+  )
+  ignore(
+    run("/bin/cp", [
+      "/opt/homebrew/opt/ggml/LICENSE",
+      root + "/lib/GGML-LICENSE.txt",
+    ]),
+  )
+  println("Prepared self-contained Whisper runtime at " + root)
+}

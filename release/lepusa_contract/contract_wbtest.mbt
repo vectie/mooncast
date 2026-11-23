@@ -2,7 +2,7 @@
 let supported_lepusa_version : String = "0.1.6"
 
 ///|
-let studio_port : Int = 4302
+let studio_port : Int32 = 4312
 
 ///|
 let studio_path : String = "/apps/mooncast/studio"
@@ -67,7 +67,7 @@ fn required_string(object : Map[String, Json], key : String) -> String {
 }
 
 ///|
-fn required_int(object : Map[String, Json], key : String) -> Int {
+fn required_int(object : Map[String, Json], key : String) -> Int32 {
   match object.get(key) {
     Some(value) => try! @json.from_json(value)
     None => abort("required JSON integer is missing: \{key}")
@@ -171,7 +171,7 @@ async test "release grants only localhost and file-dialog access to Studio" {
 async test "release carries a portable native Studio sidecar resource" {
   let (text, release, _) = release_inputs()
   let resources = required_array(release, "bundleResources")
-  assert_eq(resources.length(), 4)
+  assert_eq(resources.length(), 7)
   guard resources[0] is Object(resource) else {
     fail("bundleResources entry must be an object")
   }

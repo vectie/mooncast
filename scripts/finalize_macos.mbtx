@@ -1,0 +1,30 @@
+///|
+import {
+  "moonbitlang/async@0.19.4",
+  "moonbitlang/async@0.19.4/fs",
+  "moonbitlang/async@0.19.4/process",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  guard args.length() == 2 else {
+    fail("Usage: finalize_macos.mbtx /absolute/path/Mooncast.app")
+  }
+  let app = args[1]
+  guard app.has_prefix("/") && app.has_suffix(".app") else {
+    fail("Expected an absolute .app path")
+  }
+  let launcher = app + "/Contents/MacOS/mooncast"
+  // Native entry preserves LaunchServices' association between the application
+  // bundle, process, Dock icon, and its actual WKWebView window.
+  let runtime = @fs.read_file(app + "/Contents/MacOS/lepusa-runtime").binary()
+  @fs.write_file(launcher, runtime, create_mode=TruncateExisting)
+  @fs.chmod(launcher, 0o755)
+  let (code, _, err) = @process.collect_output("/usr/bin/codesign", [
+    "--force", "--deep", "--sign", "-", app,
+  ])
+  guard code == 0 else { fail(err.text()) }
+  println("Finalized native app launch identity and ad-hoc signature: " + app)
+}

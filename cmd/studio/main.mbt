@@ -1,11 +1,11 @@
 ///|
-let max_request_body : Int = 1048576
+let max_request_body : Int32 = 1048576
 
 ///|
-let max_editor_media_body : Int = 67108864
+let max_editor_media_body : Int32 = 67108864
 
 ///|
-let max_static_asset : Int = 536870912
+let max_static_asset : Int32 = 536870912
 
 ///|
 fn request_method(http_method : @async_http.RequestMethod) -> @host_http.Method {
@@ -38,7 +38,7 @@ fn direct_mount_path(path : String) -> String {
 }
 
 ///|
-async fn read_bounded_body(reader : &@io.Reader, limit : Int) -> Bytes? {
+async fn read_bounded_body(reader : &@io.Reader, limit : Int32) -> Bytes? {
   let output : Array[Byte] = []
   for ;; {
     let remaining = limit - output.length()
@@ -271,7 +271,12 @@ fn main {
     }
     let host = @env.get_env_var("MOONCAST_HOST").unwrap_or("127.0.0.1")
     let port = match @env.get_env_var("MOONCAST_PORT") {
-      None => 8765
+      None =>
+        if @env.get_env_var("LEPUSA_APP_DIR") is Some(_) {
+          4312
+        } else {
+          8765
+        }
       Some(value) => @string.parse_int(value) catch { _ => 8765 }
     }
     let configured_rabbita_root = @env.get_env_var("MOONCAST_RABBITA_ROOT").unwrap_or(

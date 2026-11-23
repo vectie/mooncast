@@ -1,7 +1,7 @@
 # Mooncast Lepusa release baseline
 
 Mooncast's checked-in `lepusa.json` is verified against Lepusa 0.1.6. It opens Mooncast
-Studio at `http://127.0.0.1:4302/apps/mooncast/studio`, waits on `/health`, and
+Studio at `http://127.0.0.1:4312/apps/mooncast/studio`, waits on `/health`, and
 supervises the native `mooncast-studio` sidecar.
 
 The manifest grants the `studio` window only the two host capabilities required
@@ -46,6 +46,48 @@ moon -C "$LEPUSA_WORKSPACE" run cmd/main --target native -- \
 `run --launch` is the handoff point: Lepusa owns the desktop window and
 sidecar lifecycle, while Mooncast owns the Studio HTTP routes and production
 behavior. Closing the Lepusa window must stop its supervised Studio process.
+
+## Standalone Mac app and player
+
+The installed app is `/Applications/Mooncast.app`. The Player tab follows Review
+in the workspace header and is also reachable from Studio. Its direct route is
+`/apps/mooncast/editor/player`. It opens local video/audio files as browser blob
+URLs without uploading them, and can play the current completed project render.
+The app uses port 4312 independently of the browser development server on 4302.
+
+Prepare local speech dependencies with
+`moon run --target native scripts/prepare_whisper_runtime.mbtx`. This stages
+Whisper, GGML CPU/Metal backends, OpenMP, and licenses, rewrites their dynamic
+library references, and signs the staged binaries. Place the multilingual base
+model at `.tools/whisper/ggml-base.bin`. Both the runtime and model are bundled.
+
+For the native entry point, the updated adjacent Lepusa runtime recognizes an argument-free launch
+from `Contents/MacOS`, initializes its resource/data paths, and opens the bundled
+manifest. Build that runtime from the adjacent Lepusa checkout and the production
+UI, then build and finalize the bundle:
+
+```sh
+moon -C ../lepusa build --target native --release cmd/runtime
+moon -C ../lepusa build --target native --release cmd/main
+cd ui/rabbita-mooncast
+npm run build
+cd ../..
+LEPUSA_RUNTIME_EXECUTABLE="$PWD/../lepusa/_build/native/release/build/cmd/runtime/runtime.exe" \
+  ../lepusa/_build/native/release/build/cmd/main/main.exe build macos \
+  "$PWD/_build/lepusa/desktop" --project "$PWD/lepusa.json"
+moon run --target native scripts/finalize_macos.mbtx "$PWD/_build/lepusa/desktop/mooncast.app"
+```
+
+The finalizer installs the native runtime as the declared application executable
+and applies an ad-hoc signature. This keeps the window process associated with
+Mooncast in LaunchServices. The original shell launcher caused native window
+discovery failures during this verification. The runtime changes live in
+`../lepusa/cmd/runtime/main.mbt` and its `moon.pkg`; they must accompany the
+Mooncast changes when reproducing this build.
+
+The installed app was verified through its native window: Studio → Player,
+macOS file picker → local H.264/AAC video, then active video playback. Its
+packaged HTTP route also decoded and played the same file in the browser.
 
 The checked-in signing identity is `-`, macOS ad-hoc signing, so local strict
 release gates have concrete signing metadata. Replace it with the publisher's
