@@ -10,7 +10,7 @@ priv struct EditorProjectDraft {
   selected_nodes : Array[String]
   selected_take : String
   selected_clips : Array[String]
-  playhead : Int
+  playhead : Int32
   inspector : InspectorDraft
   intake : IntakeDraft
   utility_concat : UtilityConcatState
@@ -19,6 +19,7 @@ priv struct EditorProjectDraft {
   public_input : String
   agent_instruction : String
   export_state : ExportState
+  output_height : Int32
   production_project_id : String
 }
 
@@ -64,6 +65,7 @@ fn retain_project_draft(model : Model) -> Map[String, EditorProjectDraft] {
     public_input: model.workspace_public_input,
     agent_instruction: model.workspace_agent_instruction,
     export_state: { ..model.export_state, promoted: false, },
+    output_height: model.output_height,
     production_project_id: model.production_project_id,
   }
   drafts
@@ -86,6 +88,9 @@ fn activate_editor_project(model : Model, project_id : String) -> Model {
     workspace_actor_id: model.workspace_actor_id,
     workspace_actor_name: model.workspace_actor_name,
     workspace_lens: model.workspace_lens,
+    player_file_url: model.player_file_url,
+    player_file_name: model.player_file_name,
+    playback_speed: model.playback_speed,
     open_generation: model.open_generation,
     preview_generation: model.preview_generation + 1,
     request_sequence: model.request_sequence,
@@ -113,6 +118,7 @@ fn activate_editor_project(model : Model, project_id : String) -> Model {
         workspace_public_input: draft.public_input,
         workspace_agent_instruction: draft.agent_instruction,
         export_state: draft.export_state,
+        output_height: draft.output_height,
         production_project_id: draft.production_project_id,
       }
   }

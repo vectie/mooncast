@@ -1,7 +1,7 @@
 ///|
-test "creative workspace is the primary lens" {
+test "editor playback is the primary lens" {
   let model = initial_model()
-  assert_eq(model.workspace_lens, GraphLens)
+  assert_eq(model.workspace_lens, EditorLens)
   assert_eq(model.selected_workspace_recipe, CombineVideosRecipe)
   assert_eq(model.selected_workspace_node, "concat")
   assert_eq(workspace_nodes(CombineVideosRecipe).length(), 6)
@@ -13,7 +13,7 @@ test "creative workspace is the primary lens" {
 test "concat activity projects onto inspectable node states" {
   let running = {
     ..initial_model(),
-    utility_concat: { ..initial_model().utility_concat, phase: "running" },
+    utility_concat: { ..initial_model().utility_concat, phase: "running", },
   }
   assert_eq(workspace_node_state(running, "intake"), "ready")
   assert_eq(workspace_node_state(running, "probe"), "succeeded")
@@ -23,7 +23,7 @@ test "concat activity projects onto inspectable node states" {
 
   let succeeded = {
     ..running,
-    utility_concat: { ..running.utility_concat, phase: "succeeded" },
+    utility_concat: { ..running.utility_concat, phase: "succeeded", },
   }
   assert_true(
     workspace_nodes(CombineVideosRecipe).all(node => {
@@ -53,7 +53,7 @@ test "persisted run state drives generic nodes without masking active concat pro
   assert_eq(workspace_node_state(generic, "generate"), "running")
   let concat = {
     ..base,
-    utility_concat: { ..base.utility_concat, phase: "succeeded" },
+    utility_concat: { ..base.utility_concat, phase: "succeeded", },
     workspace_run_nodes: [
       {
         node_id: "concat",

@@ -148,7 +148,7 @@ test "removed solo track and project change restore the full mix and do not reta
 test "audition controls appear in program monitor and identify muted track and rendered preview boundary" {
   let model = toggle_track_solo(audition_model(), "voice")
   let html = @rabbita.render_to_string(
-    @rabbita.static_cell(program_monitor(_ => @rabbita.none, model)),
+    @rabbita.static_cell(monitor_panel(_ => @rabbita.none, model)),
   )
   assert_true(html.contains("Audio audition"))
   assert_true(html.contains("Solo music"))

@@ -1,10 +1,10 @@
 ///|
 enum Msg {
-  ProjectReply(String, Int, Msg)
-  ExportReply(String, Int, Msg)
+  ProjectReply(String, Int32, Msg)
+  ExportReply(String, Int32, Msg)
   Bootstrap
   ReloadProjects
-  ProjectsLoaded(Int, Result[Json, Error])
+  ProjectsLoaded(Int32, Result[Json, Error])
   WorkspaceProposalsLoaded(Result[Json, Error])
   WorkspaceCatalogLoaded(Result[Json, Error])
   WorkspaceCapsulesLoaded(Result[Json, Error])
@@ -13,13 +13,13 @@ enum Msg {
   WorkspaceAssetQueryChanged(String)
   WorkspaceAssetKindChanged(String)
   WorkspaceAssetTagChanged(String)
-  WorkspaceAssetPageChanged(Int)
+  WorkspaceAssetPageChanged(Int32)
   WorkspaceFeaturesLoaded(Result[Json, Error])
   SaveWorkspaceGraph(String)
   WorkspaceGraphSaved(String, Result[Json, Error])
   WorkspaceNodePaletteChanged(String)
   AddWorkspaceNode(String)
-  ExpandWorkspaceCapsule(String, Int)
+  ExpandWorkspaceCapsule(String, Int32)
   DeleteSelectedWorkspaceNode
   DuplicateSelectedWorkspaceNode
   ToggleSelectedWorkspaceNodeCollapsed
@@ -50,7 +50,7 @@ enum Msg {
   WorkspaceCanvasPointerDown(String, @common.Mouse)
   WorkspaceCanvasPointerMoved(@common.Mouse)
   WorkspaceCanvasPointerReleased
-  WorkspaceNodeNudged(String, Int, Int)
+  WorkspaceNodeNudged(String, Int32, Int32)
   WorkspaceZoomChanged(Double)
   WorkspacePortActivated(String, String, Bool)
   WorkspaceAssetDragStarted(String)
@@ -101,10 +101,10 @@ enum Msg {
   ProductionProjectChanged(String)
   ImportProduction
   ProductionImported(Result[Json, Error])
-  WorkspaceOpened(Int, Result[Json, Error])
-  SnapshotLoaded(Int, Result[Json, Error])
+  WorkspaceOpened(Int32, Result[Json, Error])
+  SnapshotLoaded(Int32, Result[Json, Error])
   SelectTake(String)
-  SelectAdjacentTake(Int)
+  SelectAdjacentTake(Int32)
   AnalysisLoaded(String, Result[Json, Error])
   FilterSearchChanged(String)
   FilterKindChanged(String)
@@ -112,12 +112,22 @@ enum Msg {
   FilterRightsChanged(String)
   FilterPlacementChanged(String)
   SelectClip(String, Bool)
-  SelectAdjacentClip(Int, Bool)
+  SelectAdjacentClip(Int32, Bool)
   SelectTransition(String)
-  SeekTicks(Int)
+  SeekTicks(Int32)
   ScrubChanged(String)
-  StepFrame(Int)
+  StepFrame(Int32)
   TogglePlay
+  SetPlaybackSpeed(String)
+  SetPreviewHeight(String)
+  SetOutputHeight(String)
+  PlayerFullscreen
+  OpenPlayerFile
+  ClosePlayerFile
+  ToggleLocalCaptions
+  ToggleCaptionTranslation
+  GenerateLocalCaptions
+  LocalCaptionsLoaded(String, Result[Json, Error])
   AnimationFrame(Double)
   SwitchMonitor(MonitorMode)
   SwitchProgramSurface(ProgramSurface)
@@ -134,7 +144,7 @@ enum Msg {
   ToggleSnap
   ToggleBlade
   ToggleMultiSelect
-  TimelinePointerDown(String, Int, @common.Mouse)
+  TimelinePointerDown(String, Int32, @common.Mouse)
   TimelinePointerMoved(@common.Mouse)
   TimelinePointerReleased
   TimelineScrolled(@common.Scroll)
@@ -142,10 +152,10 @@ enum Msg {
   ZoomOut
   FitTimeline
   AddSelectedTake
-  MoveSelection(Int)
-  TrimSelection(String, Int)
-  RollSelection(Int)
-  SlipSelection(Int)
+  MoveSelection(Int32)
+  TrimSelection(String, Int32)
+  RollSelection(Int32)
+  SlipSelection(Int32)
   SetSlideOffset(String)
   SlideSelection
   SplitSelection
@@ -162,13 +172,13 @@ enum Msg {
   AddTextLayer(String)
   AddAudioLayer(String)
   ApplyTransition
-  ResizeTransition(Int)
+  ResizeTransition(Int32)
   RemoveTransition
   SetKeyframe
   RemoveKeyframe
   UtilityConcatFilesSelected(Array[UtilityConcatInput])
   StartUtilityConcat
-  UtilityConcatFileHashed(Int, Result[String, Error])
+  UtilityConcatFileHashed(Int32, Result[String, Error])
   UtilityConcatCreated(Result[UtilityConcatJob, Error])
   UtilityConcatInputUploaded(Result[UtilityConcatJob, Error])
   UtilityConcatFinished(Result[UtilityConcatJob, Error])
@@ -184,9 +194,9 @@ enum Msg {
   ApplyOutputPreset
   ExportChanged(String, String)
   StartPreview
-  PreviewStarted(Int, Result[EditorJobResponse, Error])
-  PollPreview(Int)
-  PreviewPolled(Int, Result[EditorJobResponse, Error])
+  PreviewStarted(Int32, Result[EditorJobResponse, Error])
+  PollPreview(Int32)
+  PreviewPolled(Int32, Result[EditorJobResponse, Error])
   RetryPreview
   StartExport
   ExportStarted(Result[EditorJobResponse, Error])

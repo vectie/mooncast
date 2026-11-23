@@ -24,6 +24,7 @@ enum WorkspaceLens {
   GraphLens
   EditorLens
   ReviewLens
+  PlayerLens
 } derive(Debug, Eq)
 
 ///|
@@ -159,8 +160,8 @@ struct WorkspaceGraphNodeSummary {
   node_id : String
   definition_id : String
   title : String
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
   parameters : Array[WorkspaceNodeParameterSummary]
   collapsed : Bool
 } derive(Debug, Eq, ToJson, FromJson)
@@ -179,7 +180,7 @@ struct WorkspaceGraphSummary {
   contract : String
   graph_id : String
   project_id : String
-  revision : Int
+  revision : Int32
   title : String
   nodes : Array[WorkspaceGraphNodeSummary]
   edges : Array[WorkspaceGraphEdgeSummary]
@@ -199,7 +200,7 @@ struct WorkspaceCatalogRawPayload {
 #warnings("-unused_field")
 struct WorkspaceCapsuleSummary {
   capsule_id : String
-  version : Int
+  version : Int32
   title : String
   summary : String
 } derive(FromJson)
@@ -212,17 +213,17 @@ struct WorkspaceCapsulePayload {
 
 ///|
 struct WorkspaceNodePosition {
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 }
 
 ///|
 struct WorkspaceCanvasDrag {
   node_id : String
-  origin_client_x : Int
-  origin_client_y : Int
-  origin_x : Int
-  origin_y : Int
+  origin_client_x : Int32
+  origin_client_y : Int32
+  origin_x : Int32
+  origin_y : Int32
 }
 
 ///|
@@ -240,7 +241,7 @@ enum WorkspaceNodeRunState {
 ///|
 #warnings("-unused_field")
 struct WorkspaceNodeAttemptSummary {
-  attempt : Int
+  attempt : Int32
   state : WorkspaceNodeRunState
   started_at : String
   finished_at : String
@@ -255,10 +256,10 @@ struct WorkspaceNodeAttemptSummary {
 struct WorkspaceNodeRunSummary {
   node_id : String
   state : WorkspaceNodeRunState
-  progress_numerator : Int
-  progress_denominator : Int
-  retry_count : Int
-  maximum_retries : Int
+  progress_numerator : Int32
+  progress_denominator : Int32
+  retry_count : Int32
+  maximum_retries : Int32
   attempts : Array[WorkspaceNodeAttemptSummary]
 } derive(FromJson)
 
@@ -308,14 +309,14 @@ struct WorkspaceRunAdvancePayload {
 #warnings("-unused_field")
 struct WorkspaceRunListPayload {
   runs : Array[WorkspaceRunPayload]
-  total : Int
+  total : Int32
 } derive(FromJson)
 
 ///|
 #warnings("-unused_field")
 struct WorkspaceProposalSummary {
   proposal_id : String
-  base_graph_revision : Int
+  base_graph_revision : Int32
   explanation : String
   affected_node_ids : Array[String]
   provider_ids : Array[String]
@@ -345,7 +346,7 @@ struct WorkspaceShareCreatedPayload {
 #warnings("-unused_field")
 struct WorkspaceAssetArtifactSummary {
   artifact_id : String
-  version : Int
+  version : Int32
   kind : WorkspaceArtifactKind
   digest : String
   uri : String
@@ -370,9 +371,9 @@ struct WorkspaceAssetEntrySummary {
 #warnings("-unused_field")
 struct WorkspaceAssetLibraryPayload {
   entries : Array[WorkspaceAssetEntrySummary]
-  total : Int
-  offset : Int
-  limit : Int
+  total : Int32
+  offset : Int32
+  limit : Int32
   has_more : Bool
 } derive(FromJson)
 
@@ -440,7 +441,7 @@ struct WorkspaceGraphDiffSummary {
 ///|
 #warnings("-unused_field")
 struct WorkspaceProposalReviewPayload {
-  current_graph_revision : Int
+  current_graph_revision : Int32
   stale : Bool
   diff : WorkspaceGraphDiffSummary
 } derive(FromJson)
@@ -452,7 +453,7 @@ struct WorkspaceSearchSummary {
   target_id : String
   title : String
   detail : String
-  score : Int
+  score : Int32
 } derive(FromJson)
 
 ///|
@@ -465,8 +466,8 @@ struct WorkspaceSearchPayload {
 struct TimelineDrag {
   clip_id : String
   mode : TimelineDragMode
-  origin_client_x : Int
-  preview_delta_ticks : Int
+  origin_client_x : Int32
+  preview_delta_ticks : Int32
 }
 
 ///|
@@ -536,7 +537,7 @@ struct LocalMediaSelection {
   blob : @dom.Blob
   file_name : String
   mime_type : String
-  size_bytes : Int
+  size_bytes : Int32
   sha256 : String
 }
 
@@ -545,17 +546,17 @@ struct UtilityConcatInput {
   blob : @dom.Blob
   file_name : String
   mime_type : String
-  size_bytes : Int
+  size_bytes : Int32
   sha256 : String
 }
 
 ///|
 #warnings("-unused_field")
 struct UtilityConcatJobInput {
-  index : Int
+  index : Int32
   file_name : String
   mime_type : String
-  size_bytes : Int
+  size_bytes : Int32
   sha256 : String
   uploaded : Bool
 } derive(FromJson)
@@ -568,10 +569,10 @@ struct UtilityConcatJob {
   idempotency_key : String
   state : String
   inputs : Array[UtilityConcatJobInput]
-  uploaded_count : Int
-  expected_count : Int
+  uploaded_count : Int32
+  expected_count : Int32
   output_digest : String
-  output_size : Int
+  output_size : Int32
   media_url : String
   error : String
   created_by : String
@@ -586,9 +587,9 @@ struct UtilityConcatState {
   files : Array[UtilityConcatInput]
   job_id : String
   phase : String
-  completed : Int
+  completed : Int32
   output_digest : String
-  output_size : Int
+  output_size : Int32
   media_url : String
   error : String
 }
@@ -603,8 +604,8 @@ struct ExportState {
   promoted : Bool
   handed_off : Bool
   receipt_state : String
-  canonical_revision : Int
-  timeline_revision : Int
+  canonical_revision : Int32
+  timeline_revision : Int32
   output_digest : String
   render_plan_digest : String
   handoff_record_id : String
@@ -633,8 +634,8 @@ struct EditorJobPayload {
   job_id : String?
   state : String?
   status : String?
-  attempts : Int?
-  max_attempts : Int?
+  attempts : Int32?
+  max_attempts : Int32?
   output_digest : String?
   media_url : String?
   result : EditorJobResultView?
@@ -647,8 +648,8 @@ struct EditorJobResponse {
   job_id : String?
   state : String?
   status : String?
-  attempts : Int?
-  max_attempts : Int?
+  attempts : Int32?
+  max_attempts : Int32?
   output_digest : String?
   media_url : String?
   result : EditorJobResultView?
@@ -681,7 +682,7 @@ struct MasterPromotionResponse {
   project_id : String?
   job_id : String?
   digest : String?
-  size : Int?
+  size : Int32?
   video_ref : String?
   subtitle_ref : String?
   plan_digest : String?
@@ -695,9 +696,9 @@ struct MasterPromotionResponse {
 #warnings("-unused_field")
 struct NativeProjectSummary {
   project_id : String
-  revision : Int
+  revision : Int32
   timeline_id : String
-  duration_ticks : Int
+  duration_ticks : Int32
   updated_at : String
 } derive(FromJson)
 
@@ -724,8 +725,8 @@ struct NativeTakeRecord {
 
 ///|
 struct NativeTickRange {
-  start_tick : Int
-  duration_ticks : Int
+  start_tick : Int32
+  duration_ticks : Int32
 } derive(FromJson)
 
 ///|
@@ -734,14 +735,14 @@ struct NativeReviewComment {
   comment_id : String
   range : NativeTickRange
   text : String
-  revision_round : Int
+  revision_round : Int32
 } derive(FromJson)
 
 ///|
 #warnings("-unused_field")
 struct NativeEditorOpen {
   project_id : String
-  revision : Int
+  revision : Int32
   snapshot : @api.CanonicalSnapshot
   command_log : Array[@api.CommandRecord]
   media_bindings : Array[Json]
@@ -757,7 +758,7 @@ struct NativeEditorOpen {
 #warnings("-unused_field")
 struct NativeWaveform {
   state : String
-  peaks : Array[Int]
+  peaks : Array[Int32]
   digest : String?
 } derive(FromJson)
 
@@ -787,7 +788,7 @@ struct NativePreparedIntake {
 struct Model {
   bootstrapped : Bool
   catalog_state : ProjectCatalogState
-  catalog_generation : Int
+  catalog_generation : Int32
   catalog_auto_open : Bool
   loading : Bool
   busy : Bool
@@ -818,9 +819,9 @@ struct Model {
   workspace_canvas_zoom : Double
   workspace_assets : Array[WorkspaceAssetEntrySummary]
   selected_workspace_asset_ids : Array[String]
-  workspace_asset_total : Int
-  workspace_asset_offset : Int
-  workspace_asset_limit : Int
+  workspace_asset_total : Int32
+  workspace_asset_offset : Int32
+  workspace_asset_limit : Int32
   workspace_asset_has_more : Bool
   workspace_asset_query : String
   workspace_asset_kind : String
@@ -855,17 +856,28 @@ struct Model {
   selected_take_id : String
   selected_clip_ids : Array[String]
   selected_transition_id : String
-  playhead_ticks : Int
+  playhead_ticks : Int32
   last_animation_ms : Double?
   monitor_mode : MonitorMode
   program_surface : ProgramSurface
   playing : Bool
+  playback_speed : String
+  player_file_url : String
+  player_file_name : String
+  preview_height : Int32
+  output_height : Int32
+  local_caption_live : Bool
+  local_caption_translate : Bool
+  local_caption_key : String
+  local_caption_pending : String
+  local_caption_text : String
+  local_caption_error : String
   solo_track_id : String
   muted : Bool
   volume : String
   loop_enabled : Bool
-  loop_in : Int
-  loop_out : Int?
+  loop_in : Int32
+  loop_out : Int32?
   zoom : Double
   ripple : Bool
   slide_offset_frames : String
@@ -873,8 +885,8 @@ struct Model {
   blade : Bool
   multi_select : Bool
   timeline_drag : TimelineDrag?
-  timeline_scroll_x : Int
-  viewport_width : Int
+  timeline_scroll_x : Int32
+  viewport_width : Int32
   filters : AssetFilters
   inspector : InspectorDraft
   intake : IntakeDraft
@@ -884,11 +896,11 @@ struct Model {
   analysis : @api.MediaAnalysis?
   preview_job : EditorJobPayload?
   preview_job_id : String
-  preview_generation : Int
-  open_generation : Int
+  preview_generation : Int32
+  open_generation : Int32
   export_state : ExportState
-  export_generation : Int
-  request_sequence : Int
+  export_generation : Int32
+  request_sequence : Int32
   undo_stack : Array[String]
   redo_stack : Array[String]
   status : String
@@ -964,7 +976,7 @@ fn initial_model() -> Model {
     project_id: "project-mc3a",
     selected_project_id: None,
     project_drafts: {},
-    workspace_lens: GraphLens,
+    workspace_lens: EditorLens,
     selected_workspace_recipe: CombineVideosRecipe,
     selected_workspace_node: "concat",
     selected_workspace_node_ids: ["concat"],
@@ -1029,6 +1041,17 @@ fn initial_model() -> Model {
     monitor_mode: ProgramMonitor,
     program_surface: InteractiveProxy,
     playing: false,
+    playback_speed: "1",
+    player_file_url: "",
+    player_file_name: "",
+    preview_height: 540,
+    output_height: 1080,
+    local_caption_live: false,
+    local_caption_translate: false,
+    local_caption_key: "",
+    local_caption_pending: "",
+    local_caption_text: "",
+    local_caption_error: "",
     solo_track_id: "",
     muted: false,
     volume: "1",
@@ -1162,24 +1185,24 @@ fn track_for_clip(model : Model, clip_id : String) -> @api.Track? {
 }
 
 ///|
-fn duration_ticks(model : Model) -> Int {
+fn duration_ticks(model : Model) -> Int32 {
   clips(model).fold(init=0, (maximum, clip) => {
-    Int::max(maximum, clip.start_tick + clip.duration_ticks)
+    Int32::max(maximum, clip.start_tick + clip.duration_ticks)
   })
 }
 
 ///|
-fn ticks_per_second(model : Model) -> Int {
+fn ticks_per_second(model : Model) -> Int32 {
   timeline(model).map(value => value.timebase.ticks_per_second).unwrap_or(1000)
 }
 
 ///|
-fn frame_ticks(model : Model) -> Int {
-  Int::max(1, ticks_per_second(model) / 24)
+fn frame_ticks(model : Model) -> Int32 {
+  Int32::max(1, ticks_per_second(model) / 24)
 }
 
 ///|
-fn selected_revision(model : Model) -> Int {
+fn selected_revision(model : Model) -> Int32 {
   model.workspace.map(value => value.revision).unwrap_or(0)
 }
 

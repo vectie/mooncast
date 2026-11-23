@@ -15,19 +15,13 @@ fn tab_label(tab : StudioTab) -> String {
 }
 
 ///|
-fn tab_short_label(tab : StudioTab) -> String {
-  match tab {
-    Overview => "Home"
-    ControlTower => "Tower"
-    NeedsStrategy => "Needs"
-    Creative => "Create"
-    AssetFactory => "Assets"
-    StoryboardAnimatic => "Boards"
-    Routing => "Route"
-    ShotBoard => "Shots"
-    Delivery => "Deliver"
-    Commercial => "Sales"
-  }
+fn workspace_navigation_groups() -> Array[(String, Array[StudioTab])] {
+  [
+    ("Direct", [Overview, ControlTower, NeedsStrategy]),
+    ("Create", [Creative, AssetFactory, StoryboardAnimatic]),
+    ("Produce", [Routing, ShotBoard, Delivery]),
+    ("Operate", [Commercial]),
+  ]
 }
 
 ///|
@@ -125,34 +119,57 @@ fn tab_button(
       .aria_current(if selected == tab { "page" } else { "false" })
       .data_set("testid", "studio-nav-" + tab_key(tab)),
     on_click=dispatch(SelectTab(tab)),
-    [studio_icon(tab), span(class="nav-label", tab_short_label(tab))],
+    [studio_icon(tab), span(class="nav-label", tab_label(tab))],
+  )
+}
+
+///|
+fn render_workspace_navigation(
+  dispatch : Dispatch[Msg],
+  model : Model,
+) -> @rabbita.Html {
+  nav(
+    class="workspace-navigation",
+    attrs=@html.Attrs::build().aria_label("Mooncast workspaces"),
+    workspace_navigation_groups().map(group => {
+      div(class="workspace-nav-group", [
+        small(group.0),
+        div(
+          class="workspace-nav-items",
+          group.1.map(tab => tab_button(dispatch, model.tab, tab)),
+        ),
+      ])
+    }),
   )
 }
 
 ///|
 fn render_header(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
+  let project_context = match model.project {
+    Some(project) => project.title
+    None =>
+      if model.selected_project_id == "" {
+        "No project selected"
+      } else {
+        model.selected_project_id
+      }
+  }
   header(class="studio-header", [
     div(class="brand", [
       span(class="brand-mark", "M"),
-      div([strong("Mooncast"), small("Production OS")]),
+      div([strong("Mooncast"), small("Creative workspace")]),
     ]),
-    nav(
-      class="studio-tabs",
-      attrs=@html.Attrs::build().aria_label("Mooncast workspaces"),
-      [
-        tab_button(dispatch, model.tab, Overview),
-        tab_button(dispatch, model.tab, ControlTower),
-        tab_button(dispatch, model.tab, NeedsStrategy),
-        tab_button(dispatch, model.tab, Creative),
-        tab_button(dispatch, model.tab, AssetFactory),
-        tab_button(dispatch, model.tab, StoryboardAnimatic),
-        tab_button(dispatch, model.tab, Routing),
-        tab_button(dispatch, model.tab, ShotBoard),
-        tab_button(dispatch, model.tab, Delivery),
-        tab_button(dispatch, model.tab, Commercial),
-      ],
-    ),
+    div(class="workspace-context", [
+      small("Current workspace"),
+      strong(tab_label(model.tab)),
+      span(project_context),
+    ]),
     div(class="header-actions", [
+      a(
+        class="secondary-link icon-action",
+        href="/apps/mooncast/editor/player",
+        "Player",
+      ),
       button(
         class="secondary icon-action",
         title=if model.project_load_errors.is_empty() {
@@ -178,7 +195,7 @@ fn render_header(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
         ],
       ),
       a(
-        class="primary-link icon-action",
+        class="secondary-link icon-action",
         href="/editor",
         title="Open cut editor",
         attrs=@html.Attrs::build().aria_label("Open Mooncast cut editor"),
@@ -195,59 +212,62 @@ fn render_project_rail(
 ) -> @rabbita.Html {
   aside(
     class="project-rail",
-    attrs=@html.Attrs::build().aria_label("Production projects"),
+    attrs=@html.Attrs::build().aria_label("Mooncast workspace navigation"),
     [
-      div(class="rail-heading", [
-        div([small("Production ledger"), h2("Projects")]),
-        span(class="count", "\{model.projects.length()}"),
-      ]),
-      div(
-        class="project-list",
-        if model.projects.is_empty() {
-          [
-            p(
-              class="empty",
-              "No project yet. Create the first saleable episode from Home.",
-            ),
-          ]
-        } else {
-          model.projects.map(item => {
-            button(
-              class=if item.project_id == model.selected_project_id {
-                "project-item selected"
-              } else {
-                "project-item"
-              },
-              title="Open " + item.title,
-              attrs=@html.Attrs::build()
-                .aria_label(
-                  "Open \{item.title}; stage \{item.stage}; next \{item.next_gate.unwrap_or("complete")}",
-                )
-                .aria_current(
-                  if item.project_id == model.selected_project_id {
-                    "true"
-                  } else {
-                    "false"
-                  },
-                ),
-              on_click=dispatch(SelectProject(item.project_id)),
-              [
-                strong(item.title),
-                span([code(item.project_id), status_chip(item.stage)]),
-                small(
-                  "Revision \{item.revision} · next \{item.next_gate.unwrap_or("complete")}",
-                ),
-              ],
-            )
-          })
-        },
-      ),
-      div(class="rail-safety", [
-        strong("Human release boundary"),
-        p(
-          "Plans and reviews are recorded here. Provider, payment, and publication effects always require separate authority.",
+      section(class="rail-projects", [
+        div(class="rail-heading", [
+          div([small("Production ledger"), h2("Projects")]),
+          button(
+            class="rail-create",
+            title="Create a governed project",
+            attrs=@html.Attrs::build().aria_label("Create a governed project"),
+            on_click=dispatch(SelectTab(Overview)),
+            [studio_action_icon("plus"), span("New")],
+          ),
+        ]),
+        div(
+          class="project-list",
+          if model.projects.is_empty() {
+            [
+              div(class="rail-empty", [
+                strong("No projects yet"),
+                p("Start with a payable objective, audience, and rights owner."),
+              ]),
+            ]
+          } else {
+            model.projects.map(item => {
+              button(
+                class=if item.project_id == model.selected_project_id {
+                  "project-item selected"
+                } else {
+                  "project-item"
+                },
+                title="Open " + item.title,
+                attrs=@html.Attrs::build()
+                  .aria_label(
+                    "Open \{item.title}; stage \{item.stage}; next \{item.next_gate.unwrap_or("complete")}",
+                  )
+                  .aria_current(
+                    if item.project_id == model.selected_project_id {
+                      "true"
+                    } else {
+                      "false"
+                    },
+                  ),
+                on_click=dispatch(SelectProject(item.project_id)),
+                [
+                  strong(item.title),
+                  span([code(item.project_id), status_chip(item.stage)]),
+                  small(
+                    "Revision \{item.revision} · next \{item.next_gate.unwrap_or("complete")}",
+                  ),
+                ],
+              )
+            })
+          },
         ),
       ]),
+      render_workspace_navigation(dispatch, model),
     ],
   )
 }

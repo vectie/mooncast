@@ -1,0 +1,240 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast-rabbita/studio"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type AnalyzerFindingProjection derive(@json.FromJson)
+
+type AnalyzerTaskProjection derive(@json.FromJson)
+
+type AnalyzerWorkspaceProjection derive(@json.FromJson)
+
+type AnimaticApprovalProjection derive(@json.FromJson)
+
+type AnimaticAttemptProjection derive(@json.FromJson)
+
+type AnimaticBudgetProjection derive(@json.FromJson)
+
+type AnimaticRenderProjection derive(@json.FromJson)
+
+type AnimaticRenderRefProjection derive(@json.FromJson)
+
+type AnimaticWorkspaceProjection derive(@json.FromJson)
+
+type ArtifactDecisionProjection derive(@json.FromJson)
+
+type ArtifactProjection derive(@json.FromJson)
+
+type AssetFactoryApprovedProjection derive(@json.FromJson)
+
+type AssetFactoryBindingProjection derive(@json.FromJson)
+
+type AssetFactoryDecisionProjection derive(@json.FromJson)
+
+type AssetFactoryPlanProjection derive(@json.FromJson)
+
+type AssetFactorySpecProjection derive(@json.FromJson)
+
+type AssetFactoryVariantProjection derive(@json.FromJson)
+
+type AssetFactoryWorkspaceProjection derive(@json.FromJson)
+
+type AssetVersionRefProjection derive(@json.FromJson)
+
+type BillingListProjection derive(@json.FromJson)
+
+type BillingProjection derive(@json.FromJson)
+
+type BudgetProjection derive(@json.FromJson)
+
+type CapacityBoardProjection derive(@json.FromJson)
+
+type CapacityForm
+
+type ClientBrandProjection derive(@json.FromJson)
+
+type ClientOpsForm
+
+type ClientPortalCreatedProjection derive(@json.FromJson)
+
+type ClientPortalProjection derive(@json.FromJson)
+
+type CommercialDashboardProjection derive(@json.FromJson)
+
+type CommercialForm
+
+type ControlTowerActualsForm
+
+type ControlTowerOwnershipForm
+
+type ConversionProjection derive(@json.FromJson)
+
+type CreateForm
+
+type CutPlayer
+
+type DeliveryBuildProjection derive(@json.FromJson)
+
+type DeliveryCaptionPreviewProjection derive(@json.FromJson)
+
+type DeliveryCoverFrameProjection derive(@json.FromJson)
+
+type DeliveryCue derive(Eq, @debug.Debug)
+
+type DeliveryGovernanceForm
+
+type DeliveryListProjection derive(@json.FromJson)
+
+type DeliveryPackageContentProjection derive(@json.FromJson)
+
+type DeliveryPackageProjection derive(@json.FromJson)
+
+type DeliveryTranscript
+
+type DeliveryVideoCaptionsProjection derive(@json.FromJson)
+
+type DeliveryVideoProjection derive(@json.FromJson)
+
+type EconomicsProjection derive(@json.FromJson)
+
+type EpisodeProjection derive(@json.FromJson)
+
+type FinalDeliverableHandoffProjection derive(@json.FromJson)
+
+type GateProjection derive(@json.FromJson)
+
+type HandoffRecordRefProjection derive(@json.FromJson)
+
+type ImportedIntakeProjection derive(@json.FromJson)
+
+type IntakeBindingProjection derive(@json.FromJson)
+
+type IntakeClientNeedProjection derive(@json.FromJson)
+
+type IntakeConstraintsProjection derive(@json.FromJson)
+
+type IntakeContractProjection derive(@json.FromJson)
+
+type IntakeDecisionProjection derive(@json.FromJson)
+
+type IntakeIntentProjection derive(@json.FromJson)
+
+type IntakeStrategyProjection derive(@json.FromJson)
+
+type IntakeValidationProjection derive(@json.FromJson)
+
+type LeadProjection derive(@json.FromJson)
+
+type MarginProjection derive(@json.FromJson)
+
+type MasterMediaProjection derive(@json.FromJson)
+
+type MasterProjection derive(@json.FromJson)
+
+type Model
+
+type MoonWikiEvidenceProjection derive(@json.FromJson)
+
+type Msg
+
+type NeedsIntakeWorkspaceProjection derive(@json.FromJson)
+
+type NeedsPacketProjection derive(@json.FromJson)
+
+type OperatorForm
+
+type OutcomeHandoffProjection derive(@json.FromJson)
+
+type PortalListProjection derive(@json.FromJson)
+
+type PostprocessOutputProjection derive(@json.FromJson)
+
+type PostprocessTaskProjection derive(@json.FromJson)
+
+type PostprocessWorkspaceProjection derive(@json.FromJson)
+
+type ProductionControlTowerProjection derive(@json.FromJson)
+
+type ProjectListProjection derive(@json.FromJson)
+
+type ProjectProjection derive(@json.FromJson)
+
+type ProjectSummaryProjection derive(@json.FromJson)
+
+type PromotedMasterPlayback derive(@json.FromJson)
+
+type QcForm
+
+type QuoteForm
+
+type QuoteProjection derive(@json.FromJson)
+
+type QuotedProjectProjection derive(@json.FromJson)
+
+type ReservationProjection derive(@json.FromJson)
+
+type ResourceProjection derive(@json.FromJson)
+
+type RouteProjection derive(@json.FromJson)
+
+type RoutedExecutionSummary derive(@json.FromJson)
+
+type RoutedListProjection derive(@json.FromJson)
+
+type RoutedShotBinding derive(@json.FromJson)
+
+type RoutingContentProjection derive(@json.FromJson)
+
+type RoutingForm
+
+type RoutingPlanProjection derive(@json.FromJson)
+
+type RoutingRetryProjection derive(@json.FromJson)
+
+type SceneProjection derive(@json.FromJson)
+
+type ShotProjection derive(@json.FromJson)
+
+type ShotQcProjection derive(@json.FromJson)
+
+type StudioJourney derive(Eq)
+
+type StudioTab derive(Eq)
+
+type TowerAssignmentProjection derive(@json.FromJson)
+
+type TowerCapacityConflictProjection derive(@json.FromJson)
+
+type TowerExceptionProjection derive(@json.FromJson)
+
+type TowerProjectProjection derive(@json.FromJson)
+
+type TowerProviderCostProjection derive(@json.FromJson)
+
+type TowerReallocationProjection derive(@json.FromJson)
+
+type TowerRemainingProjection derive(@json.FromJson)
+
+type TowerRevisionProjection derive(@json.FromJson)
+
+type TowerScheduleProjection derive(@json.FromJson)
+
+type TowerSpendActualProjection derive(@json.FromJson)
+
+type TowerSpendPlanProjection derive(@json.FromJson)
+
+type TowerSpendVarianceProjection derive(@json.FromJson)
+
+type TowerTotalsProjection derive(@json.FromJson)
+
+// Type aliases
+
+// Traits

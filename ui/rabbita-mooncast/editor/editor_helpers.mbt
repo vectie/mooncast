@@ -6,7 +6,7 @@ fn parse_number(value : String, fallback : Double) -> Double {
 }
 
 ///|
-fn parse_whole(value : String, fallback : Int) -> Int {
+fn parse_whole(value : String, fallback : Int32) -> Int32 {
   @string.parse_int(value.trim().to_owned()) catch {
     _ => fallback
   }
@@ -21,7 +21,7 @@ fn[T] option_or(first : T?, second : T?) -> T? {
 }
 
 ///|
-fn take_position(items : Array[@api.TakeVariant], id : String) -> Int {
+fn take_position(items : Array[@api.TakeVariant], id : String) -> Int32 {
   for index, item in items {
     if item.take_id == id {
       break index
@@ -32,7 +32,7 @@ fn take_position(items : Array[@api.TakeVariant], id : String) -> Int {
 }
 
 ///|
-fn clip_position(items : Array[@api.Clip], id : String) -> Int {
+fn clip_position(items : Array[@api.Clip], id : String) -> Int32 {
   for index, item in items {
     if item.clip_id == id {
       break index
@@ -84,8 +84,8 @@ fn flatten_tracks(items : Array[@api.Track]) -> Array[@api.Clip] {
 }
 
 ///|
-fn bounded_tick(model : Model, tick : Int) -> Int {
-  Int::min(Int::max(0, tick), duration_ticks(model))
+fn bounded_tick(model : Model, tick : Int32) -> Int32 {
+  Int32::min(Int32::max(0, tick), duration_ticks(model))
 }
 
 ///|
@@ -544,10 +544,10 @@ fn normalized_after_snapshot(
     selected_take_id: take_id,
     selected_clip_ids: selected,
     export_state,
-    playhead_ticks: Int::min(
+    playhead_ticks: Int32::min(
       model.playhead_ticks,
       canonical_clips.fold(init=0, (n, clip) => {
-        Int::max(n, clip.start_tick + clip.duration_ticks)
+        Int32::max(n, clip.start_tick + clip.duration_ticks)
       }),
     ),
     loading: false,
@@ -840,9 +840,9 @@ fn timeline_scale(model : Model) -> Double {
 }
 
 ///|
-fn quantize_ticks(model : Model, value : Int) -> Int {
+fn quantize_ticks(model : Model, value : Int32) -> Int32 {
   guard model.snap else { return value }
-  let frame = Int::max(1, frame_ticks(model))
+  let frame = Int32::max(1, frame_ticks(model))
   if value >= 0 {
     (value + frame / 2) / frame * frame
   } else {
@@ -851,10 +851,17 @@ fn quantize_ticks(model : Model, value : Int) -> Int {
 }
 
 ///|
-fn snap_target(model : Model, wanted : Int, ignored_clip_id : String) -> Int {
+fn snap_target(
+  model : Model,
+  wanted : Int32,
+  ignored_clip_id : String,
+) -> Int32 {
   guard model.snap else { return wanted }
-  let threshold = Int::max(frame_ticks(model) * 3, ticks_per_second(model) / 20)
-  let points : Array[Int] = [0, model.playhead_ticks]
+  let threshold = Int32::max(
+    frame_ticks(model) * 3,
+    ticks_per_second(model) / 20,
+  )
+  let points : Array[Int32] = [0, model.playhead_ticks]
   for clip in clips(model) {
     if clip.clip_id != ignored_clip_id &&
       !model.selected_clip_ids.contains(clip.clip_id) {
@@ -879,7 +886,7 @@ fn snap_target(model : Model, wanted : Int, ignored_clip_id : String) -> Int {
 }
 
 ///|
-fn drag_delta(model : Model, drag : TimelineDrag, mouse_x : Int) -> Int {
+fn drag_delta(model : Model, drag : TimelineDrag, mouse_x : Int32) -> Int32 {
   guard clips(model).iter().find_first(clip => clip.clip_id == drag.clip_id)
     is Some(clip) else {
     return 0
@@ -898,36 +905,36 @@ fn drag_delta(model : Model, drag : TimelineDrag, mouse_x : Int) -> Int {
   match drag.mode {
     DragMove => {
       let earliest = chosen.fold(init=clip.start_tick, (value, item) => {
-        Int::min(value, item.start_tick)
+        Int32::min(value, item.start_tick)
       })
-      Int::max(-earliest, snapped)
+      Int32::max(-earliest, snapped)
     }
     DragTrimStart => {
       let shrink = chosen.fold(init=clip.duration_ticks - frame_ticks(model), (
         value,
         item,
-      ) => Int::min(value, item.duration_ticks - frame_ticks(model)))
+      ) => Int32::min(value, item.duration_ticks - frame_ticks(model)))
       let extend_tick = chosen.fold(init=clip.source_in_tick, (value, item) => {
-        Int::min(value, item.source_in_tick)
+        Int32::min(value, item.source_in_tick)
       })
-      Int::min(shrink, Int::max(-extend_tick, snapped))
+      Int32::min(shrink, Int32::max(-extend_tick, snapped))
     }
     DragTrimEnd => {
       let shrink = chosen.fold(init=clip.duration_ticks - frame_ticks(model), (
         value,
         item,
-      ) => Int::min(value, item.duration_ticks - frame_ticks(model)))
+      ) => Int32::min(value, item.duration_ticks - frame_ticks(model)))
       let available = chosen.fold(
-        init=Int::max(
+        init=Int32::max(
           0,
           take_for_clip(model, clip)
           .map(take => take.duration_ticks - clip.source_out_tick)
           .unwrap_or(0),
         ),
         (value, item) => {
-          Int::min(
+          Int32::min(
             value,
-            Int::max(
+            Int32::max(
               0,
               take_for_clip(model, item)
               .map(take => take.duration_ticks - item.source_out_tick)
@@ -936,13 +943,13 @@ fn drag_delta(model : Model, drag : TimelineDrag, mouse_x : Int) -> Int {
           )
         },
       )
-      Int::max(-shrink, Int::min(available, snapped))
+      Int32::max(-shrink, Int32::min(available, snapped))
     }
   }
 }
 
 ///|
-fn preview_geometry(model : Model, clip : @api.Clip) -> (Int, Int) {
+fn preview_geometry(model : Model, clip : @api.Clip) -> (Int32, Int32) {
   match model.timeline_drag {
     Some(drag) if model.selected_clip_ids.contains(clip.clip_id) =>
       match drag.mode {
@@ -961,7 +968,7 @@ fn preview_geometry(model : Model, clip : @api.Clip) -> (Int, Int) {
 }
 
 ///|
-fn clip_is_active(clip : @api.Clip, tick : Int) -> Bool {
+fn clip_is_active(clip : @api.Clip, tick : Int32) -> Bool {
   tick >= clip.start_tick && tick < clip.start_tick + clip.duration_ticks
 }
 
@@ -999,18 +1006,18 @@ fn vertical_output(model : Model) -> Bool {
 ///|
 fn program_width(model : Model) -> Double {
   if vertical_output(model) {
-    540.0
+    model.preview_height.to_double()
   } else {
-    960.0
+    model.preview_height.to_double() * 16.0 / 9.0
   }
 }
 
 ///|
 fn program_height(model : Model) -> Double {
   if vertical_output(model) {
-    960.0
+    model.preview_height.to_double() * 16.0 / 9.0
   } else {
-    540.0
+    model.preview_height.to_double()
   }
 }
 
@@ -1028,6 +1035,9 @@ fn editor_subscriptions(
     subscriptions.push(
       @sub.on_animation_frame(now => dispatch(AnimationFrame(now))),
     )
+    if model.local_caption_live && model.local_caption_pending == "" {
+      subscriptions.push(@sub.every(1000, dispatch(GenerateLocalCaptions)))
+    }
   } else if model.monitor_mode == ProgramMonitor &&
     model.program_surface == InteractiveProxy &&
     model.workspace is Some(_) {
@@ -1201,7 +1211,7 @@ fn paint_program_canvas(model : Model) -> Unit {
   context.set_fill_style(@js.Union3::from0("#dce5ff"))
   context.set_font("500 24px ui-monospace")
   context.fill_text(timecode(model, model.playhead_ticks), 38.0, 49.0)
-  let total = Int::max(1, duration_ticks(model))
+  let total = Int32::max(1, duration_ticks(model))
   let progress = Double::from_int(model.playhead_ticks) /
     Double::from_int(total)
   context.set_fill_style(@js.Union3::from0("#24304f"))
@@ -1213,6 +1223,7 @@ fn paint_program_canvas(model : Model) -> Unit {
 
 ///|
 fn sync_program_media(model : Model, force_seek : Bool) -> Unit {
+  player_media_rate(playback_rate(model))
   let master_volume = Double::min(
     1.0,
     Double::max(0.0, parse_number(model.volume, 1.0)),
@@ -1242,7 +1253,7 @@ fn sync_program_media(model : Model, force_seek : Bool) -> Unit {
                   clip.start_tick
                 media.load()
                 media.set_current_time(
-                  Double::from_int(Int::max(0, local_tick)) /
+                  Double::from_int(Int32::max(0, local_tick)) /
                   Double::from_int(ticks_per_second(model)),
                 )
               }
@@ -1276,12 +1287,12 @@ fn sync_authoritative_media(model : Model) -> Unit {
 }
 
 ///|
-fn timecode(model : Model, ticks : Int) -> String {
+fn timecode(model : Model, ticks : Int32) -> String {
   let fps = 24
-  let tps = Int::max(1, ticks_per_second(model))
-  let seconds = Int::max(0, ticks) / tps
-  let frames = Int::max(0, ticks) % tps * fps / tps
-  fn pad(value : Int) -> String {
+  let tps = Int32::max(1, ticks_per_second(model))
+  let seconds = Int32::max(0, ticks) / tps
+  let frames = Int32::max(0, ticks) % tps * fps / tps
+  fn pad(value : Int32) -> String {
     if value < 10 {
       "0\{value}"
     } else {

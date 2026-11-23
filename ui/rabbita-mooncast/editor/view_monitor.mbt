@@ -178,7 +178,7 @@ fn program_monitor(
         },
         type_="button",
         on_click=dispatch(SwitchProgramSurface(InteractiveProxy)),
-        "Interactive proxy",
+        "Live preview",
       ),
       @html.button(
         class=if model.program_surface == AuthoritativePreview {
@@ -189,7 +189,7 @@ fn program_monitor(
         type_="button",
         disabled=authoritative_media_url(model) == "",
         on_click=dispatch(SwitchProgramSurface(AuthoritativePreview)),
-        "Authoritative render",
+        "Rendered preview",
       ),
     ],
     if model.program_surface == InteractiveProxy {
@@ -218,7 +218,6 @@ fn program_monitor(
         "",
       )
     },
-    audio_audition_view(dispatch, model),
     @html.div(class="proxy-status") <| [
       status_tag("neutral", "Canvas + media compositor"),
       status_tag(
@@ -257,6 +256,7 @@ fn transport(dispatch : @rabbita.Emit[Msg], model : Model) -> @rabbita.Html {
     @html.button(
       class="play",
       type_="button",
+      disabled=duration_ticks(model) <= 0,
       on_click=dispatch(TogglePlay),
       if model.playing {
         "Pause"
@@ -275,7 +275,7 @@ fn transport(dispatch : @rabbita.Emit[Msg], model : Model) -> @rabbita.Html {
       class="scrubber",
       input_type=@html.Range,
       min=0,
-      max=Int::max(1, total.to_int()),
+      max=Int32::max(1, total.to_int()),
       step=1,
       value="\{seconds}",
       on_input=dispatch.map(value => ScrubChanged(value)),
@@ -335,15 +335,17 @@ fn monitor_panel(dispatch : @rabbita.Emit[Msg], model : Model) -> @rabbita.Html 
           },
           type_="button",
           on_click=dispatch(SwitchMonitor(ProgramMonitor)),
-          "Program",
+          "Edited video",
         ),
       ],
       @html.div(class="monitor-actions") <| [
         @html.button(
           type_="button",
-          disabled=model.busy,
+          disabled=model.busy ||
+            model.workspace is None ||
+            duration_ticks(model) <= 0,
           on_click=dispatch(StartPreview),
-          "Create preview",
+          "Preview latest edit",
         ),
         @html.button(
           type_="button",
@@ -355,11 +357,27 @@ fn monitor_panel(dispatch : @rabbita.Emit[Msg], model : Model) -> @rabbita.Html 
         ),
       ],
     ],
+    player_controls(dispatch, model),
     if model.monitor_mode == SourceMonitor {
       source_monitor(model)
     } else {
       program_monitor(dispatch, model)
     },
     transport(dispatch, model),
+    @html.details(class="audio-mix-drawer", [
+      @html.summary("Audio mix"),
+      audio_audition_view(dispatch, model),
+    ]),
+    if model.local_caption_key == local_caption_identity(model) &&
+      model.local_caption_text != "" {
+      @html.div(
+        class="live-caption-text",
+        attrs=@html.Attrs::build().role("status"),
+        model.local_caption_text,
+      )
+    } else {
+      @html.nothing
+    },
+    local_caption_controls(dispatch, model),
   ]
 }

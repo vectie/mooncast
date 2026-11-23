@@ -31,6 +31,12 @@ fn project_header(
         on_click=dispatch(SwitchWorkspaceLens(ReviewLens)),
         "Review",
       ),
+      @html.button(
+        type_="button",
+        class=if model.workspace_lens == PlayerLens { "is-active" } else { "" },
+        on_click=dispatch(SwitchWorkspaceLens(PlayerLens)),
+        "Player",
+      ),
       @html.select(
         disabled=model.catalog_state != CatalogReady,
         on_change=dispatch.map(value => SelectProject(value)),

@@ -194,19 +194,19 @@ fn production_handoff_view(
     ],
     @html.div(class="handoff-group") <| [
       @html.label <| [
-        @html.span("Output preset"),
+        @html.span("Output orientation"),
         @html.select(
           on_change=dispatch.map(value => ExportChanged("preset", value)),
         ) <| [
           @html.option(
             value="horizontal-1080p",
             selected=state.output_preset == "horizontal-1080p",
-            "Horizontal 1080p",
+            "Horizontal 16:9",
           ),
           @html.option(
             value="vertical-1080p",
             selected=state.output_preset == "vertical-1080p",
-            "Vertical 1080×1920",
+            "Vertical 9:16",
           ),
         ],
       ],

@@ -1,0 +1,172 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/mooncast-rabbita/editor"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type AssetFilters
+
+type EditorJobPayload derive(@json.FromJson)
+
+type EditorJobResponse derive(@json.FromJson)
+
+type EditorJobResultView derive(@json.FromJson)
+
+type ExportReceiptView derive(@json.FromJson)
+
+type ExportState
+
+type ImmutablePutView derive(@json.FromJson)
+
+type ImmutableRecordView derive(@json.FromJson)
+
+type InspectorDraft
+
+type IntakeDraft
+
+type LocalMediaSelection
+
+type MasterPromotionResponse derive(@json.FromJson)
+
+type Model
+
+type MonitorMode derive(Eq)
+
+type Msg
+
+type NativeEditorOpen derive(@json.FromJson)
+
+type NativeMediaAnalysis derive(@json.FromJson)
+
+type NativePreparedIntake derive(@json.FromJson)
+
+type NativeProjectSummary derive(@json.FromJson)
+
+type NativeReviewComment derive(@json.FromJson)
+
+type NativeTakeRecord derive(@json.FromJson)
+
+type NativeTickRange derive(@json.FromJson)
+
+type NativeWaveform derive(@json.FromJson)
+
+type PendingAction
+
+type ProgramSurface derive(Eq)
+
+type TimelineDrag
+
+type TimelineDragMode derive(Eq)
+
+type UtilityConcatInput
+
+type UtilityConcatJob derive(@json.FromJson)
+
+type UtilityConcatJobInput derive(@json.FromJson)
+
+type UtilityConcatState
+
+type WorkspaceAgentAssistPayload derive(@json.FromJson)
+
+type WorkspaceArtifactComparisonPayload derive(@json.FromJson)
+
+type WorkspaceArtifactKind derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspaceAssetArtifactSummary derive(@json.FromJson)
+
+type WorkspaceAssetEntrySummary derive(@json.FromJson)
+
+type WorkspaceAssetLibraryPayload derive(@json.FromJson)
+
+type WorkspaceAuthoritySummary derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspaceCanvasDrag
+
+type WorkspaceCapsulePayload derive(@json.FromJson)
+
+type WorkspaceCapsuleSummary derive(@json.FromJson)
+
+type WorkspaceCatalogRawPayload derive(@json.FromJson)
+
+type WorkspaceCommentSummary derive(@json.FromJson)
+
+type WorkspaceDefinitionSummary derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspaceFeaturesPayload derive(@json.FromJson)
+
+type WorkspaceGraphDiffSummary derive(@json.FromJson)
+
+type WorkspaceGraphEdgeSummary derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspaceGraphNodeSummary derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspaceGraphSummary derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspaceLens derive(Eq, @debug.Debug)
+
+type WorkspaceNodeAttemptSummary derive(@json.FromJson)
+
+type WorkspaceNodeKindSummary derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspaceNodeParameterSummary derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspaceNodePosition
+
+type WorkspaceNodeRunState derive(@json.FromJson)
+
+type WorkspaceNodeRunSummary derive(@json.FromJson)
+
+type WorkspaceNodeView
+
+type WorkspaceParameterControl derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspaceParameterDefinition derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspaceParameterOption derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspaceParameterValueKind derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspacePortCardinality derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspacePortSummary derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type WorkspacePresenceSummary derive(@json.FromJson)
+
+type WorkspaceProposalPayload derive(@json.FromJson)
+
+type WorkspaceProposalReviewPayload derive(@json.FromJson)
+
+type WorkspaceProposalSummary derive(@json.FromJson)
+
+type WorkspaceRecipe derive(Eq, @debug.Debug)
+
+type WorkspaceRunAdvancePayload derive(@json.FromJson)
+
+type WorkspaceRunBlockerSummary derive(@json.FromJson)
+
+type WorkspaceRunEventPayload derive(@json.FromJson)
+
+type WorkspaceRunEventSummary derive(@json.FromJson)
+
+type WorkspaceRunListPayload derive(@json.FromJson)
+
+type WorkspaceRunPayload derive(@json.FromJson)
+
+type WorkspaceSearchPayload derive(@json.FromJson)
+
+type WorkspaceSearchSummary derive(@json.FromJson)
+
+type WorkspaceShareCreatedPayload derive(@json.FromJson)
+
+type WorkspaceShareSummary derive(@json.FromJson)
+
+// Type aliases
+
+// Traits

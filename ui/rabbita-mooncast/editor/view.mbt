@@ -15,7 +15,10 @@ fn view(dispatch : @rabbita.Emit[Msg], model : Model) -> @rabbita.Html {
         GraphLens => workspace_graph_view(dispatch, model)
         EditorLens =>
           @html.div <| [
-            production_handoff_view(dispatch, model),
+            @html.details(class="editor-delivery-drawer") <| [
+              @html.summary("Export and delivery"),
+              production_handoff_view(dispatch, model),
+            ],
             @html.div(class="editor-grid") <| [
               asset_bin(dispatch, model),
               @html.div(class="edit-center") <| [
@@ -29,6 +32,7 @@ fn view(dispatch : @rabbita.Emit[Msg], model : Model) -> @rabbita.Html {
             ],
           ]
         ReviewLens => workspace_review_lens(dispatch, model)
+        PlayerLens => standalone_player_view(dispatch, model)
       },
       editor_footer(dispatch, model),
     ],

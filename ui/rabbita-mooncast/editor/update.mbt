@@ -345,7 +345,7 @@ fn update_project(
         }
       }
     WorkspaceAssetQueryChanged(workspace_asset_query) => {
-      let next = { ..model, workspace_asset_query, workspace_asset_offset: 0 }
+      let next = { ..model, workspace_asset_query, workspace_asset_offset: 0, }
       (
         @http.get(workspace_asset_library_url(next)).expect_json(result => {
           dispatch(WorkspaceAssetsLoaded(result))
@@ -354,7 +354,7 @@ fn update_project(
       )
     }
     WorkspaceAssetKindChanged(workspace_asset_kind) => {
-      let next = { ..model, workspace_asset_kind, workspace_asset_offset: 0 }
+      let next = { ..model, workspace_asset_kind, workspace_asset_offset: 0, }
       (
         @http.get(workspace_asset_library_url(next)).expect_json(result => {
           dispatch(WorkspaceAssetsLoaded(result))
@@ -363,7 +363,7 @@ fn update_project(
       )
     }
     WorkspaceAssetTagChanged(workspace_asset_tag) => {
-      let next = { ..model, workspace_asset_tag, workspace_asset_offset: 0 }
+      let next = { ..model, workspace_asset_tag, workspace_asset_offset: 0, }
       (
         @http.get(workspace_asset_library_url(next)).expect_json(result => {
           dispatch(WorkspaceAssetsLoaded(result))
@@ -372,11 +372,11 @@ fn update_project(
       )
     }
     WorkspaceAssetPageChanged(direction) => {
-      let next_offset = Int::max(
+      let next_offset = Int32::max(
         0,
         model.workspace_asset_offset + direction * model.workspace_asset_limit,
       )
-      let next = { ..model, workspace_asset_offset: next_offset }
+      let next = { ..model, workspace_asset_offset: next_offset, }
       (
         @http.get(workspace_asset_library_url(next)).expect_json(result => {
           dispatch(WorkspaceAssetsLoaded(result))
@@ -440,8 +440,10 @@ fn update_project(
       } else {
         (@rabbita.none, model)
       }
-    SwitchWorkspaceLens(workspace_lens) =>
+    SwitchWorkspaceLens(workspace_lens) => {
+      standalone_player_location(workspace_lens == PlayerLens)
       (@rabbita.none, { ..model, workspace_lens, })
+    }
     SelectWorkspaceRecipe(selected_workspace_recipe) => {
       let selected_workspace_node = match selected_workspace_recipe {
         CombineVideosRecipe => "concat"
@@ -483,7 +485,7 @@ fn update_project(
         None =>
           (
             @rabbita.none,
-            { ..model, error: "That node definition is unavailable." },
+            { ..model, error: "That node definition is unavailable.", },
           )
       }
     ExpandWorkspaceCapsule(capsule_id, capsule_version) => {
@@ -525,7 +527,7 @@ fn update_project(
       } else {
         model.selected_workspace_node_ids + [id]
       }
-      (@rabbita.none, { ..model, selected_workspace_node_ids: ids })
+      (@rabbita.none, { ..model, selected_workspace_node_ids: ids, })
     }
     SelectWorkspaceEdge(selected_workspace_edge) =>
       (
@@ -618,7 +620,7 @@ fn update_project(
       }
     SaveWorkspaceGraph(continuation) =>
       match model.workspace_graph {
-        None => (@rabbita.none, { ..model, error: "No graph is loaded." })
+        None => (@rabbita.none, { ..model, error: "No graph is loaded.", })
         Some(graph) =>
           (
             @http.post(
@@ -680,12 +682,12 @@ fn update_project(
           if continuation == "all" {
             (
               start_workspace_graph_http(dispatch, saved, false),
-              { ..saved, busy: true },
+              { ..saved, busy: true, },
             )
           } else if continuation == "selected" {
             (
               start_workspace_graph_http(dispatch, saved, true),
-              { ..saved, busy: true },
+              { ..saved, busy: true, },
             )
           } else {
             (@rabbita.none, saved)
@@ -767,7 +769,7 @@ fn update_project(
             model,
           )
         Err(_) =>
-          (@rabbita.none, { ..model, error: "Could not renew edit presence." })
+          (@rabbita.none, { ..model, error: "Could not renew edit presence.", })
       }
     WorkspaceCanvasPointerDown(node_id, mouse) => {
       let position = workspace_node_position(model, node_id)
@@ -791,11 +793,11 @@ fn update_project(
       match model.workspace_canvas_drag {
         None => (@rabbita.none, model)
         Some(drag) => {
-          let x = Int::max(
+          let x = Int32::max(
             0,
             drag.origin_x + mouse.client_pos().x - drag.origin_client_x,
           )
-          let y = Int::max(
+          let y = Int32::max(
             0,
             drag.origin_y + mouse.client_pos().y - drag.origin_client_y,
           )
@@ -810,7 +812,7 @@ fn update_project(
       }
       (
         @rabbita.none,
-        { ..model, workspace_canvas_drag: None, workspace_activity: activity },
+        { ..model, workspace_canvas_drag: None, workspace_activity: activity, },
       )
     }
     WorkspaceNodeNudged(node_id, delta_x, delta_y) => {
@@ -853,7 +855,7 @@ fn update_project(
       if model.workspace_connect_from.is_blank() {
         return (
           @rabbita.none,
-          { ..model, error: "Choose an output port before choosing an input." },
+          { ..model, error: "Choose an output port before choosing an input.", },
         )
       }
       let source = model.workspace_connect_from
@@ -926,7 +928,7 @@ fn update_project(
         is Some(entry) else {
         return (
           @rabbita.none,
-          { ..model, error: "The dragged asset version is no longer indexed." },
+          { ..model, error: "The dragged asset version is no longer indexed.", },
         )
       }
       (
@@ -950,7 +952,7 @@ fn update_project(
       } else {
         model.selected_workspace_asset_ids + [artifact_id]
       }
-      (@rabbita.none, { ..model, selected_workspace_asset_ids: selected })
+      (@rabbita.none, { ..model, selected_workspace_asset_ids: selected, })
     }
     TagSelectedWorkspaceAsset => {
       guard model.selected_workspace_asset_ids.last() is Some(artifact_id) &&
@@ -958,7 +960,7 @@ fn update_project(
         .iter()
         .find_first(entry => entry.artifact.artifact_id == artifact_id)
         is Some(entry) else {
-        return (@rabbita.none, { ..model, error: "Select an asset to tag." })
+        return (@rabbita.none, { ..model, error: "Select an asset to tag.", })
       }
       let tags = if entry.tags.contains("review") {
         entry.tags.filter(value => value != "review")
@@ -978,7 +980,7 @@ fn update_project(
         .expect_json(result => {
           dispatch(WorkspaceAssetMutationFinished("tag", result))
         }),
-        { ..model, busy: true, status: "Updating asset tags…", error: "" },
+        { ..model, busy: true, status: "Updating asset tags…", error: "", },
       )
     }
     DeleteSelectedWorkspaceAsset => {
@@ -987,7 +989,7 @@ fn update_project(
         .iter()
         .find_first(entry => entry.artifact.artifact_id == artifact_id)
         is Some(entry) else {
-        return (@rabbita.none, { ..model, error: "Select an asset to hide." })
+        return (@rabbita.none, { ..model, error: "Select an asset to hide.", })
       }
       (
         @http.post(
@@ -1036,13 +1038,13 @@ fn update_project(
     ToggleWorkspaceAppView =>
       (
         @rabbita.none,
-        { ..model, workspace_app_view: !model.workspace_app_view },
+        { ..model, workspace_app_view: !model.workspace_app_view, },
       )
     WorkspaceSearchChanged(workspace_search) => {
       guard workspace_search.trim().length() >= 2 else {
         return (
           @rabbita.none,
-          { ..model, workspace_search, workspace_search_results: [] },
+          { ..model, workspace_search, workspace_search_results: [], },
         )
       }
       let body : Json = { "project_id": "", "query": workspace_search }
@@ -1066,7 +1068,7 @@ fn update_project(
             Some(value) =>
               (
                 @rabbita.none,
-                { ..model, workspace_search_results: value.matches },
+                { ..model, workspace_search_results: value.matches, },
               )
             None => (@rabbita.none, model)
           }
@@ -1078,7 +1080,7 @@ fn update_project(
       (@rabbita.none, { ..model, workspace_public_input, })
     PostWorkspaceNodeComment => {
       guard !model.workspace_comment.trim().is_blank() else {
-        return (@rabbita.none, { ..model, error: "Write a comment first." })
+        return (@rabbita.none, { ..model, error: "Write a comment first.", })
       }
       let body : Json = {
         "project_id": model.project_id,
@@ -1188,7 +1190,7 @@ fn update_project(
         is Some(entry) else {
         return (
           @rabbita.none,
-          { ..model, error: "Select a registered asset to promote." },
+          { ..model, error: "Select a registered asset to promote.", },
         )
       }
       let action_id = fresh_key(model, "promotion")
@@ -1223,7 +1225,7 @@ fn update_project(
         is Some(entry) else {
         return (
           @rabbita.none,
-          { ..model, error: "Select a registered asset before branching it." },
+          { ..model, error: "Select a registered asset before branching it.", },
         )
       }
       let branch_id = fresh_key(model, "artifact-branch")
@@ -1367,7 +1369,7 @@ fn update_project(
         )
         .with_json({ "actor": model.workspace_actor_name })
         .expect_json(result => dispatch(WorkspaceShareRevoked(result))),
-        { ..model, busy: true, status: "Revoking review link…", error: "" },
+        { ..model, busy: true, status: "Revoking review link…", error: "", },
       )
     }
     WorkspaceShareRevoked(result) =>
@@ -1375,7 +1377,7 @@ fn update_project(
         Err(_) =>
           (
             @rabbita.none,
-            { ..model, busy: false, error: "Share revocation failed." },
+            { ..model, busy: false, error: "Share revocation failed.", },
           )
         Ok(_) =>
           (
@@ -1418,14 +1420,14 @@ fn update_project(
           "/proposals/" +
           proposal_id,
         ).expect_json(result => dispatch(WorkspaceProposalReviewLoaded(result))),
-        { ..model, status: "Loading proposal diff…", error: "" },
+        { ..model, status: "Loading proposal diff…", error: "", },
       )
     WorkspaceProposalReviewLoaded(result) =>
       match result {
         Err(_) =>
           (
             @rabbita.none,
-            { ..model, error: "Proposal diff could not be loaded." },
+            { ..model, error: "Proposal diff could not be loaded.", },
           )
         Ok(response) => {
           let decoded : WorkspaceProposalReviewPayload? = Some(
@@ -1448,7 +1450,7 @@ fn update_project(
                 },
               )
             None =>
-              (@rabbita.none, { ..model, error: "Proposal diff was invalid." })
+              (@rabbita.none, { ..model, error: "Proposal diff was invalid.", })
           }
         }
       }
@@ -1504,7 +1506,7 @@ fn update_project(
         !model.workspace_agent_instruction.trim().is_blank() else {
         return (
           @rabbita.none,
-          { ..model, error: "Enter a workspace assistant instruction first." },
+          { ..model, error: "Enter a workspace assistant instruction first.", },
         )
       }
       (
@@ -1518,7 +1520,7 @@ fn update_project(
           "actor": model.workspace_actor_name,
         })
         .expect_json(result => dispatch(WorkspaceAgentAssisted(result))),
-        { ..model, busy: true, status: "Inspecting graph and run evidence…" },
+        { ..model, busy: true, status: "Inspecting graph and run evidence…", },
       )
     }
     WorkspaceAgentAssisted(result) =>
@@ -1539,7 +1541,7 @@ fn update_project(
             _ => None
           }
           guard decoded is Some(value) else {
-            return (@rabbita.none, { ..model, busy: false })
+            return (@rabbita.none, { ..model, busy: false, })
           }
           (
             @http.get(
@@ -1669,7 +1671,7 @@ fn update_project(
     WorkspaceRunEventsLoaded(result) =>
       match result {
         Err(_) =>
-          (@rabbita.none, { ..model, error: "Run event replay failed." })
+          (@rabbita.none, { ..model, error: "Run event replay failed.", })
         Ok(response) => {
           let decoded : WorkspaceRunEventPayload? = Some(
             @json.from_json(response),
@@ -1681,7 +1683,7 @@ fn update_project(
             None =>
               (
                 @rabbita.none,
-                { ..model, workspace_run_last_event_id: feed.last_event_id },
+                { ..model, workspace_run_last_event_id: feed.last_event_id, },
               )
             Some(event) => {
               let next_state = event.run.state.stringify()
@@ -1715,7 +1717,7 @@ fn update_project(
           }
           match decoded {
             Some(value) =>
-              (@rabbita.none, { ..model, workspace_run_history: value.runs })
+              (@rabbita.none, { ..model, workspace_run_history: value.runs, })
             None => (@rabbita.none, model)
           }
         }
@@ -1745,14 +1747,14 @@ fn update_project(
       guard !model.workspace_run_id.is_blank() else {
         return (
           @rabbita.none,
-          { ..model, error: "Start a run before claiming work." },
+          { ..model, error: "Start a run before claiming work.", },
         )
       }
       (
         @http.post("/api/workspace/runs/" + model.workspace_run_id + "/advance")
         .with_json({ "actor": model.workspace_actor_name })
         .expect_json(result => dispatch(WorkspaceRunAdvanced(result))),
-        { ..model, busy: true, status: "Advancing supported native nodes…" },
+        { ..model, busy: true, status: "Advancing supported native nodes…", },
       )
     }
     WorkspaceRunAdvanced(result) =>
@@ -1829,7 +1831,7 @@ fn update_project(
           "note": model.workspace_comment,
         })
         .expect_json(result => dispatch(WorkspaceHumanDecisionFinished(result))),
-        { ..model, busy: true, status: "Recording named human decision…" },
+        { ..model, busy: true, status: "Recording named human decision…", },
       )
     }
     WorkspaceHumanDecisionFinished(result) =>
@@ -1837,14 +1839,18 @@ fn update_project(
         Err(_) =>
           (
             @rabbita.none,
-            { ..model, busy: false, error: "Human gate decision was rejected." },
+            {
+              ..model,
+              busy: false,
+              error: "Human gate decision was rejected.",
+            },
           )
         Ok(response) => {
           let decoded : WorkspaceRunPayload? = Some(@json.from_json(response)) catch {
             _ => None
           }
           match decoded {
-            None => (@rabbita.none, { ..model, busy: false })
+            None => (@rabbita.none, { ..model, busy: false, })
             Some(run) => {
               let decided = {
                 ..model,
@@ -1870,7 +1876,7 @@ fn update_project(
         )
         .with_json({ "node_id": "", "actor": model.workspace_actor_name })
         .expect_json(result => dispatch(WorkspaceRunPolled(result))),
-        { ..model, busy: true, status: "Cancelling run…" },
+        { ..model, busy: true, status: "Cancelling run…", },
       )
     }
     RetryWorkspaceNode => {
@@ -1887,7 +1893,7 @@ fn update_project(
           "actor": model.workspace_actor_name,
         })
         .expect_json(result => dispatch(WorkspaceRunPolled(result))),
-        { ..model, busy: true, status: "Retrying failed node…" },
+        { ..model, busy: true, status: "Retrying failed node…", },
       )
     }
     WorkspaceRunPolled(result) =>
@@ -1895,7 +1901,7 @@ fn update_project(
         Err(_) =>
           (
             @rabbita.none,
-            { ..model, busy: false, error: "Workspace run operation failed." },
+            { ..model, busy: false, error: "Workspace run operation failed.", },
           )
         Ok(response) => {
           let decoded : WorkspaceRunPayload? = Some(@json.from_json(response)) catch {
@@ -2124,7 +2130,7 @@ fn update_project(
             )
           }
           let files = state.files.copy()
-          files[index] = { ..file, sha256: digest }
+          files[index] = { ..file, sha256: digest, }
           let next_index = index + 1
           let next_state = {
             ..state,
@@ -2140,12 +2146,12 @@ fn update_project(
             Some(next) =>
               (
                 hash_utility_concat_file(dispatch, next_index, next),
-                { ..model, utility_concat: next_state },
+                { ..model, utility_concat: next_state, },
               )
             None =>
               (
                 create_utility_concat(dispatch, files),
-                { ..model, utility_concat: next_state },
+                { ..model, utility_concat: next_state, },
               )
           }
         }
@@ -2553,7 +2559,10 @@ fn update_project(
       let visible = filtered_takes(model)
       guard visible.length() > 0 else { return (@rabbita.none, model) }
       let index = take_position(visible, model.selected_take_id)
-      let next = Int::min(Int::max(0, index + direction), visible.length() - 1)
+      let next = Int32::min(
+        Int32::max(0, index + direction),
+        visible.length() - 1,
+      )
       update(raw_dispatch, SelectTake(visible[next].take_id), model)
     }
     AnalysisLoaded(take_id, result) =>
@@ -2578,17 +2587,23 @@ fn update_project(
         _ => (@rabbita.none, model)
       }
     FilterSearchChanged(value) =>
-      (@rabbita.none, { ..model, filters: { ..model.filters, search: value } })
+      (
+        @rabbita.none,
+        { ..model, filters: { ..model.filters, search: value, }, },
+      )
     FilterKindChanged(value) =>
-      (@rabbita.none, { ..model, filters: { ..model.filters, kind: value } })
+      (@rabbita.none, { ..model, filters: { ..model.filters, kind: value, }, })
     FilterQcChanged(value) =>
-      (@rabbita.none, { ..model, filters: { ..model.filters, qc: value } })
+      (@rabbita.none, { ..model, filters: { ..model.filters, qc: value, }, })
     FilterRightsChanged(value) =>
-      (@rabbita.none, { ..model, filters: { ..model.filters, rights: value } })
+      (
+        @rabbita.none,
+        { ..model, filters: { ..model.filters, rights: value, }, },
+      )
     FilterPlacementChanged(value) =>
       (
         @rabbita.none,
-        { ..model, filters: { ..model.filters, placement: value } },
+        { ..model, filters: { ..model.filters, placement: value, }, },
       )
     SelectClip(clip_id, extend_selection) => {
       let selection = if extend_selection {
@@ -2628,7 +2643,10 @@ fn update_project(
       }
       let ordered = track.clips
       let index = clip_position(ordered, clip.clip_id)
-      let next = Int::min(Int::max(0, index + direction), ordered.length() - 1)
+      let next = Int32::min(
+        Int32::max(0, index + direction),
+        ordered.length() - 1,
+      )
       update(
         raw_dispatch,
         SelectClip(ordered[next].clip_id, extend_selection),
@@ -2638,7 +2656,7 @@ fn update_project(
     SelectTransition(id) =>
       (
         @rabbita.none,
-        { ..model, selected_transition_id: id, selected_clip_ids: [] },
+        { ..model, selected_transition_id: id, selected_clip_ids: [], },
       )
     SeekTicks(value) => {
       let next = {
@@ -2667,6 +2685,143 @@ fn update_project(
         SeekTicks(model.playhead_ticks + direction * frame_ticks(model)),
         { ..model, playing: false, last_animation_ms: None, },
       )
+    SetPlaybackSpeed(value) => {
+      let next = { ..model, playback_speed: value, last_animation_ms: None, }
+      player_media_rate(playback_rate(next))
+      (@rabbita.none, next)
+    }
+    SetPreviewHeight(value) => {
+      let height = @string.parse_int(value) catch { _ => 540 }
+      let next = {
+        ..model,
+        preview_height: if [360, 540, 720, 1080].contains(height) {
+          height
+        } else {
+          540
+        },
+      }
+      (@rabbita.none, next)
+    }
+    SetOutputHeight(value) => {
+      let height = @string.parse_int(value) catch { _ => 1080 }
+      (
+        @rabbita.none,
+        {
+          ..model,
+          output_height: if [720, 1080, 2160].contains(height) {
+            height
+          } else {
+            1080
+          },
+        },
+      )
+    }
+    PlayerFullscreen => {
+      player_fullscreen()
+      (@rabbita.none, model)
+    }
+    OpenPlayerFile => {
+      let raw = standalone_player_file(model.player_file_url)
+      let result = @json.parse(raw) catch { _ => Json::null() }
+      match result {
+        { "url": String(url), "name": String(name), .. } =>
+          (
+            @rabbita.none,
+            { ..model, player_file_url: url, player_file_name: name, },
+          )
+        _ => (@rabbita.none, model)
+      }
+    }
+    ClosePlayerFile => {
+      standalone_player_release(model.player_file_url)
+      (@rabbita.none, { ..model, player_file_url: "", player_file_name: "", })
+    }
+    ToggleLocalCaptions =>
+      (
+        @rabbita.none,
+        {
+          ..model,
+          local_caption_live: !model.local_caption_live,
+          local_caption_error: "",
+        },
+      )
+    ToggleCaptionTranslation =>
+      (
+        @rabbita.none,
+        {
+          ..model,
+          local_caption_translate: !model.local_caption_translate,
+          local_caption_key: "",
+          local_caption_text: "",
+        },
+      )
+    GenerateLocalCaptions => {
+      let key = local_caption_identity(model)
+      guard model.local_caption_pending == "" &&
+        key != "" &&
+        key != model.local_caption_key else {
+        return (@rabbita.none, model)
+      }
+      guard local_caption_target(model) is Some((take, start, length)) else {
+        return (@rabbita.none, model)
+      }
+      (
+        @http.post(
+          "/api/editor/projects/" +
+          model.project_id +
+          "/takes/" +
+          take +
+          "/local-captions",
+        )
+        .with_json(
+          Json::object({
+            "start_ms": Json(start),
+            "duration_ms": Json(length),
+            "translate": Json(model.local_caption_translate),
+          }),
+        )
+        .expect_json(result => dispatch(LocalCaptionsLoaded(key, result))),
+        { ..model, local_caption_pending: key, local_caption_error: "", },
+      )
+    }
+    LocalCaptionsLoaded(key, result) => {
+      guard model.local_caption_pending == key else {
+        return (@rabbita.none, model)
+      }
+      let next = { ..model, local_caption_pending: "", }
+      match result {
+        Ok(value) => {
+          let text = match value {
+            { "text": String(text), .. } => text
+            _ => ""
+          }
+          let error = match value {
+            { "error": String(error), .. } => error
+            _ => ""
+          }
+          (
+            @rabbita.none,
+            {
+              ..next,
+              local_caption_key: key,
+              local_caption_text: text,
+              local_caption_error: error,
+              local_caption_live: model.local_caption_live && error == "",
+            },
+          )
+        }
+        Err(error) =>
+          (
+            @rabbita.none,
+            {
+              ..next,
+              local_caption_live: false,
+              local_caption_error: "Local captions unavailable. Check MOONCAST_WHISPER_MODEL and the local service. " +
+              error.to_string(),
+            },
+          )
+      }
+    }
     TogglePlay => {
       let playing = duration_ticks(model) > 0 && !model.playing
       let next = {
@@ -2681,6 +2836,8 @@ fn update_project(
         last_animation_ms: None,
       }
       sync_program_media(next, true)
+      sync_authoritative_media(next)
+      player_render_play(next.playing)
       paint_program_canvas(next)
       (@rabbita.none, next)
     }
@@ -2692,9 +2849,12 @@ fn update_project(
       let advance = if elapsed <= 0.0 {
         0
       } else {
-        Int::max(
+        Int32::max(
           1,
-          (elapsed * Double::from_int(ticks_per_second(model)) / 1000.0).to_int(),
+          (elapsed *
+          playback_rate(model) *
+          Double::from_int(ticks_per_second(model)) /
+          1000.0).to_int(),
         )
       }
       let proposed = model.playhead_ticks + advance
@@ -2729,6 +2889,9 @@ fn update_project(
         sync_program_media(next, true)
       }
       paint_program_canvas(next)
+      if !playing {
+        player_render_play(false)
+      }
       (@rabbita.none, next)
     }
     SwitchMonitor(mode) => {
@@ -2774,7 +2937,7 @@ fn update_project(
       (@rabbita.none, next)
     }
     ToggleMute => {
-      let next = { ..model, muted: !model.muted }
+      let next = { ..model, muted: !model.muted, }
       sync_program_media(next, false)
       sync_authoritative_media(next)
       (@rabbita.none, next)
@@ -2797,12 +2960,12 @@ fn update_project(
         {
           ..model,
           loop_out: Some(
-            Int::max(model.playhead_ticks, model.loop_in + frame_ticks(model)),
+            Int32::max(model.playhead_ticks, model.loop_in + frame_ticks(model)),
           ),
         },
       )
     ToggleLoop =>
-      (@rabbita.none, { ..model, loop_enabled: !model.loop_enabled })
+      (@rabbita.none, { ..model, loop_enabled: !model.loop_enabled, })
     ResyncProxy => {
       sync_program_media(model, true)
       paint_program_canvas(model)
@@ -2819,11 +2982,11 @@ fn update_project(
       paint_program_canvas(model)
       (@rabbita.none, model)
     }
-    ToggleRipple => (@rabbita.none, { ..model, ripple: !model.ripple })
-    ToggleSnap => (@rabbita.none, { ..model, snap: !model.snap })
-    ToggleBlade => (@rabbita.none, { ..model, blade: !model.blade })
+    ToggleRipple => (@rabbita.none, { ..model, ripple: !model.ripple, })
+    ToggleSnap => (@rabbita.none, { ..model, snap: !model.snap, })
+    ToggleBlade => (@rabbita.none, { ..model, blade: !model.blade, })
     ToggleMultiSelect =>
-      (@rabbita.none, { ..model, multi_select: !model.multi_select })
+      (@rabbita.none, { ..model, multi_select: !model.multi_select, })
     TimelinePointerDown(clip_id, width, mouse) => {
       guard !model.busy else { return (@rabbita.none, model) }
       guard clips(model).iter().find_first(clip => clip.clip_id == clip_id)
@@ -2836,9 +2999,9 @@ fn update_project(
           model,
           (Double::from_int(pointer) / timeline_scale(model)).to_int(),
         )
-        let tick = Int::min(
+        let tick = Int32::min(
           clip.start_tick + clip.duration_ticks - frame_ticks(model),
-          Int::max(
+          Int32::max(
             clip.start_tick + frame_ticks(model),
             clip.start_tick + local_tick,
           ),
@@ -2945,16 +3108,16 @@ fn update_project(
         }
       }
     TimelineScrolled(scroll) =>
-      (@rabbita.none, { ..model, timeline_scroll_x: scroll.offset_pos().x })
+      (@rabbita.none, { ..model, timeline_scroll_x: scroll.offset_pos().x, })
     ZoomIn =>
-      (@rabbita.none, { ..model, zoom: Double::min(8.0, model.zoom * 1.5) })
+      (@rabbita.none, { ..model, zoom: Double::min(8.0, model.zoom * 1.5), })
     ZoomOut =>
-      (@rabbita.none, { ..model, zoom: Double::max(0.25, model.zoom / 1.5) })
+      (@rabbita.none, { ..model, zoom: Double::max(0.25, model.zoom / 1.5), })
     FitTimeline => {
-      let seconds = Double::from_int(Int::max(1, duration_ticks(model))) /
+      let seconds = Double::from_int(Int32::max(1, duration_ticks(model))) /
         Double::from_int(ticks_per_second(model))
       let available = Double::from_int(
-        Int::max(320, model.viewport_width - 420),
+        Int32::max(320, model.viewport_width - 420),
       )
       (
         @rabbita.none,
@@ -2971,11 +3134,14 @@ fn update_project(
       guard selected_take(model) is Some(take) else {
         return (
           @rabbita.none,
-          { ..model, error: take_eligibility(selected_take(model)) },
+          { ..model, error: take_eligibility(selected_take(model)), },
         )
       }
       guard take_is_eligible(take) else {
-        return (@rabbita.none, { ..model, error: take_eligibility(Some(take)) })
+        return (
+          @rabbita.none,
+          { ..model, error: take_eligibility(Some(take)), },
+        )
       }
       guard !clips(model).any(clip => clip.media_ref_id == take.media_ref_id) else {
         return (
@@ -3021,7 +3187,7 @@ fn update_project(
         {
           "clip_id": clip.clip_id,
           "track_id": track_id,
-          "start_tick": Int::max(0, clip.start_tick + delta),
+          "start_tick": Int32::max(0, clip.start_tick + delta),
         }
       } else {
         let moves = chosen.map(clip => {
@@ -3032,7 +3198,7 @@ fn update_project(
             {
               "clip_id": clip.clip_id,
               "track_id": track_id,
-              "start_tick": Int::max(0, clip.start_tick + delta),
+              "start_tick": Int32::max(0, clip.start_tick + delta),
             } : Json)
         })
         { "moves": Json::array(moves) }
@@ -3240,7 +3406,7 @@ fn update_project(
         Ok(response) => {
           let command_id = "http:" +
             fresh_key(
-              { ..model, request_sequence: model.request_sequence - 1 },
+              { ..model, request_sequence: model.request_sequence - 1, },
               kind,
             )
           let stacks = if kind == "undo" {
@@ -3332,34 +3498,34 @@ fn update_project(
     InspectorChanged(field, value) => {
       let draft = model.inspector
       let inspector = match field {
-        "transition" => { ..draft, transition: value }
-        "transition_seconds" => { ..draft, transition_seconds: value }
-        "brightness" => { ..draft, brightness: value }
-        "contrast" => { ..draft, contrast: value }
-        "saturation" => { ..draft, saturation: value }
-        "gamma" => { ..draft, gamma: value }
-        "opacity" => { ..draft, opacity: value }
-        "scale" => { ..draft, scale: value }
-        "position_x" => { ..draft, position_x: value }
-        "position_y" => { ..draft, position_y: value }
-        "rotation" => { ..draft, rotation: value }
-        "mask_shape" => { ..draft, mask_shape: value }
-        "mask_x" => { ..draft, mask_x: value }
-        "mask_y" => { ..draft, mask_y: value }
-        "mask_width" => { ..draft, mask_width: value }
-        "mask_height" => { ..draft, mask_height: value }
-        "mask_feather" => { ..draft, mask_feather: value }
-        "speed_midpoint" => { ..draft, speed_midpoint: value }
-        "overlay_text" => { ..draft, overlay_text: value }
-        "overlay_position" => { ..draft, overlay_position: value }
-        "overlay_size" => { ..draft, overlay_size: value }
-        "overlay_color" => { ..draft, overlay_color: value }
-        "overlay_background" => { ..draft, overlay_background: value }
-        "track_volume_db" => { ..draft, track_volume_db: value }
-        "track_pan" => { ..draft, track_pan: value }
-        "keyframe_channel" => { ..draft, keyframe_channel: value }
-        "keyframe_value" => { ..draft, keyframe_value: value }
-        "keyframe_interpolation" => { ..draft, keyframe_interpolation: value }
+        "transition" => { ..draft, transition: value, }
+        "transition_seconds" => { ..draft, transition_seconds: value, }
+        "brightness" => { ..draft, brightness: value, }
+        "contrast" => { ..draft, contrast: value, }
+        "saturation" => { ..draft, saturation: value, }
+        "gamma" => { ..draft, gamma: value, }
+        "opacity" => { ..draft, opacity: value, }
+        "scale" => { ..draft, scale: value, }
+        "position_x" => { ..draft, position_x: value, }
+        "position_y" => { ..draft, position_y: value, }
+        "rotation" => { ..draft, rotation: value, }
+        "mask_shape" => { ..draft, mask_shape: value, }
+        "mask_x" => { ..draft, mask_x: value, }
+        "mask_y" => { ..draft, mask_y: value, }
+        "mask_width" => { ..draft, mask_width: value, }
+        "mask_height" => { ..draft, mask_height: value, }
+        "mask_feather" => { ..draft, mask_feather: value, }
+        "speed_midpoint" => { ..draft, speed_midpoint: value, }
+        "overlay_text" => { ..draft, overlay_text: value, }
+        "overlay_position" => { ..draft, overlay_position: value, }
+        "overlay_size" => { ..draft, overlay_size: value, }
+        "overlay_color" => { ..draft, overlay_color: value, }
+        "overlay_background" => { ..draft, overlay_background: value, }
+        "track_volume_db" => { ..draft, track_volume_db: value, }
+        "track_pan" => { ..draft, track_pan: value, }
+        "keyframe_channel" => { ..draft, keyframe_channel: value, }
+        "keyframe_value" => { ..draft, keyframe_value: value, }
+        "keyframe_interpolation" => { ..draft, keyframe_interpolation: value, }
         _ => draft
       }
       (@rabbita.none, { ..model, inspector, })
@@ -3435,7 +3601,7 @@ fn update_project(
         return (@rabbita.none, model)
       }
       let draft = model.inspector
-      let midpoint_timeline = Int::max(1, clip.duration_ticks / 2)
+      let midpoint_timeline = Int32::max(1, clip.duration_ticks / 2)
       let source_span = clip.source_out_tick - clip.source_in_tick
       let midpoint_source = clip.source_in_tick +
         (Double::from_int(source_span) *
@@ -3561,10 +3727,10 @@ fn update_project(
         is Some(track) else {
         return (
           @rabbita.none,
-          { ..model, error: "No canonical \{role} track exists." },
+          { ..model, error: "No canonical \{role} track exists.", },
         )
       }
-      let duration = Int::min(
+      let duration = Int32::min(
         source.duration_ticks,
         ticks_per_second(model) * 3,
       )
@@ -3630,7 +3796,7 @@ fn update_project(
         is Some(track) else {
         return (
           @rabbita.none,
-          { ..model, error: "No canonical \{role} audio bus exists." },
+          { ..model, error: "No canonical \{role} audio bus exists.", },
         )
       }
       let payload : Json = {
@@ -3688,8 +3854,8 @@ fn update_project(
       }
       let duration = (parse_number(model.inspector.transition_seconds, 0.5) *
       Double::from_int(ticks_per_second(model))).to_int()
-      let outgoing = Int::max(1, duration / 2)
-      let incoming = Int::max(1, duration - outgoing)
+      let outgoing = Int32::max(1, duration / 2)
+      let incoming = Int32::max(1, duration - outgoing)
       let transition : Json = {
         "transition_id": if model.selected_transition_id == "" {
           fresh_key(model, "transition")
@@ -3748,18 +3914,18 @@ fn update_project(
           "from_clip_id": transition.from_clip_id,
           "to_clip_id": transition.to_clip_id,
           "kind": transition.kind,
-          "duration_ticks": Int::max(
+          "duration_ticks": Int32::max(
             frame_ticks(model),
             transition.duration_ticks + delta,
           ),
-          "outgoing_handle_ticks": Int::max(
+          "outgoing_handle_ticks": Int32::max(
             1,
             transition.outgoing_handle_ticks.unwrap_or(
               transition.duration_ticks / 2,
             ) +
             delta / 2,
           ),
-          "incoming_handle_ticks": Int::max(
+          "incoming_handle_ticks": Int32::max(
             1,
             transition.incoming_handle_ticks.unwrap_or(
               transition.duration_ticks - transition.duration_ticks / 2,
@@ -3808,8 +3974,8 @@ fn update_project(
       guard selected_clip(model) is Some(clip) else {
         return (@rabbita.none, model)
       }
-      let relative = Int::min(
-        Int::max(0, model.playhead_ticks - clip.start_tick),
+      let relative = Int32::min(
+        Int32::max(0, model.playhead_ticks - clip.start_tick),
         clip.duration_ticks,
       )
       let curve = match msg {
@@ -3913,20 +4079,20 @@ fn update_project(
     IntakeChanged(field, value) => {
       let draft = model.intake
       let intake = match field {
-        "role" => { ..draft, role: value }
-        "file_name" => { ..draft, file_name: value }
-        "mime_type" => { ..draft, mime_type: value }
-        "size_bytes" => { ..draft, size_bytes: value }
-        "sha256" => { ..draft, sha256: value }
-        "duration_seconds" => { ..draft, duration_seconds: value }
-        "owner" => { ..draft, owner: value }
-        "basis" => { ..draft, basis: value }
-        "territory" => { ..draft, territory: value }
-        "channels" => { ..draft, channels: value }
-        "rights_ref" => { ..draft, rights_ref: value }
-        "source_kind" => { ..draft, source_kind: value }
-        "source_ref" => { ..draft, source_ref: value }
-        "pasted_content" => { ..draft, pasted_content: value }
+        "role" => { ..draft, role: value, }
+        "file_name" => { ..draft, file_name: value, }
+        "mime_type" => { ..draft, mime_type: value, }
+        "size_bytes" => { ..draft, size_bytes: value, }
+        "sha256" => { ..draft, sha256: value, }
+        "duration_seconds" => { ..draft, duration_seconds: value, }
+        "owner" => { ..draft, owner: value, }
+        "basis" => { ..draft, basis: value, }
+        "territory" => { ..draft, territory: value, }
+        "channels" => { ..draft, channels: value, }
+        "rights_ref" => { ..draft, rights_ref: value, }
+        "source_kind" => { ..draft, source_kind: value, }
+        "source_ref" => { ..draft, source_ref: value, }
+        "pasted_content" => { ..draft, pasted_content: value, }
         _ => draft
       }
       (@rabbita.none, { ..model, intake, })
@@ -3942,7 +4108,7 @@ fn update_project(
       guard identity is Some(binding) else {
         return (
           @rabbita.none,
-          { ..model, error: "Open a production shot before media intake." },
+          { ..model, error: "Open a production shot before media intake.", },
         )
       }
       let draft = model.intake
@@ -3961,7 +4127,7 @@ fn update_project(
           draft.pasted_content.length(),
         ),
         "sha256": draft.sha256,
-        "duration_ticks": Int::max(
+        "duration_ticks": Int32::max(
           1,
           (parse_number(draft.duration_seconds, 5.0) *
           Double::from_int(ticks_per_second(model))).to_int(),
@@ -4046,7 +4212,7 @@ fn update_project(
               ..model,
               busy: false,
               loading: true,
-              intake: { ..model.intake, selected_blob: None },
+              intake: { ..model.intake, selected_blob: None, },
               selected_take_id: "take-" + model.pending_intake_id,
               pending_intake_id: "",
               status: "Media verified; refreshing asset registry…",
@@ -4063,14 +4229,14 @@ fn update_project(
           )
       }
     ReviewCommentChanged(value) =>
-      (@rabbita.none, { ..model, review_comment: value })
+      (@rabbita.none, { ..model, review_comment: value, })
     PostReviewComment => {
       let comment = model.review_comment.trim().to_owned()
       guard comment.length() > 0 && duration_ticks(model) > 0 else {
         return (@rabbita.none, model)
       }
-      let start_tick = Int::min(
-        Int::max(0, model.playhead_ticks),
+      let start_tick = Int32::min(
+        Int32::max(0, model.playhead_ticks),
         duration_ticks(model) - 1,
       )
       let body : Json = {
@@ -4078,7 +4244,7 @@ fn update_project(
           "comment_id": fresh_key(model, "comment"),
           "kind": "review",
           "start_tick": start_tick,
-          "end_tick": Int::min(
+          "end_tick": Int32::min(
             duration_ticks(model),
             start_tick + frame_ticks(model),
           ),
@@ -4372,14 +4538,14 @@ fn update_project(
           "max_attempts": 2,
           "spec": {
             "width": if model.export_state.output_preset.contains("vertical") {
-              1080
+              model.output_height
             } else {
-              1920
+              model.output_height * 16 / 9
             },
             "height": if model.export_state.output_preset.contains("vertical") {
-              1920
+              model.output_height * 16 / 9
             } else {
-              1080
+              model.output_height
             },
             "fps": { "numerator": 24, "denominator": 1 },
             "container": "mp4",
@@ -4635,7 +4801,7 @@ fn update_project(
           @rabbita.none,
           {
             ..model,
-            export_state: { ..model.export_state, promoted: false },
+            export_state: { ..model.export_state, promoted: false, },
             error: "Promotion is blocked: reopen or refresh the editor from an exact G4 production source.",
           },
         )
@@ -4692,7 +4858,7 @@ fn update_project(
               {
                 ..model,
                 busy: false,
-                export_state: { ..state, promoted: true },
+                export_state: { ..state, promoted: true, },
                 status: "Exact verified export and subtitle sidecar promoted; G5–G7 remain required.",
               },
             )
@@ -4702,7 +4868,7 @@ fn update_project(
               {
                 ..model,
                 busy: false,
-                export_state: { ..state, promoted: false },
+                export_state: { ..state, promoted: false, },
                 error: response_error_message(receipt.error).unwrap_or(
                   "Master promotion returned incomplete or mismatched evidence.",
                 ),

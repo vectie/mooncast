@@ -55,8 +55,8 @@ fn status_chip(status : String) -> @rabbita.Html {
 
 ///|
 fn control_tower_portfolio_status(
-  project_count : Int,
-  projects_at_sla_risk : Int,
+  project_count : Int32,
+  projects_at_sla_risk : Int32,
 ) -> String {
   if project_count == 0 {
     "no projects"
@@ -90,7 +90,7 @@ fn text_field(
   label_ : String,
   value_ : String,
   placeholder_ : String,
-  rows_ : Int,
+  rows_ : Int32,
   change : @rabbita.Emit[String],
 ) -> @rabbita.Html {
   label(class="field", [
@@ -367,35 +367,62 @@ fn render_operator_bar(
   dispatch : Dispatch[Msg],
   model : Model,
 ) -> @rabbita.Html {
-  section(class="operator-bar", [
-    div(class="operator-title", [
-      small("Named human authority"),
-      strong("Every decision binds the displayed revision and digest"),
+  @html.details(class="operator-disclosure", [
+    @html.summary(class="operator-summary", [
+      div(class="operator-summary-copy", [
+        small("Human authority"),
+        strong(
+          if model.operator.actor == "" {
+            "Add a named reviewer"
+          } else {
+            model.operator.actor + " · " + model.operator.role
+          },
+        ),
+        span("Decisions bind the exact displayed revision and digest."),
+      ]),
+      span(
+        class=if model.operator.human_confirmed {
+          "authority-state confirmed"
+        } else {
+          "authority-state"
+        },
+        if model.operator.human_confirmed {
+          "Confirmed"
+        } else {
+          "Review"
+        },
+      ),
     ]),
-    form_field("Actor", model.operator.actor, "named reviewer", fn(value) {
-      dispatch(SetOperatorField("actor", value))
-    }),
-    form_field("Role", model.operator.role, "creative-director", fn(value) {
-      dispatch(SetOperatorField("role", value))
-    }),
-    form_field("Decision time", model.operator.recorded_at, "ISO-8601", fn(
-      value,
-    ) {
-      dispatch(SetOperatorField("recorded_at", value))
-    }),
-    button(
-      class=if model.operator.human_confirmed {
-        "confirmation confirmed"
-      } else {
-        "confirmation"
-      },
-      on_click=dispatch(SetHumanConfirmed(!model.operator.human_confirmed)),
-      if model.operator.human_confirmed {
-        "Human confirmation recorded"
-      } else {
-        "Confirm deliberate action"
-      },
-    ),
+    section(class="operator-bar", [
+      form_field("Actor", model.operator.actor, "named reviewer", fn(value) {
+        dispatch(SetOperatorField("actor", value))
+      }),
+      form_field("Role", model.operator.role, "creative-director", fn(value) {
+        dispatch(SetOperatorField("role", value))
+      }),
+      form_field("Decision time", model.operator.recorded_at, "ISO-8601", fn(
+        value,
+      ) {
+        dispatch(SetOperatorField("recorded_at", value))
+      }),
+      button(
+        class=if model.operator.human_confirmed {
+          "confirmation confirmed"
+        } else {
+          "confirmation"
+        },
+        on_click=dispatch(SetHumanConfirmed(!model.operator.human_confirmed)),
+        if model.operator.human_confirmed {
+          "Human confirmation recorded"
+        } else {
+          "Confirm deliberate action"
+        },
+      ),
+      p(
+        class="boundary-note",
+        "Provider, payment, publication, and release effects require separate authority.",
+      ),
+    ]),
   ])
 }
 
@@ -3442,14 +3469,14 @@ fn render_status(model : Model) -> @rabbita.Html {
     } else {
       @html.nothing
     },
-    div(
-      model.project_load_errors.map(item => {
-        p(class="global-error", item.0 + ": " + item.1)
-      }),
-    ),
     match model.error {
-      Some(value) => p(class="global-error", value)
-      None => @html.nothing
+      Some(_) => @html.nothing
+      None =>
+        div(
+          model.project_load_errors.map(item => {
+            p(class="global-error", item.0 + ": " + item.1)
+          }),
+        )
     },
   ])
 }
@@ -3521,13 +3548,14 @@ fn render_keyed_surface(
 ///|
 fn render_app(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
   div(class="mooncast-studio", [
+    a(class="skip-link", href="#studio-main", "Skip to workspace"),
     render_header(dispatch, model),
     div(class="studio-shell", [
       render_project_rail(dispatch, model),
-      main_(class="studio-main", [
-        render_operator_bar(dispatch, model),
-        render_status(model),
+      main_(id="studio-main", class="studio-main", [
         render_journey_compass(dispatch, model),
+        render_status(model),
+        render_operator_bar(dispatch, model),
         render_keyed_surface(dispatch, model),
       ]),
     ]),
