@@ -890,6 +890,54 @@ fn player_script() -> String {
     #|      resumeStatus.textContent = 'Reopened ' + count + ' changed captions for this session. Continue editing and download again before closing. Original screening and feedback context are unchanged.';
     #|    });
     #|    document.getElementById('caption-resume-cancel').addEventListener('click', () => { resetResume(); resumeFile.value = ''; resumeStatus.textContent = 'Saved draft preview dismissed. Applied captions are kept.'; });
+    #|    const clockMode = document.getElementById('caption-clock-mode');
+    #|    const clockFields = ['offset', 'source-first', 'target-first', 'source-last', 'target-last'].map(name => document.getElementById('caption-clock-' + name));
+    #|    const clockStatus = document.getElementById('caption-clock-status'), clockList = document.getElementById('caption-clock-list'), clockApply = document.getElementById('caption-clock-apply');
+    #|    let clockChange = null;
+    #|    function clockKey() { return JSON.stringify([clockMode.value, ...clockFields.map(field => field.value)]); }
+    #|    function resetClock() { clockChange = null; clockApply.disabled = true; clockList.replaceChildren(); }
+    #|    clockMode.value = 'offset'; clockFields[0].value = '0';
+    #|    [clockMode, ...clockFields].forEach(field => field.addEventListener('input', () => { resetClock(); clockStatus.textContent = 'Clock inputs changed. Preview the new timing before applying.'; }));
+    #|    ['first', 'last'].forEach((name, index) => document.getElementById('caption-clock-capture-' + name).addEventListener('click', () => {
+    #|      const ms = Math.round(video.currentTime * 1000);
+    #|      if (!Number.isSafeInteger(ms) || ms < 0 || ms > data.duration_ms) { clockStatus.textContent = 'Current player position is outside the screening duration.'; return; }
+    #|      clockFields[index ? 4 : 2].value = String(ms); resetClock(); clockStatus.textContent = 'Captured target ' + name + ' at ' + captionClock(ms) + '. Enter the matching time in the current captions, then preview.';
+    #|    }));
+    #|    document.getElementById('caption-clock-preview').addEventListener('click', () => {
+    #|      resetClock();
+    #|      try {
+    #|        if (captionDirty() || captionPreview) throw Error('Apply or cancel the single-caption edit first.');
+    #|        const draft = correctedCaptionDraft();
+    #|        const integer = field => { if (!/^-?\d+$/.test(field.value)) throw Error('Enter whole milliseconds.'); const n = Number(field.value); if (!Number.isSafeInteger(n) || Math.abs(n) > 7200000) throw Error('Clock values must be within two hours.'); return n; };
+    #|        let map;
+    #|        if (clockMode.value === 'offset') {
+    #|          const offset = integer(clockFields[0]); map = time => { const value = time + offset; if (value < 0 || value > draft.duration_ms) throw Error('A synchronized cue falls outside the duration; no cues were clipped.'); return value; };
+    #|        } else if (clockMode.value === 'anchors') {
+    #|          const [s1, t1, s2, t2] = clockFields.slice(1).map(integer);
+    #|          if (s1 < 0 || s2 <= s1 || s2 > draft.duration_ms || t1 < 0 || t2 <= t1 || t2 > draft.duration_ms) throw Error('Use two increasing source and target points inside the duration.');
+    #|          const span = s2 - s1, targetSpan = t2 - t1;
+    #|          map = time => { const numerator = t1 * span + (time - s1) * targetSpan; if (numerator < 0 || numerator > draft.duration_ms * span) throw Error('A synchronized cue falls outside the duration; no cues were clipped.'); return Math.floor((numerator + Math.floor(span / 2)) / span); };
+    #|        } else throw Error('Choose offset or two anchors.');
+    #|        const cues = draft.cues.map(cue => ({...cue, start_ms: map(cue.start_ms), end_ms: map(cue.end_ms)}));
+    #|        if (cues.some(cue => cue.end_ms <= cue.start_ms)) throw Error('A cue would become shorter than one millisecond.');
+    #|        const changed = [];
+    #|        cues.forEach((cue, index) => { if (cueChanged(cue, captionCues[index])) changed.push(index); });
+    #|        changed.forEach(index => { const row = document.createElement('li'), before = captionCues[index], after = cues[index]; row.textContent = 'Caption ' + (index + 1) + ': ' + captionClock(before.start_ms) + '–' + captionClock(before.end_ms) + ' → ' + captionClock(after.start_ms) + '–' + captionClock(after.end_ms) + ' ' + after.text; clockList.appendChild(row); });
+    #|        clockChange = {source: JSON.stringify(captionCues), key: clockKey(), cues, changed}; clockApply.disabled = !changed.length;
+    #|        clockStatus.textContent = changed.length + ' captions would change. Applied captions and playback are unchanged until Apply. Wording, gaps and overlaps use the same clock mapping; all times round to nearest millisecond, exact halves upward.';
+    #|      } catch (error) { clockStatus.textContent = error.message + ' Nothing changed.'; }
+    #|    });
+    #|    clockApply.addEventListener('click', () => {
+    #|      if (!clockChange) return;
+    #|      if (captionDirty() || captionPreview || clockChange.source !== JSON.stringify(captionCues) || clockChange.key !== clockKey()) { resetClock(); clockStatus.textContent = 'Captions or clock inputs changed. Preview again; nothing applied.'; return; }
+    #|      const change = clockChange;
+    #|      change.cues.forEach((cue, index) => { captionCues[index] = {...cue}; });
+    #|      if (selectedCaption !== null) { const cue = captionCues[selectedCaption]; captionStart.value = String(cue.start_ms); captionEnd.value = String(cue.end_ms); }
+    #|      change.changed.forEach(index => syncCaptionPresentation(index));
+    #|      resetClock(); resetResume(); resetReplacement(); showCaptionEditor();
+    #|      clockStatus.textContent = 'Synchronized ' + change.changed.length + ' captions. Continue screening and download corrected captions before closing.';
+    #|    });
+    #|    document.getElementById('caption-clock-cancel').addEventListener('click', () => { resetClock(); clockStatus.textContent = 'Clock preview dismissed. Applied captions are kept.'; });
     #|    function downloadCaptions(format) {
     #|      discardStalePreview();
     #|      if (captionDirty()) { showCaptionEditor('Download blocked; apply or cancel the current correction first.'); return; }
@@ -994,6 +1042,11 @@ pub fn Plan::html(
       "</button></li>",
     )
   }
+  out.write_string(
+    (
+      #|<li style="list-style:none"><section aria-labelledby="caption-clock-title"><h3 id="caption-clock-title">Synchronize the caption track</h3><p>Delay or advance all current captions, or fit two caption times to two observed speech positions. Use milliseconds. Positive offset delays captions. Source times refer to the currently applied caption clock. Preview lists changes without altering playback captions; apply to audition, then download to keep them.</p><label for="caption-clock-mode">Timing method</label><select id="caption-clock-mode"><option value="offset">Constant offset</option><option value="anchors">Two speech anchors</option></select><label for="caption-clock-offset">Offset (ms)</label><input id="caption-clock-offset" value="0" inputmode="numeric"><label for="caption-clock-source-first">First source caption time (ms)</label><input id="caption-clock-source-first" inputmode="numeric"><label for="caption-clock-target-first">First target speech time (ms)</label><input id="caption-clock-target-first" inputmode="numeric"><button id="caption-clock-capture-first" type="button">Capture first target from player</button><label for="caption-clock-source-last">Last source caption time (ms)</label><input id="caption-clock-source-last" inputmode="numeric"><label for="caption-clock-target-last">Last target speech time (ms)</label><input id="caption-clock-target-last" inputmode="numeric"><button id="caption-clock-capture-last" type="button">Capture last target from player</button><button id="caption-clock-preview" type="button">Preview track timing</button><button id="caption-clock-apply" type="button" disabled>Apply track timing</button><button id="caption-clock-cancel" type="button">Cancel clock preview</button><p id="caption-clock-status" role="status">All cues use the same mapping. No speech detection or automatic approval.</p><ol id="caption-clock-list"></ol></section></li>
+    ),
+  )
   out.write_string(
     "<li style=\"list-style:none\"><section aria-labelledby=\"caption-resume-title\"><h3 id=\"caption-resume-title\">Resume saved caption corrections</h3><p>Reopen corrected JSON downloaded from this screening. The recorded media SHA-256, duration and cue count must match. Review wording and timing changes before replacing the applied session draft. Download current corrections first to keep a recovery copy. This does not verify the media file or approve captions.</p><label for=\"caption-resume-file\">Saved corrected-caption JSON (up to 16 MiB)</label><input id=\"caption-resume-file\" type=\"file\" accept=\".json,application/json\"><button id=\"caption-resume-apply\" type=\"button\" disabled>Apply previewed saved captions</button><button id=\"caption-resume-cancel\" type=\"button\">Cancel saved draft preview</button><p id=\"caption-resume-status\" role=\"status\" aria-live=\"polite\">Choose a saved draft to preview. Nothing is uploaded.</p><ol id=\"caption-resume-list\"></ol></section></li>",
   )

@@ -25,6 +25,10 @@ moonbook pack install /path/to/mooncast /path/to/workspace host-profile.json
 Mooncast owns production policy and schemas. MoonLib, MoonBook, MoonClaw,
 MoonDesk, and Moonstat only consume generic pack projections.
 
+While watching an offline screening, [synchronize the whole caption track](docs/screening-caption-sync.md)
+with a constant offset or two captured speech anchors, then save an editable
+caption draft or WebVTT sidecar.
+
 See [Responsibility and testability](docs/RESPONSIBILITY_AND_TESTABILITY.md)
 for the executable ownership boundary and layered verification model.
 
@@ -253,3 +257,9 @@ selects an explicit language, and imports exact source bytes with paragraph/cue
 mappings into the existing editable caption draft. Continue with native
 show/set/export and SRT reopen. Unsupported timing/layout semantics reject;
 visual styling and whitespace losses are declared. See [TTML caption intake](docs/ttml-captions.md).
+
+The native test command strips debug symbols to keep the large test-driver
+build bounded while running the same assertions. Omit `--strip` only when
+investigating a native stack trace; that debug build can take substantially
+longer and use more memory. The two-job limit avoids compiling large drivers
+concurrently with additional work.

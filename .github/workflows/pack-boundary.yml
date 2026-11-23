@@ -43,7 +43,7 @@ jobs:
         run: moon check --target native --warn-list +73
 
       - name: Test MoonBit contracts
-        run: moon test --target native
+        run: moon test --target native --strip --jobs 2
 
       - name: Build native studio host
         run: moon build --target native cmd/studio

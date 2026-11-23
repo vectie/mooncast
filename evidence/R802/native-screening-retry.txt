@@ -1,0 +1,36 @@
+Warning: [0020]
+    ╭─[ /workspace/scratch/665adc5202cf/moonsuite-cloud-20261020/work/R802/mooncast/editor/screening/output.mbt:15:4 ]
+    │
+ 15 │   .to_json()
+    │    ───┬───  
+    │       ╰───── Warning (deprecated): The method `to_json` is implicitly promoted from `impl ToJson for Plan`. This behavior is deprecated, either use `ToJson::to_json` instead or add a `extend Plan with ToJson::{to_json, ..}` declaration.
+────╯
+Warning: [0079]
+   ╭─[ /workspace/scratch/665adc5202cf/moonsuite-cloud-20261020/work/R802/mooncast/editor/screening/plan.mbt:5:10 ]
+   │
+ 5 │ } derive(Eq, ToJson)
+   │          ─┬  
+   │           ╰── Warning (implicit_impl_as_method): The methods not_equal, equal from `impl Eq for Chapter` are implicit promoted as regular method for `Chapter`. This behavior is deprecated and will be removed in the future. Add a `pub extend Chapter with Eq::{not_equal, equal}` declaration or manually define regular methods for type `Chapter` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+───╯
+Warning: [0079]
+   ╭─[ /workspace/scratch/665adc5202cf/moonsuite-cloud-20261020/work/R802/mooncast/editor/screening/plan.mbt:5:14 ]
+   │
+ 5 │ } derive(Eq, ToJson)
+   │              ───┬──  
+   │                 ╰──── Warning (implicit_impl_as_method): The methods to_json from `impl ToJson for Chapter` are implicit promoted as regular method for `Chapter`. This behavior is deprecated and will be removed in the future. Add a `pub extend Chapter with ToJson::{to_json}` declaration or manually define regular methods for type `Chapter` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+───╯
+Warning: [0079]
+    ╭─[ /workspace/scratch/665adc5202cf/moonsuite-cloud-20261020/work/R802/mooncast/editor/screening/plan.mbt:14:10 ]
+    │
+ 14 │ } derive(Eq, ToJson)
+    │          ─┬  
+    │           ╰── Warning (implicit_impl_as_method): The methods not_equal, equal from `impl Eq for Plan` are implicit promoted as regular method for `Plan`. This behavior is deprecated and will be removed in the future. Add a `pub extend Plan with Eq::{not_equal, equal}` declaration or manually define regular methods for type `Plan` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0079]
+    ╭─[ /workspace/scratch/665adc5202cf/moonsuite-cloud-20261020/work/R802/mooncast/editor/screening/plan.mbt:14:14 ]
+    │
+ 14 │ } derive(Eq, ToJson)
+    │              ───┬──  
+    │                 ╰──── Warning (implicit_impl_as_method): The methods to_json from `impl ToJson for Plan` are implicit promoted as regular method for `Plan`. This behavior is deprecated and will be removed in the future. Add a `pub extend Plan with ToJson::{to_json}` declaration or manually define regular methods for type `Plan` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Total tests: 7, passed: 7, failed: 0.

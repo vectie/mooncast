@@ -99,17 +99,25 @@ test "empty optional drafts produce an honest media-only player" {
 ///|
 test "refuse unmatched durations and out of range caption end despite duration tolerance" {
   assert_true(
-    (try? @screening.plan(media(), "Review", captions={
-      ..captions(),
-      duration_ms: 6100,
-    }))
+    (Ok(
+      @screening.plan(media(), "Review", captions={
+        ..captions(),
+        duration_ms: 6100,
+      }),
+    ) catch {
+      e => Err(e)
+    })
     is Err(_),
   )
   assert_true(
-    (try? @screening.plan(media(), "Review", chapters={
-      ..chapters(),
-      duration_ticks: 200000,
-    }))
+    (Ok(
+      @screening.plan(media(), "Review", chapters={
+        ..chapters(),
+        duration_ticks: 200000,
+      }),
+    ) catch {
+      e => Err(e)
+    })
     is Err(_),
   )
   let draft = {
@@ -118,7 +126,10 @@ test "refuse unmatched durations and out of range caption end despite duration t
     cues: [{ start_ms: 6000, end_ms: 6010, text: "Late", }],
   }
   assert_true(
-    (try? @screening.plan(media(), "Review", captions=draft)) is Err(_),
+    (Ok(@screening.plan(media(), "Review", captions=draft)) catch {
+      e => Err(e)
+    })
+    is Err(_),
   )
   let chapter = {
     ..chapters(),
@@ -126,24 +137,35 @@ test "refuse unmatched durations and out of range caption end despite duration t
     markers: [{ marker_id: "end", start_tick: 180000, title: "Too late", }],
   }
   assert_true(
-    (try? @screening.plan(media(), "Review", chapters=chapter)) is Err(_),
+    (Ok(@screening.plan(media(), "Review", chapters=chapter)) catch {
+      e => Err(e)
+    })
+    is Err(_),
   )
 }
 
 ///|
 test "browser profile refuses unsupported codecs containers multiple audio and embedded tracks" {
   assert_true(
-    (try? @screening.plan({ ..media(), suffix: ".mkv", }, "Review")) is Err(_),
+    (Ok(@screening.plan({ ..media(), suffix: ".mkv", }, "Review")) catch {
+      e => Err(e)
+    })
+    is Err(_),
   )
   let tracks = media().tracks.copy()
   tracks[0] = { ..tracks[0], codec: "hevc", }
   assert_true(
-    (try? @screening.plan({ ..media(), tracks, }, "Review")) is Err(_),
+    (Ok(@screening.plan({ ..media(), tracks, }, "Review")) catch {
+      e => Err(e)
+    })
+    is Err(_),
   )
   let two_audio = media().tracks.copy()
   two_audio.push({ ..two_audio[1], index: 2, })
   assert_true(
-    (try? @screening.plan({ ..media(), tracks: two_audio, }, "Review"))
+    (Ok(@screening.plan({ ..media(), tracks: two_audio, }, "Review")) catch {
+      e => Err(e)
+    })
     is Err(_),
   )
   let embedded = media().tracks.copy()
@@ -154,13 +176,20 @@ test "browser profile refuses unsupported codecs containers multiple audio and e
     codec: "mov_text",
   })
   assert_true(
-    (try? @screening.plan({ ..media(), tracks: embedded, }, "Review")) is Err(_),
+    (Ok(@screening.plan({ ..media(), tracks: embedded, }, "Review")) catch {
+      e => Err(e)
+    })
+    is Err(_),
   )
   assert_true(
-    (try? @screening.plan(
-      { ..media(), tracks: [media().tracks[0]], },
-      "Silent video",
-    ))
+    (Ok(
+      @screening.plan(
+        { ..media(), tracks: [media().tracks[0]], },
+        "Silent video",
+      ),
+    ) catch {
+      e => Err(e)
+    })
     is Ok(_),
   )
 }
@@ -187,10 +216,40 @@ test "HTML escapes data and contains portable native keyboard controls" {
 }
 
 ///|
+test "caption track synchronization controls and native clock fixture" {
+  let plan = @screening.plan(media(), "Review", captions=captions())
+  let html = plan.html("video.mp4", "hash")
+  assert_true(html.contains("id=\"caption-clock-mode\""))
+  assert_true(html.contains("id=\"caption-clock-capture-first\""))
+  assert_true(html.contains("id=\"caption-clock-apply\""))
+  let draft : @captions.CaptionDraft = {
+    contract: "mooncast.caption-draft.v1",
+    source_file: "fixture",
+    duration_ms: 6000,
+    cues: [
+      { start_ms: 500, end_ms: 1500, text: "First", },
+      { start_ms: 4000, end_ms: 5000, text: "Closing", },
+    ],
+  }
+  let aligned = draft.sync(500, 750, 4500, 5150)
+  assert_eq(aligned.cues[0].start_ms, 750)
+  assert_eq(aligned.cues[0].end_ms, 1850)
+  assert_eq(aligned.cues[1].start_ms, 4600)
+  assert_eq(aligned.cues[1].end_ms, 5700)
+}
+
+///|
 test "plan rejects malformed title and preserves source drafts" {
-  assert_true((try? @screening.plan(media(), "  ")) is Err(_))
-  assert_true((try? @screening.plan(media(), "new\nline")) is Err(_))
-  assert_true((try? @screening.plan(media(), "x".repeat(201))) is Err(_))
+  assert_true(
+    (Ok(@screening.plan(media(), "  ")) catch { e => Err(e) }) is Err(_),
+  )
+  assert_true(
+    (Ok(@screening.plan(media(), "new\nline")) catch { e => Err(e) }) is Err(_),
+  )
+  assert_true(
+    (Ok(@screening.plan(media(), "x".repeat(201))) catch { e => Err(e) })
+    is Err(_),
+  )
   let draft = captions()
   let plan = @screening.plan(media(), "Review", captions=draft)
   plan.cues.clear()

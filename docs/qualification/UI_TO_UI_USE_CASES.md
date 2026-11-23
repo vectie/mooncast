@@ -56,7 +56,7 @@ repository's deterministic 180-second qualification fixture once, run:
 ```sh
 cd /Users/kq/Workspace/mooncast
 moon test studio_service/episode_acceptance_wbtest.mbt \
-  --target native \
+  --target native --strip -j 2 \
   --filter '*governed 180 second episode*'
 ```
 
@@ -247,7 +247,7 @@ cd /Users/kq/Workspace/mooncast
 moon fmt
 moon info
 moon check --target native
-moon test --target native
+moon test --target native --strip -j 2
 npm --prefix ui/rabbita-mooncast run build
 ```
 

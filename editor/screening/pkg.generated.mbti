@@ -15,13 +15,13 @@ pub fn plan(@caption_media.Media, String, captions? : @captions.CaptionDraft, ch
 // Types and methods
 pub(all) struct Chapter {
   title : String
-  start_ms : Int
+  start_ms : Int32
 } derive(Eq, ToJson)
 
 pub(all) struct Plan {
   contract : String
   title : String
-  duration_ms : Int
+  duration_ms : Int32
   cues : Array[@captions.Caption]
   chapters : Array[Chapter]
 } derive(Eq, ToJson)

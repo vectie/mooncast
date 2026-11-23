@@ -1,0 +1,54 @@
+{"caption_roundtrip":"/tmp/mooncast-caption-edit-UWuQgk","sha256":{"json":"2a063bee04add9a4a4e4848b40ea490533dbcdb4d310b09e8a97f4009cde4c56","vtt":"d3d999402a21be1692cbbaac554b7e211f757f9c46f6c45a5bb4e0e0b9fec6fb"},"qualification":"Exact production JS and real output bytes; independent schema/clock checks, no native consumer execution."}
+✔ production HTML exposes cue-specific editing, labels, disabled startup and unchanged native draft contract (3.64717ms)
+✔ edit stays on the selected overlapping cue while playback changes; saved fallback previews exact wording (16.553354ms)
+✔ native caption text changes preserve cue clocks, toggle mode and paused playback (6.508419ms)
+✔ caption text update failure uses corrected fallback and keeps downloadable saved wording (4.549511ms)
+✔ saved corrections participate in transcript search without changing cue selection or timing (4.224551ms)
+✔ switch and downloads protect unfinished wording; cancel and supplied-wording reset are explicit (16.033468ms)
+✔ plain-text caption validation blocks unsupported markup, empty lines and controls without changing saved text (3.890781ms)
+✔ real Blob JSON and VTT downloads reopen as exact ordinary caption drafts with unchanged cue order and clocks (16.461599ms)
+✔ caption correction preserves notebook source, pending note draft, saved notes and original brief context (8.326248ms)
+✔ screening without captions does not create a false caption draft or editor selection (3.200185ms)
+✔ download failure retains saved captions and reports failure rather than a completed save (2.734393ms)
+✔ WebVTT respects the existing two-MiB export bound while a supported JSON draft remains available (119.134164ms)
+✔ preview is nonmutating, all applied cues change literally, timings and supplied data stay intact (18.707952ms)
+✔ hidden matches included; no-match and empty search never apply (6.57511ms)
+✔ invalid resulting captions abort whole preview; delete literal and Unicode work (3.438552ms)
+✔ changed inputs and intervening single-caption changes reject stale preview (2.522367ms)
+✔ unsaved single-caption draft blocks replacement and selected editor refreshes after apply (6.284297ms)
+✔ downloaded correction can be reopened, previewed, applied and continued without rewriting supplied context (22.383278ms)
+✔ wrong identity, duration, schema, cue counts and malformed cues reject whole draft (9.442006ms)
+✔ dirty edits and stale previews cannot overwrite current captions (10.375038ms)
+✔ late reads are ignored after cancel or newer file; interrupted read leaves applied draft intact (4.755577ms)
+✔ no-op and size limits; file reading racing applied changes is refused (3.882383ms)
+✔ offset previews then changes every cue and its player presentation, preserving words and overlap (12.10831ms)
+✔ two captured speech targets correct drift; downloaded result reopens in existing resume workflow (9.35495ms)
+✔ clock math matches native Int64 formula including half-up, odd span and bounded large products (17.647901ms)
+✔ out-of-range mapping and collapsed cue keep all current captions; cancel keeps draft (3.738312ms)
+✔ current editing and subsequent edits require a fresh track proposal (2.979744ms)
+{"timing_roundtrip":"/tmp/mooncast-caption-timing-pq8plc","sha256":{"json":"3204d7ea1e81b2d460b1df9ba275a813bcbf9b2d8935a779632a1dd0dc6da869","vtt":"2e982c1cdfd6c6701bfad5acccd1dff14f4ec309312f517a28fe0ea669561311"},"qualification":"Production JS with DOM/media doubles; real output bytes, independent ordinary-draft validation, native consumer unrun."}
+✔ shipped HTML declares labeled timing controls, explicit preview/apply/cancel, initial disabled states (6.124805ms)
+✔ fallback timing preview connects transcript time, seek and overlap display; cancel restores applied cue (15.472791ms)
+✔ timing cannot apply before preview; repeated apply and explicit cancel retain the applied correction (3.484979ms)
+✔ invalid intervals and order changes are rejected without sorting, clipping or losing draft input (74.809119ms)
+✔ equal starts, overlaps, a one-millisecond cue and exact terminal duration are legal (7.03445ms)
+✔ capture uses rounded playback milliseconds on the deliberate selection and rejects unavailable positions (9.728903ms)
+✔ native cue timing and text preview, cancel, repeated preview and apply never duplicate cues (37.931626ms)
+✔ each native cue mutation failure disables the track and uses the exact preview/applied fallback (24.040869ms)
+✔ typing or capturing after preview restores applied presentation and requires a fresh preview (4.087889ms)
+✔ stale preview cannot apply or leak into export if controls change without an input event (3.070395ms)
+✔ unfinished and previewed timing protect both downloads and newer caption selections (2.443839ms)
+✔ restore supplied timing is a draft and is constrained by already applied neighboring starts (3.543781ms)
+✔ preview/apply leave A–B repeat, pause, speed and pending media seek behavior intact (7.036328ms)
+✔ media errors and duration changes retain caption draft/preview and do not apply it (8.285191ms)
+✔ caption retiming keeps original notebook identity, revision history and supplied brief context (8.521551ms)
+✔ real JSON/VTT retiming bytes persist with ordinary contracts; reopen preserves edits, original reload does not (11.61249ms)
+✔ no-caption and failed-download paths never claim persisted timing or lose applied data (4.293825ms)
+ℹ tests 44
+ℹ suites 0
+ℹ pass 44
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 524.054484
