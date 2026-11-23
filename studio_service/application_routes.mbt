@@ -18,15 +18,15 @@ struct BillingProjection {
 
 ///|
 struct RoutedActionRequest {
-  expected_execution_revision : Int
+  expected_execution_revision : Int32
   expected_execution_digest : String?
   actor_id : String
 } derive(FromJson)
 
 ///|
 struct RoutedCreateRequest {
-  expected_project_revision : Int
-  expected_routing_plan_version : Int
+  expected_project_revision : Int32
+  expected_routing_plan_version : Int32
   expected_routing_plan_digest : String
   actor_id : String
   network_authority : Bool
@@ -50,7 +50,7 @@ struct RoutedActionProjection {
 struct ClientProjectEpisodeProjection {
   episode_id : String
   title : String
-  scene_count : Int
+  scene_count : Int32
 } derive(ToJson)
 
 ///|
@@ -58,7 +58,7 @@ struct ClientProjectProjection {
   project_id : String
   title : String
   objective : String
-  target_duration_seconds : Int
+  target_duration_seconds : Int32
   episodes : Array[ClientProjectEpisodeProjection]
 } derive(ToJson)
 
@@ -72,16 +72,16 @@ struct ClientBindingProjection {
 
 ///|
 struct ClientRevisionPolicyProjection {
-  maximum : Int
-  used : Int
-  remaining : Int
+  maximum : Int32
+  used : Int32
+  remaining : Int32
 } derive(ToJson)
 
 ///|
 struct ClientArtifactProjection {
   name : String
   kind : String
-  size_bytes : Int
+  size_bytes : Int32
   sha256 : String
 } derive(ToJson)
 
@@ -141,7 +141,7 @@ struct EditorHandoffRequestInput {
 
 ///|
 struct ClientPortalCreateInput {
-  expected_project_revision : Int
+  expected_project_revision : Int32
   expected_master_sha256 : String
   build_id : String
   expected_build_digest : String
@@ -166,7 +166,7 @@ struct ClientPortalCreateProjection {
 
 ///|
 struct ClientPortalControlInput {
-  expected_portal_revision : Int
+  expected_portal_revision : Int32
   expected_portal_digest : String
   human_confirmed : Bool
   actor : String
@@ -175,7 +175,7 @@ struct ClientPortalControlInput {
 
 ///|
 struct BillingCreateInput {
-  expected_project_revision : Int
+  expected_project_revision : Int32
   kind : String
   state : String
   currency : String
@@ -189,7 +189,7 @@ struct BillingCreateInput {
 
 ///|
 struct BillingTransitionInput {
-  expected_billing_revision : Int
+  expected_billing_revision : Int32
   expected_billing_digest : String
   state : String
   human_confirmed : Bool
@@ -202,8 +202,8 @@ struct BillingTransitionInput {
 struct DeliveryVariantInput {
   variant_id : String
   orientation : String
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   policy : String
 } derive(ToJson, FromJson)
 
@@ -227,7 +227,7 @@ struct DeliveryCoverInput {
 ///|
 struct DeliveryProfileInput {
   contract : String
-  version : Int
+  version : Int32
   include_source_master : Bool
   variants : Array[DeliveryVariantInput]
   cuts : Array[DeliveryCutInput]
@@ -239,23 +239,23 @@ struct DeliveryProfileInput {
 
 ///|
 struct DeliveryCreateInput {
-  expected_project_revision : Int
+  expected_project_revision : Int32
   expected_master_sha256 : String
-  expected_delivery_version : Int
+  expected_delivery_version : Int32
   expected_delivery_digest : String
   profile : DeliveryProfileInput
 } derive(ToJson, FromJson)
 
 ///|
 struct DeliveryActionInput {
-  expected_build_revision : Int
+  expected_build_revision : Int32
   expected_record_digest : String
   actor : String
 } derive(FromJson)
 
 ///|
 struct DeliveryAcceptanceInput {
-  expected_project_revision : Int
+  expected_project_revision : Int32
   expected_build_digest : String
   expected_build_record_digest : String
   human_confirmed : Bool
@@ -271,7 +271,7 @@ struct DeliveryArtifactProjection {
   kind : String
   name : String
   media_type : String
-  size_bytes : Int
+  size_bytes : Int32
   sha256 : String
 } derive(ToJson)
 
@@ -281,16 +281,16 @@ struct DeliveryBuildProjection {
   build_id : String
   build_digest : String
   project_id : String
-  project_revision : Int
+  project_revision : Int32
   master_sha256 : String
-  delivery_version : Int
+  delivery_version : Int32
   delivery_digest : String
-  profile_version : Int
+  profile_version : Int32
   profile_digest : String
   state : String
-  revision : Int
-  attempt_count : Int
-  recovery_count : Int
+  revision : Int32
+  attempt_count : Int32
+  recovery_count : Int32
   artifacts : Array[DeliveryArtifactProjection]
   cover_frames : Array[DeliveryCoverFrameProjection]
   videos : Array[DeliveryVideoProjection]
@@ -1075,8 +1075,8 @@ fn delivery_build_projection(
 fn delivery_output(
   output_id : String,
   kind : String,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
   subtitle_mode : String,
   metadata_digest : String,
 ) -> @execution.DeliveryOutputSpec {
@@ -1599,6 +1599,18 @@ pub async fn StudioService::dispatch_application_http(
 ) -> @host_http.Response? {
   let segments = path_segments(request.path)
   match (request.request_method, segments) {
+    (
+      Post,
+      [
+        "api",
+        "editor",
+        "projects",
+        project_id,
+        "takes",
+        take_id,
+        "local-captions",
+      ],
+    ) => Some(self.local_caption_response(project_id, take_id, request))
     (Get, ["api", "provider-executions", "config"]) =>
       Some(@app_http.provider_config_handler(self.execution_application))
     (Get, ["api", "provider-executions"]) => {
