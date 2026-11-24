@@ -1599,6 +1599,8 @@ pub async fn StudioService::dispatch_application_http(
 ) -> @host_http.Response? {
   let segments = path_segments(request.path)
   match (request.request_method, segments) {
+    (Post, ["api", "player", "captions"]) =>
+      Some(self.player_caption_response(request))
     (
       Post,
       [
@@ -2926,7 +2928,7 @@ pub fn StudioService::register_standard_application_routes(
   for
     prefix in [
       "/api/provider-executions", "/api/v2/projects", "/api/commercial-intake", "/api/client",
-      "/api/handoffs", "/api/editor",
+      "/api/handoffs", "/api/editor", "/api/player",
     ] {
     self.register_route_extension(
       RouteExtension::new(prefix, async fn(request) {
