@@ -124,6 +124,10 @@ enum Msg {
   PlayerFullscreen
   OpenPlayerFile
   ClosePlayerFile
+  TogglePlayerCaptions
+  SetPlayerTranslation(String)
+  PollPlayerCaptions
+  PlayerCaptionsLoaded(Int, String, Result[Json, Error])
   ToggleLocalCaptions
   ToggleCaptionTranslation
   GenerateLocalCaptions

@@ -1031,6 +1031,9 @@ fn editor_subscriptions(
     @sub.on_resize(size => dispatch(Resized(size))),
     @sub.on_url_request(request => dispatch(UrlRequested(request))),
   ]
+  if model.workspace_lens == PlayerLens && model.player_captions.enabled {
+    subscriptions.push(@sub.every(250, dispatch(PollPlayerCaptions)))
+  }
   if model.playing {
     subscriptions.push(
       @sub.on_animation_frame(now => dispatch(AnimationFrame(now))),

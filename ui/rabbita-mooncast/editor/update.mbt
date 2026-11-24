@@ -442,7 +442,8 @@ fn update_project(
       }
     SwitchWorkspaceLens(workspace_lens) => {
       standalone_player_location(workspace_lens == PlayerLens)
-      (@rabbita.none, { ..model, workspace_lens, })
+      if workspace_lens != PlayerLens { player_audio_stop(); standalone_player_pause() }
+      (@rabbita.none, { ..model, workspace_lens, player_captions: { ..model.player_captions.invalidate(), enabled: false, }, })
     }
     SelectWorkspaceRecipe(selected_workspace_recipe) => {
       let selected_workspace_node = match selected_workspace_recipe {
@@ -2727,15 +2728,45 @@ fn update_project(
         { "url": String(url), "name": String(name), .. } =>
           (
             @rabbita.none,
-            { ..model, player_file_url: url, player_file_name: name, },
+            { ..model, player_file_url: url, player_file_name: name, player_captions: model.player_captions.invalidate(), },
           )
         _ => (@rabbita.none, model)
       }
     }
     ClosePlayerFile => {
       standalone_player_release(model.player_file_url)
-      (@rabbita.none, { ..model, player_file_url: "", player_file_name: "", })
+      player_audio_stop()
+      (@rabbita.none, { ..model, player_file_url: "", player_file_name: "", player_captions: model.player_captions.invalidate(), })
     }
+    TogglePlayerCaptions => {
+      player_audio_resume()
+      let state = model.player_captions.invalidate()
+      if state.enabled { player_audio_stop() }
+      (@rabbita.none, { ..model, player_captions: { ..state, enabled: !state.enabled, }, })
+    }
+    SetPlayerTranslation(target) => {
+      let allowed = ["off", "en", "zh", "ja", "ko", "fr", "de", "es", "ru", "ar"]
+      if !allowed.contains(target) { return (@rabbita.none, model) }
+      (@rabbita.none, { ..model, player_captions: { ..model.player_captions.invalidate(), target, }, })
+    }
+    PollPlayerCaptions => {
+      let state = model.player_captions
+      guard model.workspace_lens == PlayerLens && state.enabled else { return (@rabbita.none, model) }
+      let sample = @json.parse(player_audio_poll(state.generation, state.pending == "")) catch { _ => Json::null() }
+      match sample {
+        { "reset": True, .. } => (@rabbita.none, { ..model, player_captions: state.invalidate(), })
+        { "error": String(error), .. } => (@rabbita.none, { ..model, player_captions: { ..state.invalidate(), enabled: false, error, }, })
+        { "audio": String(audio), "key": String(key), .. } if state.pending == "" => (
+          @http.post("/api/player/captions")
+          .with_json({ "audio": audio, "target_language": state.target })
+          .expect_json(result => dispatch(PlayerCaptionsLoaded(state.generation, key, result))),
+          { ..model, player_captions: { ..state, pending: key, }, },
+        )
+        _ => (@rabbita.none, model)
+      }
+    }
+    PlayerCaptionsLoaded(generation, key, result) =>
+      (@rabbita.none, { ..model, player_captions: player_caption_reply(model.player_captions, generation, key, result), })
     ToggleLocalCaptions =>
       (
         @rabbita.none,

@@ -8,11 +8,15 @@ extern "js" fn standalone_player_location(player : Bool) -> Unit =
 
 ///|
 extern "js" fn standalone_player_file(previous : String) -> String =
-  #|previous => { const file = document.getElementById('standalone-player-file')?.files?.[0]; if (!file) return ''; if (previous.startsWith('blob:')) URL.revokeObjectURL(previous); return JSON.stringify({url: URL.createObjectURL(file), name: file.name}); }
+  #|previous => { const file = document.getElementById('standalone-player-file')?.files?.[0]; if (!file) return ''; document.getElementById('standalone-video')?.pause(); if (previous.startsWith('blob:')) URL.revokeObjectURL(previous); return JSON.stringify({url: URL.createObjectURL(file), name: file.name}); }
 
 ///|
 extern "js" fn standalone_player_release(url : String) -> Unit =
-  #|url => { if (url.startsWith('blob:')) URL.revokeObjectURL(url); }
+  #|url => { document.getElementById('standalone-video')?.pause(); if (url.startsWith('blob:')) URL.revokeObjectURL(url); }
+
+///|
+extern "js" fn standalone_player_pause() -> Unit =
+  #|() => globalThis.document?.getElementById('standalone-video')?.pause()
 
 ///|
 fn standalone_player_render_url(model : Model) -> String {
@@ -77,6 +81,10 @@ fn standalone_player_view(
           "Back to editing",
         ),
       ]),
+      player_caption_controls(dispatch, model, url != ""),
+      if model.player_captions.error != "" {
+        @html.p(class="error-text", attrs=@html.Attrs::build().role("alert"), model.player_captions.error)
+      } else { @html.nothing },
       if url == "" {
         @html.div(class="standalone-player-empty", [
           @html.h2("Open something to watch"),
@@ -90,7 +98,7 @@ fn standalone_player_view(
           Map::from_array([
             (
               url,
-              @html.video(
+              @html.div(class="player-video-frame", [@html.video(
                 id="standalone-video",
                 src=url,
                 controls=true,
@@ -103,7 +111,7 @@ fn standalone_player_view(
                   },
                 ),
                 "This media format could not be played.",
-              ),
+              ), player_caption_output(model)]),
             ),
           ]),
         )

@@ -90,6 +90,11 @@ fn activate_editor_project(model : Model, project_id : String) -> Model {
     workspace_lens: model.workspace_lens,
     player_file_url: model.player_file_url,
     player_file_name: model.player_file_name,
+    player_captions: if model.player_file_url != "" {
+      model.player_captions
+    } else {
+      { ..model.player_captions.invalidate(), enabled: false, }
+    },
     playback_speed: model.playback_speed,
     open_generation: model.open_generation,
     preview_generation: model.preview_generation + 1,

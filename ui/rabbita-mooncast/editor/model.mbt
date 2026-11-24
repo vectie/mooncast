@@ -864,6 +864,7 @@ struct Model {
   playback_speed : String
   player_file_url : String
   player_file_name : String
+  player_captions : PlayerCaptions
   preview_height : Int32
   output_height : Int32
   local_caption_live : Bool
@@ -1044,6 +1045,7 @@ fn initial_model() -> Model {
     playback_speed: "1",
     player_file_url: "",
     player_file_name: "",
+    player_captions: PlayerCaptions::new(),
     preview_height: 540,
     output_height: 1080,
     local_caption_live: false,
