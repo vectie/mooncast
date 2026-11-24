@@ -310,3 +310,20 @@ cluster install retains original icon/model configuration, external Vectie
 weights and application data; signed rollback bundles and deployment evidence
 are under `~/mooncast-player-install-20261125` on that Mac. Browser QA of the
 served UI is not direct visual verification of the remote native WKWebView.
+
+## MoonSuite source handoff — 2026-11-25
+
+The user requested active product work on pushed main and direct source copies
+on the cluster Mac's `/Volumes/Vectie/Codespace`. Preserve explicitly archived,
+failed integration and disposable QA branches; never publish private snapshot
+branches or use `push --all`. MoonGate/MoonClaw have obsolete Gitee origins;
+their canonical GitHub remote is named `github`, not `origin`. MoonMini is the
+Bunnia repository, and MoonStat shares MoonGate's Git storage.
+
+Transfer committed main through independent shallow clones, not dirty working
+directories or shared-object clones. Verify upstream commit, archive SHA256,
+destination HEAD, branch, clean status and Git connectivity. Existing Codespace
+projects, app bundles, models and runtime data remain untouched. MoonFish's raw
+research outputs/UI trajectories and MoonRobo's local slicer result are not
+source. MoonTown's active worktrees required preserving both handoff histories
+and the newer coffee release-size ceiling during integration.
