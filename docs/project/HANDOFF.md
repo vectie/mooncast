@@ -265,3 +265,48 @@ Preserved the entire prior Desk bundle with a `.bundle` backup suffix to avoid
 creating another registered `.app`. The decoded final ICNS was visually checked;
 do not substitute corner transparency for silhouette/inset verification or
 claim remote Launchpad visual acceptance without confirmation.
+
+## Standalone Player captions — 2026-11-25
+
+Player now has a visible Live captions toggle, translation-language selector,
+local processing state and retryable errors beside playback controls. Captions
+and translations are overlaid above the video controls. The Player-only width
+override removes the editing workspace's 1120px minimum on narrow windows.
+The empty-state grid also needs an explicit shrinkable column to wrap its copy.
+
+The browser samples the playing media element, not the microphone or a complete
+file decode, and submits bounded mono PCM16 WAV windows to
+`POST /api/player/captions`. One inference request stays in flight, with only
+the latest next window retained. Seeking, playback-rate changes, file changes,
+translation changes and stopping invalidate text; late replies release the
+request slot without painting old results. Local-file caption state survives
+project switches. Leaving Player or replacing its file pauses the old media;
+old audio-processing graphs are disconnected when the media element changes.
+
+The native route validates WAV sizes/header fields, limits concurrency, cleans
+temporary audio, and calls only loopback Qwen ASR (18731) and Index Translate
+(18732). No cloud provider or project intake is involved. Qwen metadata is
+removed before display. Index requires its training-aligned Chinese translation
+prompt and thinking disabled: the initial English instruction could be echoed
+on short fragments. Keep `/api/player` in standard route-extension registration;
+testing the dispatch helper alone misses a public-route 404.
+
+UI suite: 167 passed. Four backend checks passed with the real Mandarin fixture
+enabled via `MOONCAST_PLAYER_CAPTION_TEST_AUDIO`; without that environment the
+real-model test deliberately skips. Browser playback displayed Mandarin with
+English and Japanese translations, including target switching. Direct endpoint
+checks also passed French translation. The installed cluster app's served UI
+then displayed French captions, and the 375px document width remained 375px.
+These are chunk previews with roughly
+four seconds of audio collection plus inference delay, not word-synchronized
+streaming, saved subtitles, exported captions, or a full multilingual quality
+qualification. Native video full-screen does not carry the HTML caption overlay.
+
+For macOS 15 deployment use a fresh `--target-dir` as well as
+`MACOSX_DEPLOYMENT_TARGET=15.0`. Reusing macOS 26 C-stub caches produced a missing
+`posix_spawn_file_actions_addchdir` symbol despite a 15.0 Mach-O minimum. The
+fresh build ran successfully on the cluster Mac before app replacement. The
+cluster install retains original icon/model configuration, external Vectie
+weights and application data; signed rollback bundles and deployment evidence
+are under `~/mooncast-player-install-20261125` on that Mac. Browser QA of the
+served UI is not direct visual verification of the remote native WKWebView.

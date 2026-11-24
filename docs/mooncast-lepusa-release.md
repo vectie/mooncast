@@ -55,6 +55,27 @@ in the workspace header and is also reachable from Studio. Its direct route is
 URLs without uploading them, and can play the current completed project render.
 The app uses port 4312 independently of the browser development server on 4302.
 
+Player's **Live captions** toggle samples playback audio in bounded four-second
+windows, without importing the media into a project. **Translate to** selects
+English, Chinese, Japanese, Korean, French, German, Spanish, Russian or Arabic;
+Off keeps source-language captions only. Play the media after enabling captions.
+Both source and translated text appear above the video controls, with processing
+delay. Stop captions does not stop playback. These previews are not saved or
+exported; the HTML overlay is not shown in native video full-screen mode.
+
+The Player backend calls local Qwen ASR at `127.0.0.1:18731` and Index Translate
+at `127.0.0.1:18732`. Those services must run on the same Mac as Mooncast; no
+cloud fallback or LAN model endpoint is used. The cluster Mac's models remain
+on `/Volumes/Vectie/MoonSuite/models`. Missing services produce a retryable
+Player error rather than silently using another provider. The Editor's earlier
+Whisper controls remain independent.
+
+For a macOS 15 build on a newer development Mac, set
+`MACOSX_DEPLOYMENT_TARGET=15.0` and use a fresh Moon `--target-dir`. A cached
+macOS 26 async C stub can retain unavailable symbols even when the executable
+reports a 15.0 minimum. Verify the new service on the target before replacing
+the app, then sign and strictly verify the installed bundle.
+
 Prepare local speech dependencies with
 `moon run --target native scripts/prepare_whisper_runtime.mbtx`. This stages
 Whisper, GGML CPU/Metal backends, OpenMP, and licenses, rewrites their dynamic
