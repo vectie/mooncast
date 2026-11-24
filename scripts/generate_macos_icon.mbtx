@@ -1,0 +1,87 @@
+///|
+// Render a macOS SVG without Quick Look's opaque thumbnail background.
+// Usage: moon run scripts/generate_macos_icon.mbtx --target native -- INPUT.svg OUTPUT.icns
+// Requires rsvg-convert, sips, iconutil and ffmpeg on PATH.
+import {
+  "moonbitlang/async@0.19.4",
+  "moonbitlang/async@0.19.4/process",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn run(program : String, args : Array[String]) -> String {
+  let (code, out, err) = @process.collect_output(program, args)
+  guard code == 0 else { fail(program + ": " + out.text() + err.text()) }
+  out.text()
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  guard args is [_, svg, output] &&
+    svg.has_suffix(".svg") &&
+    output.has_suffix(".icns") else {
+    fail("Expected INPUT.svg OUTPUT.icns")
+  }
+  let temporary = run("/usr/bin/mktemp", ["-d", "-t", "mooncast-icon"])
+    .trim()
+    .to_owned()
+  let iconset = temporary + "/AppIcon.iconset"
+  ignore(run("/bin/mkdir", [iconset]))
+  let rendered = temporary + "/render.png"
+  ignore(
+    run("rsvg-convert", [
+      "--width", "1024", "--height", "1024", svg, "--output", rendered,
+    ]),
+  )
+  for
+    (name, size) in [
+      ("16x16", 16),
+      ("16x16@2x", 32),
+      ("32x32", 32),
+      ("32x32@2x", 64),
+      ("128x128", 128),
+      ("128x128@2x", 256),
+      ("256x256", 256),
+      ("256x256@2x", 512),
+      ("512x512", 512),
+      ("512x512@2x", 1024),
+    ] {
+    let png = iconset + "/icon_" + name + ".png"
+    ignore(
+      run("/usr/bin/sips", [
+        "-z",
+        size.to_string(),
+        size.to_string(),
+        rendered,
+        "--out",
+        png,
+      ]),
+    )
+    for (x, y) in [(0, 0), (0, size - 1), (size - 1, 0), (size - 1, size - 1)] {
+      let alpha = run("ffmpeg", [
+        "-v",
+        "error",
+        "-i",
+        png,
+        "-vf",
+        "alphaextract,crop=1:1:" + x.to_string() + ":" + y.to_string(),
+        "-frames:v",
+        "1",
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "gray",
+        "pipe:1",
+      ])
+      guard alpha == "\u0000" else { fail("Opaque padding in " + name) }
+    }
+  }
+  ignore(run("/usr/bin/iconutil", ["-c", "icns", iconset, "-o", output]))
+  println(
+    "Wrote " +
+    output +
+    "; all four corners transparent at every icon size. Evidence: " +
+    temporary,
+  )
+}

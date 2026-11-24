@@ -2,6 +2,7 @@
   "identifier": "dev.vectie.mooncast",
   "productName": "Mooncast",
   "version": "0.2.3",
+  "icon": "assets/mooncast.icns",
   "runtime": {
     "backend": "system-webview",
     "assetProtocol": "lepusa",
