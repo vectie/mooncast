@@ -156,11 +156,16 @@ fn render_header(dispatch : Dispatch[Msg], model : Model) -> @rabbita.Html {
   }
   header(class="studio-header", [
     div(class="brand", [
-      span(class="brand-mark", "M"),
-      div([strong("Mooncast"), small("Creative workspace")]),
+      @html.img(
+        class="brand-mark",
+        src="/mooncast.svg",
+        alt="",
+        width=36,
+        height=36,
+      ),
+      strong("Mooncast"),
     ]),
     div(class="workspace-context", [
-      small("Current workspace"),
       strong(tab_label(model.tab)),
       span(project_context),
     ]),

@@ -49,7 +49,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .brand div { display: grid; gap: 1px; }
 .brand strong { font-size: 15px; letter-spacing: -.01em; }
 .brand small, .workspace-context small, .workspace-nav-group > small, .rail-heading small, .panel-heading small, .operator-summary-copy small { color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
-.brand-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; background: var(--accent); color: #0b0d10; font-weight: 900; }
+.brand-mark { width: 36px; height: 36px; flex: 0 0 36px; object-fit: contain; }
 .workspace-context { min-width: 0; display: grid; grid-template-columns: auto minmax(0, auto) minmax(0, 1fr); align-items: baseline; justify-content: start; gap: 8px 12px; }
 .workspace-context small { grid-column: 1 / -1; }
 .workspace-context strong { font-size: 16px; line-height: 1.2; }

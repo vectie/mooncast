@@ -31,7 +31,9 @@ a { color: var(--accent); }
 .mooncast-editor { min-height: 100vh; }
 .appbar { height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--line); background: rgba(8, 11, 20, .9); position: sticky; top: 0; z-index: 50; backdrop-filter: blur(14px); }
 .brand, .project-controls, .pane-heading, .tag-row, .take-actions, .monitor-heading, .surface-tabs, .monitor-actions, .tool-group, .status-strip { display: flex; align-items: center; gap: 8px; }
-.brand-mark { width: 34px; height: 34px; display: grid; place-items: center; color: #08100d; background: var(--accent); border-radius: 10px; font-weight: 900; }
+.brand-mark { width: 34px; height: 34px; flex: 0 0 34px; object-fit: contain; }
+.editor-first-use { display: grid; align-content: center; justify-items: center; gap: 16px; min-height: 60vh; padding: 24px; }
+.editor-first-use h1 { font-size: 17px; font-weight: 500; margin: 0; }
 .brand div { display: grid; gap: 2px; }
 .brand small, small, .microcopy { color: var(--muted); }
 .project-controls select { min-width: 260px; }

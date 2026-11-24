@@ -21,6 +21,27 @@ test "standalone player is a separate lens and preserves a local file across pro
   )
   assert_eq(editor.workspace_lens, EditorLens)
   assert_eq(editor.player_file_name, "review.mp4")
+  let player_markup = @rabbita.render_to_string(
+    @rabbita.static_cell(view(_ => @rabbita.none, player)),
+  )
+  assert_true(player_markup.contains("/mooncast.svg"))
+  assert_true(player_markup.contains("Open video or audio"))
+  assert_false(player_markup.contains("Working in:"))
+  assert_false(player_markup.contains("No editor projects yet"))
+  assert_false(player_markup.contains("Publication blocked"))
+  let editor_markup = @rabbita.render_to_string(
+    @rabbita.static_cell(view(_ => @rabbita.none, editor)),
+  )
+  assert_true(editor_markup.contains("Working in:"))
+  assert_true(editor_markup.contains("Publication blocked"))
+  let first_edit = { ..editor, catalog_state: CatalogEmpty, workspace: None, }
+  let first_markup = @rabbita.render_to_string(
+    @rabbita.static_cell(view(_ => @rabbita.none, first_edit)),
+  )
+  assert_true(first_markup.contains("Create creative workspace"))
+  assert_false(first_markup.contains("All QC"))
+  assert_false(first_markup.contains("Apply clip settings"))
+  assert_false(first_markup.contains("Working in:"))
 }
 
 ///|

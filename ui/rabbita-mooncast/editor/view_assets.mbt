@@ -5,11 +5,14 @@ fn project_header(
 ) -> @rabbita.Html {
   @html.header(class="appbar") <| [
     @html.div(class="brand") <| [
-      @html.span(class="brand-mark", "M"),
-      @html.div <| [
-        @html.strong("Mooncast Creative Workspace"),
-        @html.small("Graph → generate → edit → review → deliver"),
-      ],
+      @html.img(
+        class="brand-mark",
+        src="/mooncast.svg",
+        alt="",
+        width=34,
+        height=34,
+      ),
+      @html.strong("Mooncast"),
     ],
     @html.nav(class="project-controls") <| [
       @html.a(href="/apps/mooncast/studio", "Studio"),
@@ -37,68 +40,74 @@ fn project_header(
         on_click=dispatch(SwitchWorkspaceLens(PlayerLens)),
         "Player",
       ),
-      @html.select(
-        disabled=model.catalog_state != CatalogReady,
-        on_change=dispatch.map(value => SelectProject(value)),
-      ) <| (if model.projects.is_empty() {
+      ..if model.workspace_lens == PlayerLens || editor_needs_workspace(model) {
+        []
+      } else {
         [
-          @html.option(
-            disabled=true,
-            selected=true,
-            match model.catalog_state {
-              CatalogIdle | CatalogLoading => "Loading projects…"
-              CatalogFailed => "Project catalog unavailable"
-              CatalogEmpty => "No editor projects yet"
-              CatalogReady => "Choose a project"
+          @html.select(
+            disabled=model.catalog_state != CatalogReady,
+            on_change=dispatch.map(value => SelectProject(value)),
+          ) <| (if model.projects.is_empty() {
+            [
+              @html.option(
+                disabled=true,
+                selected=true,
+                match model.catalog_state {
+                  CatalogIdle | CatalogLoading => "Loading projects…"
+                  CatalogFailed => "Project catalog unavailable"
+                  CatalogEmpty => "No editor projects yet"
+                  CatalogReady => "Choose a project"
+                },
+              ),
+            ]
+          } else {
+            model.projects.map(project => {
+              @html.option(
+                value=project.project_id,
+                selected=project.project_id == chosen_project(model),
+              ) <| [
+                @html.span("\{project.title} · r\{project.revision}"),
+              ]
+            })
+          }),
+          @html.button(
+            type_="button",
+            disabled=model.busy ||
+              model.workspace_graph_saving ||
+              (
+                model.catalog_state != CatalogReady &&
+                model.catalog_state != CatalogEmpty &&
+                model.catalog_state != CatalogFailed
+              ),
+            on_click=dispatch(
+              if model.catalog_state == CatalogFailed {
+                ReloadProjects
+              } else {
+                OpenProject
+              },
+            ),
+            if model.catalog_state == CatalogFailed {
+              "Retry project catalog"
+            } else if model.catalog_state == CatalogEmpty {
+              "Open creative workspace"
+            } else if chosen_project(model) != model.project_id {
+              "Open selected project"
+            } else {
+              "Reload project"
             },
           ),
-        ]
-      } else {
-        model.projects.map(project => {
-          @html.option(
-            value=project.project_id,
-            selected=project.project_id == chosen_project(model),
-          ) <| [
-            @html.span("\{project.title} · r\{project.revision}"),
-          ]
-        })
-      }),
-      @html.button(
-        type_="button",
-        disabled=model.busy ||
-          model.workspace_graph_saving ||
-          (
-            model.catalog_state != CatalogReady &&
-            model.catalog_state != CatalogEmpty &&
-            model.catalog_state != CatalogFailed
+          @html.small(
+            "Working in: " +
+            model.project_id +
+            (if chosen_project(model) != model.project_id {
+              " · " + chosen_project(model) + " selected; use Open to switch"
+            } else {
+              ""
+            }),
           ),
-        on_click=dispatch(
-          if model.catalog_state == CatalogFailed {
-            ReloadProjects
-          } else {
-            OpenProject
-          },
-        ),
-        if model.catalog_state == CatalogFailed {
-          "Retry project catalog"
-        } else if model.catalog_state == CatalogEmpty {
-          "Open creative workspace"
-        } else if chosen_project(model) != model.project_id {
-          "Open selected project"
-        } else {
-          "Reload project"
-        },
-      ),
-      @html.small(
-        "Working in: " +
-        model.project_id +
-        (if chosen_project(model) != model.project_id {
-          " · " + chosen_project(model) + " selected; use Open to switch"
-        } else {
-          ""
-        }),
-      ),
-      @html.span(class="revision-pill", "r\{selected_revision(model)}"),
+          @html.span(class="revision-pill", "r\{selected_revision(model)}"),
+        ]
+      },
     ],
   ]
 }

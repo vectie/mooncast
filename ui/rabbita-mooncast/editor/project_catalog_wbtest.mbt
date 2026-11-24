@@ -300,7 +300,7 @@ test "catalog loading error dismissed error and empty states render distinct rec
       (loading, "Loading projects…"),
       (failed, "Retry project catalog"),
       (dismissed, "Retry project catalog"),
-      (empty, "Open creative workspace"),
+      (empty, "Create creative workspace"),
     ] {
     let html = @rabbita.render_to_string(
       @rabbita.static_cell(view(_ => @rabbita.none, model)),
